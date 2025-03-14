@@ -44,9 +44,9 @@ def blaster(
     input_path = os.path.join(input_database_path, subject, subject)
     try:
         # Ensure the ASN output directory exists
-        os.makedirs(defaults.ASN_OUTPUT_DIR, exist_ok=True)
+        os.makedirs(defaults.ASN_TBLASTN_DIR, exist_ok=True)
         # Create ASN.1 file path
-        asn_file_name = os.path.join(defaults.ASN_OUTPUT_DIR, f"{subject}.asn")
+        asn_file_name = os.path.join(defaults.ASN_TBLASTN_DIR, f"{subject}.asn")
 
         # Construct the BLAST command
         blast_command = [
@@ -153,7 +153,8 @@ def process_species(species: str) -> Tuple[Optional[pd.DataFrame], List[SeqRecor
     filtered_df = blast_df[
         (blast_df['Pct Identity'] >= defaults.PERC_IDENTITY_THRESHOLD) &
         (blast_df['E-value'] <= defaults.E_VALUE_THRESHOLD) &
-        (blast_df['Alignment Length'] >= defaults.SEQ_LENGTH_THRESHOLD)
+        (blast_df['Alignment Length'] >= defaults.SEQ_LENGTH_THRESHOLD) &
+        (blast_df['Bit Score'] >= defaults.BITSCORE_THRESHOLD)
     ].copy()
 
     if filtered_df.empty:
@@ -217,7 +218,7 @@ def main():
                 if seq_records:
                     output_fasta_path = os.path.join(defaults.FASTA_OUTPUT_DIR, f'{species}_sequences.fasta')
                     SeqIO.write(seq_records, output_fasta_path, 'fasta')
-                    logging.info(f'Saved sequences to {output_fasta_path}')
+                    # logging.info(f'Saved sequences to {output_fasta_path}')
             pbar.update(1)
 
     # Concatenate all DataFrames
