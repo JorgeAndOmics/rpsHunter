@@ -129,3 +129,22 @@ rule rpsbproc_parser:
         '''
         python rpsbproc_parser.py 
         '''
+
+
+rule contingency_sorter:
+    input:
+        domains=rules.rpsbproc_parser.output,
+        species_list=defaults.QUERY_INPUT_FILE
+    output:
+        tile_plot=os.path.join(defaults.PLOT_DIR,'tile_plot.png')
+    params:
+        domain_data=os.path.join(defaults.TABLE_OUTPUT_DIR,'domains.parquet'),
+        species_list=defaults.QUERY_INPUT_FILE,
+        output_folder=defaults.PLOT_DIR
+    shell:
+        '''
+        Rscript contingency_sorter.R \
+        {params.domain_data:q} \
+        {params.species_list:q} \
+        {params.output_folder:q}
+        '''
