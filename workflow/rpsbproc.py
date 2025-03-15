@@ -5,8 +5,6 @@ import defaults
 
 
 def main(input_dir, output_dir, db_path, t_option):
-    # Ensure the output directory exists
-    os.makedirs(output_dir, exist_ok=True)
 
     # List all .asn files in the input directory
     input_files = [f for f in os.listdir(input_dir) if f.endswith('.asn')]
@@ -32,4 +30,4 @@ if __name__ == '__main__':
     main(input_dir=defaults.ASN_RPSBLAST_DIR,
          output_dir=defaults.RPSBPROC_OUTPUT_DIR,
          db_path=defaults.RPSBPROC_DB,
-         t_option='doms')
+         t_option='both')

@@ -1,0 +1,131 @@
+import os
+import defaults
+
+BLAST_DB_EXT = ['ndb', 'nhr', 'nin', 'not', 'nsq', 'ntf', 'nto']
+
+rule genome_downloader_setup:
+    output:
+        species=os.path.join(defaults.SPECIES_DB, '{genome}.fa')
+    params:
+        SPECIES_DB=defaults.SPECIES_DB,
+        DOWNLOAD_LOG=os.path.join(defaults.CONFIG_DIR, 'download.txt'),
+        API_KEY=defaults.NCBI_API_TOKEN
+    threads:
+        workflow.cores / 3
+    shell:
+        '''
+        export NCBI_API_KEY={params.API_KEY:q} && \
+        bash genome_downloader.sh {wildcards.genome:q} {params.SPECIES_DB:q} {params.DOWNLOAD_LOG:q}
+        '''
+
+
+rule genome_downloader:
+    input:
+        species=expand(os.path.join(defaults.SPECIES_DB, '{genome}.fa'), genome=defaults.SPECIES)
+    priority: 100
+    shell:
+        """
+        echo "Genome download completed for selected species"
+        """
+
+
+rule query_downloader_setup:
+    output:
+        species=os.path.join(defaults.QUERY_FILE)
+    params:
+        query_acc=os.path.join(defaults.QUERY_ACC),
+        query_dir=os.path.join(defaults.DATA_FASTA_DIR),
+        download_log=os.path.join(defaults.CONFIG_DIR, 'download.txt'),
+        entrez_email=defaults.ENTREZ_EMAIL
+    shell:
+        '''
+        export ENTREZ_EMAIL={params.entrez_email:q} && \
+        bash query_downloader.sh {params.query_acc:q} {params.query_dir:q} {params.download_log:q}
+        '''
+
+rule query_downloader:
+    input:
+        query_file=os.path.join(defaults.DATA_FASTA_DIR, defaults.QUERY_FILE)
+    priority: 100
+    shell:
+        """
+        echo "Query protein download completed"
+        """
+
+
+rule blast_db_generator_setup:
+    input:
+        fa = os.path.join(defaults.SPECIES_DB, '{genome}.fa')
+    output:
+        ndb_file=os.path.join(defaults.SPECIES_DB,'{genome}','{genome}.ndb'),
+        nhr_file=os.path.join(defaults.SPECIES_DB,'{genome}','{genome}.nhr'),
+        nin_file=os.path.join(defaults.SPECIES_DB,'{genome}','{genome}.nin'),
+        not_file=os.path.join(defaults.SPECIES_DB,'{genome}','{genome}.not'),
+        nsq_file=os.path.join(defaults.SPECIES_DB,'{genome}','{genome}.nsq'),
+        ntf_file=os.path.join(defaults.SPECIES_DB,'{genome}','{genome}.ntf'),
+        nto_file=os.path.join(defaults.SPECIES_DB,'{genome}','{genome}.nto'),
+    params:
+        db_dir=defaults.SPECIES_DB
+    shell:
+        """
+        parallel 'if [ -f {{}} ]; then mv {{}} {{.}}.fa; fi' ::: *.{{FASTA,fasta,fna,fas}} && \
+        makeblastdb -in {input.fa:q} -dbtype nucl -parse_seqids \
+        -out {params.db_dir:q}/{wildcards.genome:q}/{wildcards.genome:q}
+        """
+
+rule blast_db_generator:
+    input:
+        blast_db = expand(os.path.join(defaults.SPECIES_DB, '{genome}/{genome}.{ext}'),
+                          genome=defaults.SPECIES,
+                          ext=BLAST_DB_EXT)
+
+
+rule blaster:
+    input:
+        blast_db=rules.blast_db_generator.input,
+        query=rules.query_downloader.input
+    output:
+        asn_files=expand(os.path.join(defaults.ASN_TBLASTN_DIR,'{genome}.asn'),genome=defaults.SPECIES),
+        fasta_files=expand(os.path.join(defaults.FASTA_OUTPUT_DIR,'{genome}.fa'),genome=defaults.SPECIES),
+        csv_files=os.path.join(defaults.TABLE_OUTPUT_DIR,'blast.csv'),
+        parquet_files=os.path.join(defaults.TABLE_OUTPUT_DIR,'blast.parquet')
+    shell:
+        '''
+        python blast.py 
+        '''
+
+
+rule rpsblaster:
+    input:
+        blast_output=rules.blaster.output,
+    output:
+        asn_files=expand(os.path.join(defaults.ASN_RPSBLAST_DIR,'{genome}.asn'),genome=defaults.SPECIES),
+        csv_files=os.path.join(defaults.TABLE_OUTPUT_DIR,'rpsblast.csv'),
+        parquet_files=os.path.join(defaults.TABLE_OUTPUT_DIR,'rpsblast.parquet')
+    shell:
+        '''
+        python rpsblast.py 
+        '''
+
+
+rule rpsbproc:
+    input:
+        rpsblast_output=rules.rpsblaster.output,
+    output:
+        rpsbproc_txt=expand(os.path.join(defaults.RPSBPROC_OUTPUT_DIR,'{genome}.txt'),genome=defaults.SPECIES),
+    shell:
+        '''
+        python rpsbproc.py 
+        '''
+
+
+rule rpsbproc_parser:
+    input:
+        rpsbproc_output=rules.rpsbproc.output,
+    output:
+        csv_files=os.path.join(defaults.TABLE_OUTPUT_DIR,'domains.csv'),
+        parquet_files=os.path.join(defaults.TABLE_OUTPUT_DIR,'domains.parquet')
+    shell:
+        '''
+        python rpsbproc_parser.py 
+        '''

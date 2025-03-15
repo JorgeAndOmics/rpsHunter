@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 import os
 import subprocess
@@ -43,8 +44,6 @@ def blaster(
     """
     input_path = os.path.join(input_database_path, subject, subject)
     try:
-        # Ensure the ASN output directory exists
-        os.makedirs(defaults.ASN_TBLASTN_DIR, exist_ok=True)
         # Create ASN.1 file path
         asn_file_name = os.path.join(defaults.ASN_TBLASTN_DIR, f"{subject}.asn")
 
@@ -125,7 +124,7 @@ def process_species(species: str) -> Tuple[Optional[pd.DataFrame], List[SeqRecor
     blast_output, asn_file_name = blaster(
         command='tblastn',
         input_database_path=defaults.SPECIES_DB,
-        query_file_path=defaults.QUERY_SEQ,
+        query_file_path=defaults.QUERY_FILE,
         subject=species,
         evalue=defaults.E_VALUE_THRESHOLD
     )
@@ -145,6 +144,7 @@ def process_species(species: str) -> Tuple[Optional[pd.DataFrame], List[SeqRecor
         'Pct Identity': float,
         'E-value': float,
         'Alignment Length': int,
+        'Bit Score': float,
         'S. Start': int,
         'S. End': int
     })
@@ -191,7 +191,7 @@ def process_species(species: str) -> Tuple[Optional[pd.DataFrame], List[SeqRecor
     seq_records = []
     for _, row in merged_df.iterrows():
         header = f"{row['Hit Description']} {row['Subject ID']}:{row['S. Start']}-{row['S. End']}"
-        sequence = row['Subject Sequence']
+        sequence = str(row['Subject Sequence'])
         seq_records.append(SeqRecord(Seq(sequence), id=header, description=''))
 
     return filtered_df, seq_records
@@ -208,18 +208,29 @@ def main():
     os.makedirs(defaults.FASTA_OUTPUT_DIR, exist_ok=True)
     os.makedirs(defaults.TABLE_OUTPUT_DIR, exist_ok=True)
 
-    with tqdm(total=len(defaults.SPECIES)) as pbar:
-        for species in defaults.SPECIES:
-            pbar.set_description(f'Processing {species.replace("_", " ")}...')
-            filtered_df, seq_records = process_species(species)
-            if filtered_df is not None and not filtered_df.empty:
-                dfs.append(filtered_df)
-                # Save sequences to FASTA file for this species
-                if seq_records:
-                    output_fasta_path = os.path.join(defaults.FASTA_OUTPUT_DIR, f'{species}_sequences.fasta')
-                    SeqIO.write(seq_records, output_fasta_path, 'fasta')
-                    # logging.info(f'Saved sequences to {output_fasta_path}')
-            pbar.update(1)
+    species_list = defaults.SPECIES
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = {executor.submit(process_species, species): species for species in species_list}
+
+        with tqdm(total=len(futures)) as pbar:
+            for future in concurrent.futures.as_completed(futures):
+                species = futures[future]
+                try:
+                    filtered_df, seq_records = future.result()
+                except Exception as exc:
+                    logging.error(f"Exception processing {species}: {exc}")
+                    pbar.update(1)
+                    continue
+
+                if filtered_df is not None and not filtered_df.empty:
+                    dfs.append(filtered_df)
+                    # Save sequences to FASTA file for this species
+                    if seq_records:
+                        output_fasta_path = os.path.join(defaults.FASTA_OUTPUT_DIR, f'{species}.fa')
+                        SeqIO.write(seq_records, output_fasta_path, 'fasta')
+                        # logging.info(f'Saved sequences to {output_fasta_path}')
+                pbar.update(1)
 
     # Concatenate all DataFrames
     if dfs:

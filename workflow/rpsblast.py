@@ -2,6 +2,7 @@ import logging
 import os
 import subprocess
 from typing import List, Optional, Tuple
+import concurrent.futures
 
 import pandas as pd
 from tqdm import tqdm
@@ -39,8 +40,6 @@ def rpsblaster(
         A tuple containing the tabular RPS-BLAST output and the path to the ASN.1 file.
     """
     try:
-        # Ensure the ASN output directory exists
-        os.makedirs(defaults.ASN_RPSBLAST_DIR, exist_ok=True)
         # Create ASN.1 file path
         asn_file_name = os.path.join(defaults.ASN_RPSBLAST_DIR, f"{species}.asn")
 
@@ -103,7 +102,7 @@ def parse_blast_output(blast_output: str) -> pd.DataFrame:
 
 def process_rps_species(species: str) -> Optional[pd.DataFrame]:
     """Processes RPS-BLAST results for a single species."""
-    fasta_file_path = os.path.join(defaults.FASTA_OUTPUT_DIR, f'{species}_sequences.fasta')
+    fasta_file_path = os.path.join(defaults.FASTA_OUTPUT_DIR, f'{species}.fa')
 
     if not os.path.exists(fasta_file_path):
         logging.warning(f'FASTA file for species {species} does not exist at {fasta_file_path}.')
@@ -160,17 +159,23 @@ def main():
     # Initialize list to collect DataFrames
     dfs = []
 
-    # Ensure output directories exist
-    os.makedirs(defaults.TABLE_OUTPUT_DIR, exist_ok=True)
-    os.makedirs(defaults.ASN_RPSBLAST_DIR, exist_ok=True)
-
-    with tqdm(total=len(defaults.SPECIES)) as pbar:
-        for species in defaults.SPECIES:
-            pbar.set_description(f'Processing {species.replace("_", " ")}...')
-            filtered_df = process_rps_species(species)
-            if filtered_df is not None and not filtered_df.empty:
-                dfs.append(filtered_df)
-            pbar.update(1)
+    # Use ThreadPoolExecutor to process species concurrently
+    with tqdm(total=len(defaults.SPECIES), desc='Running RPSBLAST against species...') as pbar:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=defaults.MAX_THREADPOOL_WORKERS) as executor:
+            future_to_species = {
+                executor.submit(process_rps_species, species): species
+                for species in defaults.SPECIES
+            }
+            for future in concurrent.futures.as_completed(future_to_species):
+                species = future_to_species[future]
+                try:
+                    filtered_df = future.result()
+                    if filtered_df is not None and not filtered_df.empty:
+                        dfs.append(filtered_df)
+                except Exception as exc:
+                    logging.error(f'Error processing species {species}: {exc}')
+                finally:
+                    pbar.update(1)
 
     # Concatenate all DataFrames
     if dfs:
