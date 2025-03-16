@@ -12,7 +12,7 @@ suppressMessages({
 args <- commandArgs(trailingOnly = TRUE)
 
 args.data <- args[1]
-# args.data <- file.path("C:/Users/Lympha/Desktop/results-PRDM9-isoformA/tables/domains.parquet")
+# args.data <- file.path("C:/Users/Lympha/Documents/Repositories/rpsHunter/results/tables/domains.parquet")
 args.species <- args[2]
 # args.species <- file.path("C:/Users/Lympha/Documents/Repositories/rpsHunter/data/config/species.txt")
 args.output_folder <- args[3]
@@ -105,7 +105,7 @@ domain.ranking <- c("Complete" = 1,
 
 plot.data.ranked <- plot.data %>%
   mutate(rank = domain.ranking[Incomplete.desc],
-         Domain = factor(Domain, levels = sort(unique(Domain)))) 
+         Domain = factor(Domain, levels = rev(sort(unique(Domain))))) 
 
 
 # GENERATE TILE PLOT

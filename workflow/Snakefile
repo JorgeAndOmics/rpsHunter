@@ -139,7 +139,7 @@ rule contingency_sorter:
         tile_plot=os.path.join(defaults.PLOT_DIR,'tile_plot.png')
     params:
         domain_data=os.path.join(defaults.TABLE_OUTPUT_DIR,'domains.parquet'),
-        species_list=defaults.QUERY_INPUT_FILE,
+        species_list=defaults.SPECIES_FILE,
         output_folder=defaults.PLOT_DIR
     shell:
         '''

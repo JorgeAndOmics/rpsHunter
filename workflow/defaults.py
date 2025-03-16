@@ -92,5 +92,5 @@ SPECIES_FILE = os.path.abspath(os.path.join(CONFIG_DIR, 'species.txt'))
 if not USE_SPECIES_LIST:
     SPECIES: list = [(f.split('.fa')[0]).strip() for f in os.listdir(SPECIES_DB) if f.endswith('.fa')]
 else:
-    SPECIES: list = [line.strip() for line in open(SPECIES_FILE, 'r')]
+    SPECIES: list = [line.strip() for line in open(SPECIES_FILE, 'r') if line.strip()]
 
