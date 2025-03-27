@@ -177,7 +177,7 @@ def main():
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = {executor.submit(process_species, species): species for species in species_list}
 
-        with tqdm(total=len(futures)) as pbar:
+        with tqdm(total=len(futures), desc = 'Running tBLASTn against select species...') as pbar:
             for future in concurrent.futures.as_completed(futures):
                 species = futures[future]
                 try:

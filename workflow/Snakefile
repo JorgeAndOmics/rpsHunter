@@ -40,6 +40,7 @@ rule query_downloader_setup:
     shell:
         '''
         export ENTREZ_EMAIL={params.entrez_email:q} && \
+        rm -f {params.query_dir:q}/* && \
         bash query_downloader.sh {params.query_acc:q} {params.query_dir:q} {params.download_log:q}
         '''
 
@@ -79,6 +80,7 @@ rule blast_db_generator:
                           genome=defaults.SPECIES,
                           ext=BLAST_DB_EXT)
 
+# TODO: CDD DATABASE DOWNLOAD AND SETUP
 
 rule blaster:
     input:
@@ -140,11 +142,13 @@ rule contingency_sorter:
     params:
         domain_data=os.path.join(defaults.TABLE_OUTPUT_DIR,'domains.parquet'),
         species_list=defaults.SPECIES_FILE,
-        output_folder=defaults.PLOT_DIR
+        plot_output_folder=defaults.PLOT_DIR,
+        table_output_folder=defaults.TABLE_OUTPUT_DIR
     shell:
         '''
         Rscript contingency_sorter.R \
         {params.domain_data:q} \
         {params.species_list:q} \
-        {params.output_folder:q}
+        {params.plot_output_folder:q} \
+        {params.table_output_folder:q}
         '''
