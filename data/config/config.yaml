@@ -1,0 +1,44 @@
+blast:
+  e_value: 0.01
+  perc_identity: 60
+  seq_length: 50
+  bitscore: 70
+
+query:
+  format: 'fa'
+  accession: 'NP_001297143.1'  # Example accession number
+
+execution:
+  num_cores: 16
+  use_species_list: true
+  retrieval_time_lag: 0.3
+  max_retrieval_attempts: 9
+  max_threadpool_workers: null
+  entrez_email: 'your_email@example.com'
+
+display:
+  display_snakemake_info: true
+  display_requests_warning: false
+  display_operation_info: false
+
+root:
+  db_root_folder: '/mnt/v/databases'
+  data_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/data'
+  results_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/results'
+  logs_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/logs'
+
+logging:
+  level_styles:
+    debug: { color: 'white' }
+    info: { color: 'cyan', bold: 'yes' }
+    warning: { color: 'yellow' }
+    error: { color: 'red', bold: 'yes' }
+    critical: { color: 'black', bold: 'yes', background: 'red' }
+  field_styles:
+    asctime: { color: 'green' }
+    levelname: { color: 'green' }
+    name: { color: 'green' }
+
+species:
+  'GCA_045786645.1': 'Wasp-A'
+  'GCA_003054995.1': 'Wasp-B'

@@ -232,7 +232,7 @@ scatter.3D.plot <- plot_ly(
   type = "scatter3d",
   mode = "markers",
   marker = list(
-    size = ~Count * 2,
+    size = ~sqrt(Count) * 3,
     color = ~Count,
     colorscale = 'Plasma',
     showscale = TRUE,
@@ -244,7 +244,7 @@ scatter.3D.plot <- plot_ly(
   layout(
     scene = list(
       xaxis = list(
-        title = "Species",
+        title = "",
         tickvals = seq_along(species_levels),
         ticktext = species_levels
       ),

@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+
+# -------------------
+# DEPENDENCIES
+# -------------------
+
+import os
+import subprocess
+import argparse
+from pathlib import Path
+
+
+# -----------------------------
+# MAIN ENTRY POINT
+# -----------------------------
+
+if __name__ == '__main__':
+    # -----------------------------
+    # PARSE COMMAND-LINE ARGUMENTS
+    # -----------------------------
+    parser = argparse.ArgumentParser(
+        description='rpsHunter: A tool for gene domain identification and analysis.'
+    )
+
+    parser.add_argument(
+        '--download_genomes',
+        action='store_true',
+        help="Downloads genomes specified in .yaml file. "
+             "Will skip download if the same files exist currently in the target directory."
+    )
+
+    parser.add_argument(
+        '--download_query',
+        action='store_true',
+        help="Downloads query protein sequence in fasta format."
+             " Will skip download if the same file exists currently in the target directory."
+    )
+
+    parser.add_argument(
+        '--blast_dbs',
+        action='store_true',
+        help="Generates BLAST databases from genomes."
+    )
+
+    parser.add_argument(
+        '--blast',
+        action='store_true',
+        help="Runs tBLASTn of provided protein accession sequence against genome databases."
+    )
+
+    parser.add_argument(
+        '--rpsblast',
+        action='store_true',
+        help="Runs rpsblast of provided protein accession sequence against domain database."
+    )
+
+    parser.add_argument(
+        '--rpsbproc',
+        action='store_true',
+        help="Runs rpsbproc to process the rpsblast output."
+    )
+
+    parser.add_argument(
+        '--rpsbproc_parser',
+        action='store_true',
+        help="Parses the rpsbproc output to table format."
+    )
+
+    parser.add_argument(
+        '--contingency_parser',
+        action='store_true',
+        help="Generates contingency tables and plots."
+    )
+
+    parser.add_argument(
+        '--skip_validation', '-skp',
+        action='store_true',
+        help='Skip input validation.'
+    )
+
+    args, unknown = parser.parse_known_args()
+
+    # -----------------------------
+    # DEFINE SCRIPT EXECUTION PATH
+    # -----------------------------
+    script_dir = Path(__file__).resolve().parent / 'workflow'
+
+    # -----------------------------
+    # EXECUTE MAIN PIPELINE
+    # -----------------------------
+    main_cmd: list = ['python', 'scripts/RetroSeek.py']
+
+    if args.skip_validation:
+        main_cmd.append('--skip_validation')
+
+    if args.download_genomes:
+        main_cmd.append('--download_genomes')
+
+    if args.download_query:
+        main_cmd.append('--download_query')
+
+    if args.blast_dbs:
+        main_cmd.append('--blast_dbs')
+
+    if args.blast:
+        main_cmd.append('--blast')
+
+    if args.rpsblast:
+        main_cmd.append('--rpsblast')
+
+    if args.rpsbproc:
+        main_cmd.append('--rpsbproc')
+
+    if args.rpsbproc_parser:
+        main_cmd.append('--rpsbproc_parser')
+
+    if args.contingency_parser:
+        main_cmd.append('--contingency_parser')
+
+    if unknown:
+        main_cmd.extend(unknown)
+
+    subprocess.run(main_cmd, cwd=script_dir)

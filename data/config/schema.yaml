@@ -1,0 +1,65 @@
+blast: include('blast_schema')
+query: include('query_schema')
+execution: include('execution_schema')
+root: include('root_schema')
+logging: include('logging_schema')
+species: include('species_schema')
+
+blast_schema:
+  e_value: num(min=0)
+  perc_identity: num(min=0, max=100)
+  seq_length: int(min=1)
+  bitscore: num(min=0)
+
+query_schema:
+  format: str()
+  accession: str(matches='[A-Z]{2,}_?[0-9]+\.[0-9]{1,2}')
+
+execution_schema:
+  num_cores: int(min=1)
+  use_species_list: bool()
+  retrieval_time_lag: num(min=0)
+  max_retrieval_attempts: int(min=1)
+  max_threadpool_workers: any(int(min=1), null())
+  entrez_email: str()
+
+display:
+  display_snakemake_info: bool()
+  display_requests_warning: bool()
+  display_operation_info: bool()
+
+root_schema:
+  db_root_folder: str()
+  data_root_folder: str()
+  results_root_folder: str()
+  logs_root_folder: str()
+
+logging_schema:
+  level_styles: include('level_styles_schema')
+  field_styles: include('field_styles_schema')
+
+level_styles_schema:
+  debug: include('color_only_schema')
+  info: include('color_bold_schema')
+  warning: include('color_only_schema')
+  error: include('color_bold_schema')
+  critical: include('color_bold_bg_schema')
+
+field_styles_schema:
+  asctime: include('color_only_schema')
+  levelname: include('color_only_schema')
+  name: include('color_only_schema')
+
+color_only_schema:
+  color: str()
+
+color_bold_schema:
+  color: str()
+  bold: str(matches='^(yes|no)$')
+
+color_bold_bg_schema:
+  color: str()
+  bold: str(matches='^(yes|no)$')
+  background: str()
+
+species_schema: map(str(), key=str())

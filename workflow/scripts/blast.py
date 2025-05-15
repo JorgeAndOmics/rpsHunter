@@ -5,13 +5,11 @@ import subprocess
 from typing import List, Optional, Tuple
 
 import pandas as pd
-from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 from tqdm import tqdm
 
 import defaults
 from colored_logging import colored_logging
+
 
 def blaster(
     command: str,
@@ -44,7 +42,7 @@ def blaster(
     input_path = os.path.join(input_database_path, subject, subject)
     try:
         # Create ASN.1 file path
-        asn_file_name = os.path.join(defaults.ASN_TBLASTN_DIR, f"{subject}.asn")
+        asn_file_name = os.path.join(defaults.PATH_DICT[ASN_TBLASTN_DIR], f"{subject}.asn")
 
         # Construct the BLAST command
         blast_command = [
@@ -90,6 +88,7 @@ def blaster(
         logging.error(f'An exception occurred while running BLAST for {subject}: {str(e)}')
         return None, None
 
+
 def parse_blast_output(blast_output: str) -> pd.DataFrame:
     """Parses the combined BLAST output (with sequence) into a DataFrame."""
     if not blast_output:
@@ -109,11 +108,12 @@ def parse_blast_output(blast_output: str) -> pd.DataFrame:
     df = pd.DataFrame(rows, columns=columns)
     return df
 
+
 def process_species(species: str) -> Tuple[Optional[pd.DataFrame], List[SeqRecord]]:
     """Processes BLAST results for a single species."""
     blast_output, asn_file_name = blaster(
         command='tblastn',
-        input_database_path=defaults.SPECIES_DB,
+        input_database_path=defaults.PATH_DICT[SPECIES_DB],
         query_file_path=defaults.QUERY_FILE,
         subject=species,
         evalue=defaults.E_VALUE_THRESHOLD
@@ -143,29 +143,15 @@ def process_species(species: str) -> Tuple[Optional[pd.DataFrame], List[SeqRecor
     if 'Subject Sequence' in blast_df.columns:
         blast_df['Subject Sequence'] = blast_df['Subject Sequence'].str.replace('-', '').str.replace('*', '')
 
-    # Apply filtering criteria
-    filtered_df = blast_df[
-        (blast_df['Pct Identity'] >= defaults.PERC_IDENTITY_THRESHOLD) &
-        (blast_df['E-value'] <= defaults.E_VALUE_THRESHOLD) &
-        (blast_df['Alignment Length'] >= defaults.SEQ_LENGTH_THRESHOLD) &
-        (blast_df['Bit Score'] >= defaults.BITSCORE_THRESHOLD)
-    ].copy()
 
-    if filtered_df.empty:
+    if blast_df.empty:
         logging.warning(f'No hits after filtering for species {species}.')
         return None, []
 
-    filtered_df['Species'] = species
+    blast_df['Species'] = species
 
-    # Generate sequence records directly from the filtered DataFrame
-    seq_records = []
-    if 'Subject Sequence' in filtered_df.columns:
-        for _, row in filtered_df.iterrows():
-            header = f"{row['Subject ID']}:{row['S. Start']}-{row['S. End']}"
-            sequence = str(row['Subject Sequence'])
-            seq_records.append(SeqRecord(Seq(sequence), id=header, description=''))
+    return blast_df
 
-    return filtered_df, seq_records
 
 def main():
     # Set up logging
@@ -181,24 +167,22 @@ def main():
             for future in concurrent.futures.as_completed(futures):
                 species = futures[future]
                 try:
-                    filtered_df, seq_records = future.result()
+                    blast_df = future.result()
                 except Exception as exc:
                     logging.error(f"Exception processing {species}: {exc}")
                     pbar.update(1)
                     continue
 
-                if filtered_df is not None and not filtered_df.empty:
-                    dfs.append(filtered_df)
-                    # Save sequences to a FASTA file for this species
-                    if seq_records:
-                        output_fasta_path = os.path.join(defaults.FASTA_OUTPUT_DIR, f'{species}.fa')
-                        SeqIO.write(seq_records, output_fasta_path, 'fasta')
+                if blast_df is not None and not blast_df.empty:
+                    dfs.append(blast_df)
+
                 pbar.update(1)
 
     if dfs:
         df = pd.concat(dfs, axis=0, ignore_index=True)
-        output_csv_path = os.path.join(defaults.TABLE_OUTPUT_DIR, 'blast.csv')
-        output_parquet_path = os.path.join(defaults.TABLE_OUTPUT_DIR, 'blast.parquet')
+
+        output_csv_path = os.path.join(defaults.PATH_DICT[TABLE_OUTPUT_DIR], 'blast.csv')
+        output_parquet_path = os.path.join(defaults.PATH_DICT[TABLE_OUTPUT_DIR], 'blast.parquet')
 
         df.to_csv(output_csv_path, index=False)
         logging.info(f'Saved DataFrame as CSV to {output_csv_path}')
@@ -207,6 +191,7 @@ def main():
         logging.info(f'Saved DataFrame as Parquet to {output_parquet_path}')
     else:
         logging.warning('No data frames to concatenate. No output files were created.')
+
 
 if __name__ == '__main__':
     main()
