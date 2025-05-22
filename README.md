@@ -50,18 +50,23 @@
 
 ## Installation
 
+## Installation
+
 To set up and run **rpsHunter**, follow these steps:
 
-1. **Download **rpsHunter**: Obtain the latest version from the [Releases](#) section.
+1. **Download rpsHunter**: Obtain the latest version from the [Releases](#) section.
 
-2. **Install Dependencies**: RetroSeek requires the following tools installed on your host system:
+2. **Install Dependencies**: rpsHunter requires the following tools installed on your host system:
    - [BLAST+ (version 2.12 or higher)](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html)
    - [NCBI Datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/command-line-tools/download-and-install/)
+   - [rpsbproc](https://ftp.ncbi.nih.gov/pub/mmdb/cdd/rpsbproc/RpsbProc-x64-linux.tar.gz) (NCBI's RPS-BLAST post-processing tool)
+
+Furthermore, make sure to run `getcdddata.sh` within the rpsbproc tar.gz file to download the required accessory files for rpsbproc. Edit `db_root_folder` in the `config.yaml` file located in `data/config`. Create the following folders: `accessory/rpsbproc_annot1` within the specified `db_root_folder` path and uncompress the downloaded files within before executing the pipeline.
 
 3. **Create Conda Environment**: After installing the dependencies, set up a new Conda environment using the provided `rpsHunter.yaml` file located in `data/config`:
 
-```bash
-conda env create -f data/config/rpsHunter.yaml
+   ```bash
+   conda env create -f data/config/rpsHunter.yaml
 ```
 
 **Note**: Miniconda is recommended for optimal compatibility. However, you may use Mamba as a faster and more streamlined alternative for managing Conda environments.
@@ -164,7 +169,7 @@ To execute the full pipeline using all available CPU cores and skip input valida
 
 ## Screenshots
 
-[![tile-plot.jpg](images/tile-plot.jpg)](images/tile-plot.jpg)
+[![tile-plot.png](images/tile-plot.png)](images/tile-plot.png)
 
 [![3D-plot.png](images/3D-plot.png)](images/3D-plot.png)
 
