@@ -169,7 +169,7 @@ To execute the full pipeline using all available CPU cores and skip input valida
 
 ## Screenshots
 
-[![tile-plot.png](images/tile-plot.png)](images/tile-plot.png)
+[![tile-plot.jpg](images/tile-plot.jpg)](images/tile-plot.jpg)
 
 [![3D-plot.png](images/3D-plot.png)](images/3D-plot.png)
 
