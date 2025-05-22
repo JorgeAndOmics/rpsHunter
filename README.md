@@ -5,7 +5,8 @@
 
 
 
-[![High-Resolution-Color-Logo-cropped.png](https://i.postimg.cc/Fsg2VZtF/High-Resolution-Color-Logo-cropped.png)](https://postimg.cc/BXbYq2QR)
+[![rpsHunter](images/logo.png)](images/logo.png)
+
 
 
 # rpsHunter
