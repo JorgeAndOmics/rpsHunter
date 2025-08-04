@@ -285,7 +285,7 @@ def validation_run(fasta_files: Optional[List[str]] = None) -> bool:
         -------
             :returns: True if user confirms execution after passing validation, False otherwise.
     """
-    colored_logging.colored_logging(log_file_name='validator.log')
+    colored_logging(log_file_name='validator.log')
 
     fasta_files_list = fasta_files or []
     all_valid = main_validator(fasta_files=fasta_files_list)

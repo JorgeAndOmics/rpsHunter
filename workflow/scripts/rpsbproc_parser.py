@@ -48,10 +48,10 @@ def parse_rpsbproc_output(input_dir: str, output_dir: str) -> None:
 
     domain_hits: List[Dict[str, Any]] = []
     fieldnames: List[str] = [
-        'File_Name', 'Session_ordinal', 'Program', 'Version', 'Database', 'Score_matrix', 'Evalue_threshold',
+        'Species', 'Session_ordinal', 'Program', 'Version', 'Database', 'Score_matrix', 'Evalue_threshold',
         'Query_ID', 'Seq_type', 'Seq_length', 'Definition', 'Chromosome', 'Start', 'End',
-        'Hit_type', 'PSSM_ID', 'From', 'To', 'Evalue', 'Bit_score',
-        'Accession', 'Short_name', 'Incomplete', 'Superfamily_PSSM_ID'
+        'Hit_type', 'PSSM_ID', 'From', 'To', 'Evalue', 'Bitscore',
+        'Accession', 'Domain', 'Incomplete', 'Superfamily_PSSM_ID'
     ]
 
     files: List[str] = [
@@ -121,7 +121,7 @@ def parse_rpsbproc_output(input_dir: str, output_dir: str) -> None:
                         domain_line = lines[index].strip()
                         domain_parts = domain_line.split('\t')
                         domain_hit = {
-                            'File_Name': file_name_without_ext,
+                            'Species': file_name_without_ext,
                             'Session_ordinal': domain_parts[0],
                             'Query_ID': domain_parts[1],
                             'Hit_type': domain_parts[2],
@@ -129,9 +129,9 @@ def parse_rpsbproc_output(input_dir: str, output_dir: str) -> None:
                             'From': domain_parts[4],
                             'To': domain_parts[5],
                             'Evalue': domain_parts[6],
-                            'Bit_score': domain_parts[7],
+                            'Bitscore': domain_parts[7],
                             'Accession': domain_parts[8],
-                            'Short_name': domain_parts[9],
+                            'Domain': domain_parts[9],
                             'Incomplete': domain_parts[10],
                             'Superfamily_PSSM_ID': domain_parts[11],
                             'Seq_type': current_query['Seq_type'],
@@ -154,7 +154,7 @@ def parse_rpsbproc_output(input_dir: str, output_dir: str) -> None:
 
                 else:
                     no_domain_hit = {
-                        'File_Name': file_name_without_ext,
+                        'Species': file_name_without_ext,
                         'Session_ordinal': current_session.get('Session_ordinal', ''),
                         'Program': current_session.get('Program', ''),
                         'Version': current_session.get('Version', ''),
@@ -173,9 +173,9 @@ def parse_rpsbproc_output(input_dir: str, output_dir: str) -> None:
                         'From': '',
                         'To': '',
                         'Evalue': '',
-                        'Bit_score': '',
+                        'Bitscore': '',
                         'Accession': '',
-                        'Short_name': '',
+                        'Domain': '',
                         'Incomplete': '',
                         'Superfamily_PSSM_ID': ''
                     }
@@ -223,6 +223,6 @@ def parse_rpsbproc_output(input_dir: str, output_dir: str) -> None:
 if __name__ == '__main__':
     colored_logging.colored_logging(log_file_name='rpsbproc_parser.txt')
     parse_rpsbproc_output(
-        input_dir=defaults.PATH_DICT[RPSBPROC_OUTPUT_DIR],
-        output_dir=defaults.PATH_DICT[TABLE_OUTPUT_DIR]
+        input_dir=defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'],
+        output_dir=defaults.PATH_DICT['TABLE_OUTPUT_DIR']
     )

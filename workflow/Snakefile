@@ -1,9 +1,10 @@
 import os
+import pandas as pd
 from scripts import defaults
 
 def retrieve_species_list(csv_path:str, default:list[str]=None) -> list[str]:
     if os.path.exists(csv_path):
-        return pd.read_csv(csv_path)["species"].unique().tolist()
+        return pd.read_csv(csv_path)["Species"].unique().tolist()
     else:
         return default
 
@@ -155,12 +156,12 @@ rule rpsbproc_parser:
 rule contingency_sorter:
     input:
         domains=rules.rpsbproc_parser.output,
-        species_list=defaults.QUERY_INPUT_FILE
+        species_list=defaults.SPECIES
     output:
         tile_plot=os.path.join(defaults.PATH_DICT['PLOT_DIR'],'tile_plot.png')
     params:
         domain_data=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'domains.parquet'),
-        species_list=defaults.SPECIES_FILE,
+        species_list=defaults.SPECIES,
         plot_output_folder=defaults.PATH_DICT['PLOT_DIR'],
         table_output_folder=defaults.PATH_DICT['TABLE_OUTPUT_DIR']
     shell:
