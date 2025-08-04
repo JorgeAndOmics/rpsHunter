@@ -110,7 +110,7 @@ def run_snakemake_rule(rule: str, num_cores: int, display_info: bool, snakemake_
 
 def cli_entry() -> None:
     """
-    Main entrypoint for the RetroSeek CLI.
+    Main entrypoint for the rpsHunter CLI.
 
         Parameters
         ----------
@@ -124,7 +124,7 @@ def cli_entry() -> None:
         ------
             :raises SystemExit: If validation fails or CLI arguments are missing.
     """
-    colored_logging.colored_logging(log_file_name='RetroSeek_main.log')
+    colored_logging.colored_logging(log_file_name='rpsHunter_main.log')
 
     # -------------------------------------------------------------------------
     # Argument Parsing

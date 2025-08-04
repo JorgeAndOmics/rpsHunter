@@ -49,7 +49,7 @@ def parse_rpsbproc_output(input_dir: str, output_dir: str) -> None:
     domain_hits: List[Dict[str, Any]] = []
     fieldnames: List[str] = [
         'File_Name', 'Session_ordinal', 'Program', 'Version', 'Database', 'Score_matrix', 'Evalue_threshold',
-        'Query_ID', 'Seq_type', 'Seq_length', 'Definition',
+        'Query_ID', 'Seq_type', 'Seq_length', 'Definition', 'Chromosome', 'Start', 'End',
         'Hit_type', 'PSSM_ID', 'From', 'To', 'Evalue', 'Bit_score',
         'Accession', 'Short_name', 'Incomplete', 'Superfamily_PSSM_ID'
     ]
@@ -110,6 +110,11 @@ def parse_rpsbproc_output(input_dir: str, output_dir: str) -> None:
                     'Seq_length': parts[3],
                     'Definition': parts[4]
                 }
+                locations_in_query = {
+                    'Chromosome': parts[4].split(':')[0] if ':' in parts[4] else '',
+                    'Start': parts[4].split(':')[1].split('-')[0] if '-' in parts[4] else '',
+                    'End': parts[4].split(':')[1].split('-')[1] if '-' in parts[4] else ''
+                }
                 if index < total_lines and lines[index].strip() == 'DOMAINS':
                     index += 1
                     while index < total_lines and not lines[index].strip().startswith('ENDDOMAINS'):
@@ -132,6 +137,9 @@ def parse_rpsbproc_output(input_dir: str, output_dir: str) -> None:
                             'Seq_type': current_query['Seq_type'],
                             'Seq_length': current_query['Seq_length'],
                             'Definition': current_query['Definition'],
+                            'Chromosome': locations_in_query['Chromosome'],
+                            'Start': locations_in_query['Start'],
+                            'End': locations_in_query['End'],
                             'Program': current_session['Program'],
                             'Version': current_session['Version'],
                             'Database': current_session['Database'],
@@ -157,6 +165,9 @@ def parse_rpsbproc_output(input_dir: str, output_dir: str) -> None:
                         'Seq_type': current_query.get('Seq_type', ''),
                         'Seq_length': current_query.get('Seq_length', ''),
                         'Definition': current_query.get('Definition', ''),
+                        'Chromosome': locations_in_query.get('Chromosome', ''),
+                        'Start': locations_in_query.get('Start', ''),
+                        'End': locations_in_query.get('End', ''),
                         'Hit_type': '',
                         'PSSM_ID': '',
                         'From': '',
