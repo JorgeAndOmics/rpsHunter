@@ -153,7 +153,7 @@ rule rpsbproc_parser:
         python scripts/rpsbproc_parser.py 
         '''
 
-rule contingency_sorter:
+rule completeness_detector:
     input:
         domains=rules.rpsbproc_parser.output,
         species_list=defaults.SPECIES
@@ -166,9 +166,29 @@ rule contingency_sorter:
         table_output_folder=defaults.PATH_DICT['TABLE_OUTPUT_DIR']
     shell:
         '''
-        Rscript scripts/contingency_sorter.R \
+        Rscript scripts/completeness_detector.R \
         {params.domain_data:q} \
         {params.species_list:q} \
         {params.plot_output_folder:q} \
-        {params.table_output_folder:q}
+        '''
+
+rule contingency_sorter:
+    input:
+        domains=rules.rpsbproc_parser.output,
+    output:
+        domain_3d_plot=os.path.join(defaults.PATH_DICT['PLOT_DIR'],'scatter_3D_plot.html'),
+        contingency_table=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'contingency_table.csv'),
+    params:
+        domain_data=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'domains.parquet'),
+        species_list=defaults.SPECIES,
+        plot_output_folder=defaults.PATH_DICT['PLOT_DIR'],
+        table_output_folder=defaults.PATH_DICT['TABLE_OUTPUT_DIR'],
+        range_output_folder=defaults.PATH_DICT['RANGE_OUTPUT_DIR']
+    shell:
+        '''
+        Rscript scripts/contingency_sorter.R \
+        {params.domain_data:q} \
+        {params.plot_output_folder:q} \
+        {params.table_output_folder:q} \
+        {params.range_output_folder:q}
         '''

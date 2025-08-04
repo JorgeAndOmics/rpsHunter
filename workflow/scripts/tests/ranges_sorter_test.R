@@ -9,6 +9,7 @@ suppressMessages({
   library(plotly)
   library(GenomicRanges)
   library(plyranges)
+  library(rtracklayer)
 })
 
 # =============================================================================
@@ -64,7 +65,28 @@ full.species <- args.species
 data.clean <- data %>%
   filter(nzchar(Domain)) %>%
   mutate(
-    Bitscore = as.numeric(Bitscore)
+    Bitscore = as.numeric(Bitscore),
+    Start = as.integer(Start),
+    End = as.integer(End)
+  )
+
+# Standardize species names with a regex pattern
+chr.pattern <- "[A-Za-z]+_?[0-9]+[._]?[0-9]*"
+data.clean <- data.clean %>%
+  mutate(Chromosome = str_extract(Chromosome, chr.pattern))
+
+# Set up strand based on start-end directionality. Fix start-end directionality
+data.clean <- data.clean %>%
+  mutate(
+    Strand = ifelse(Start < End, "+", "-"),
+  )
+
+start_vec = pmin(data.clean$Start, data.clean$End)
+end_vec = pmax(data.clean$Start, data.clean$End)
+data.clean <- data.clean %>%
+  mutate(
+    Start = start_vec,
+    End = end_vec
   )
 
 # =============================================================================
@@ -72,28 +94,51 @@ data.clean <- data %>%
 # =============================================================================
 data.ranges <- GRanges(
   seqnames = data.clean$Chromosome,
-  ranges = IRanges(start = data.clean$Start, end = data.clean$End)
+  ranges = IRanges(
+    start = data.clean$Start, 
+    end = data.clean$End
+  ),
+  strand = data.clean$Strand,
   species = data.clean$Species,
   domain = data.clean$Domain,
   bitscore = data.clean$Bitscore,
   evalue = data.clean$Evalue,
-  incomplete = data.clean$Incomplete
-  pssm = data.clean$PSSM_ID
-  superfamily _= data.clean$Superfamily_PSSM_ID
+  incomplete = data.clean$Incomplete,
+  pssm = data.clean$PSSM_ID,
+  superfamily = data.clean$Superfamily_PSSM_ID
 )
+
+data.ranges.reduced <- data.ranges %>%
+  group_by(species, domain, incomplete) %>%
+  reduce_ranges_directed(
+    mean_bitscore = mean(bitscore),
+  )
+
+# Separate ranges by species
+data.ranges.reduced.species <- split(data.ranges.reduced, mcols(data.ranges.reduced)$species)
+
+
+# Convert to a tidy data frame
+data.ranges.df <- as.data.frame(data.ranges.reduced) %>%
+  dplyr::rename(
+    Species = species,
+    Domain = domain,
+    Incomplete = incomplete,
+    Mean_Bitscore = mean_bitscore
+  )
 
 # =============================================================================
 # FULL CONTINGENCY TABLE & 3D SCATTER PLOT
 # =============================================================================
 
-data.grouped.contingency <- data.clean %>%
+data.grouped.contingency <- data.ranges.df %>%
   group_by(Species, Domain, Incomplete) %>%
   arrange(.by_group = TRUE) %>%
   summarise(Count = n(), .groups = "drop")
 
 incomplete.vec <- c("N", "C", "NC", "-")
-domain.vec <- unique(data.clean$Domain)
-species.vec <- unique(data.clean$Species)
+domain.vec <- unique(data.ranges.df$Domain)
+species.vec <- unique(data.ranges.df$Species)
 
 data.full.cartesian <- expand.grid(
   Species = species.vec,
@@ -187,14 +232,13 @@ scatter.3D.plot <- plot_ly(
 # =============================================================================
 # EXPORTS (Save plots and tables)
 # =============================================================================
-
-ggsave(
-  file.path(args.output_plot_folder, "tile_plot.png"),
-  tile.plot,
-  width = 15,
-  height = 10,
-  dpi = 300
-)
+# Ranges export
+for (species in names(data.ranges.reduced.species)) {
+  rtracklayer::export(
+    data.ranges.reduced.species[[species]], 
+    file.path(args.output_table_folder, paste0(species, '.gff3')), 
+    format = 'GFF3')
+}
 
 htmlwidgets::saveWidget(
   scatter.3D.plot,

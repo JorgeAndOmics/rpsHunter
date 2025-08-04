@@ -154,11 +154,11 @@ def cli_entry() -> None:
     parser.add_argument('--rpsbproc_parser', action='store_true',
                         help='Parse rpsbproc output into tabular format.')
 
+    parser.add_argument('--completeness_detector', action='store_true',
+                        help='Generate tile plot with highest-completeness degree per domain.')
+
     parser.add_argument('--contingency_parser', action='store_true',
                         help='Generate contingency tables and visual plots.')
-
-    parser.add_argument('--pair_detection', action='store_true',
-                        help='Detect conserved domain co-occurrence patterns.')
 
     parser.add_argument('--skip_validation', '-skp', action='store_true',
                         help='Skip input validation checks.')
@@ -246,17 +246,17 @@ def cli_entry() -> None:
             snakemake_flags=unknown
         )
 
-    if args.contingency_parser:
+    if args.completeness_detector:
         run_snakemake_rule(
-            rule='contingency_sorter',
+            rule='completeness_detector',
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown
         )
 
-    if args.pair_detection:
+    if args.contingency_parser:
         run_snakemake_rule(
-            rule='pair_detector',
+            rule='contingency_sorter',
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown

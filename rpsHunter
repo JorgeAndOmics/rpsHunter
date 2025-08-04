@@ -67,6 +67,12 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
+        '--completeness_detector',
+        action='store_true',
+        help="Generates tile plot with highest-completeness degree per domain."
+    )
+
+    parser.add_argument(
         '--contingency_parser',
         action='store_true',
         help="Generates contingency tables and plots."
@@ -113,6 +119,9 @@ if __name__ == '__main__':
 
     if args.rpsbproc_parser:
         main_cmd.append('--rpsbproc_parser')
+
+    if args.contingency_parser:
+        main_cmd.append('--completeness_detector')
 
     if args.contingency_parser:
         main_cmd.append('--contingency_parser')

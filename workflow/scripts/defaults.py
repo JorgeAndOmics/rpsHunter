@@ -62,6 +62,7 @@ PATH_DICT['FASTA_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_
 PATH_DICT['ASN_ROOT_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'asn'))
 PATH_DICT['RPSBPROC_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'rpsbproc'))
 PATH_DICT['XML_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'xml'))
+PATH_DICT['RANGE_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'ranges'))
 
 # === ASN Subdirectories ===
 PATH_DICT['ASN_TBLASTN_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'tblastn'))
