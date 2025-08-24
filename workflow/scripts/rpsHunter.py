@@ -216,7 +216,7 @@ def cli_entry() -> None:
 
     if args.blast:
         run_snakemake_rule(
-            rule='blaster_parser',
+            rule='blast_parser',
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown

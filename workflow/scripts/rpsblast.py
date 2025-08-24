@@ -9,8 +9,11 @@ import argparse
 import concurrent.futures
 import logging
 import os
+import re
 import subprocess
 from typing import List, Optional, Tuple, Dict, Any
+
+from Bio import SeqIO
 
 import pandas as pd
 from tqdm import tqdm
@@ -112,7 +115,7 @@ def parse_blast_output(blast_output: str) -> pd.DataFrame:
             :raises ValueError: If the output format is unexpected.
     """
     columns: List[str] = [
-        'Query ID', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches', 'Gap Openings',
+        'Query ID', 'Tag', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches', 'Gap Openings',
         'Q. Start', 'Q. End', 'S. Start', 'S. End', 'E-value', 'Bit Score', 'Subject Title'
     ]
 
@@ -177,6 +180,9 @@ def process_rps_species(species: str) -> Optional[pd.DataFrame]:
     blast_df = blast_df.dropna(subset=numeric_columns)
     blast_df['Species'] = species
 
+    blast_df['Tag'] = blast_df['Query ID'].str.extract(rf'\|tag:(\w{{{defaults.RANDOM_ID_LENGTH}}})', expand=False)
+    blast_df['Query ID'] = blast_df['Query ID'].str.replace(rf'\|tag:\w{{{defaults.RANDOM_ID_LENGTH}}}', '', regex=True)
+
     return blast_df
 
 
@@ -226,6 +232,11 @@ def main(species_list: List[str]) -> None:
     if dfs:
         df: pd.DataFrame = pd.concat(dfs, axis=0, ignore_index=True)
 
+        # Remove duplicates
+        df = df.drop_duplicates()
+
+
+        # Save outputs
         output_csv_path: str = os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'rpsblast.csv')
         output_parquet_path: str = os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'rpsblast.parquet')
 

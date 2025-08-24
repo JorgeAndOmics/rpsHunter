@@ -9,6 +9,8 @@
 
 import concurrent.futures
 import logging
+import random
+import string
 import os
 import subprocess
 from typing import List, Optional, Tuple
@@ -96,6 +98,22 @@ def blaster(
 # -----------------------------------------------------------------------------
 # BLAST Output Parser
 # -----------------------------------------------------------------------------
+
+def random_string_generator(length: int) -> str:
+    """
+    Generates a random string of the specified length.
+
+        Parameters
+        ----------
+        :param length: The length of the string to generate.
+
+        Returns
+        -------
+        :returns: The generated random string.
+
+    """
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
 
 def parse_blast_output(blast_output: str) -> pd.DataFrame:
     """
@@ -186,15 +204,18 @@ def process_species(species: str) -> Optional[pd.DataFrame]:
     }
     blast_df = blast_df.astype(numeric_columns)
 
-    # Clean up sequences if applicable
-    if 'Subject Sequence' in blast_df.columns:
-        blast_df['Subject Sequence'] = blast_df['Subject Sequence'].str.replace('-', '').str.replace('*', '')
-
     if blast_df.empty:
         logging.warning(f'No hits after filtering for species {species}.')
         return None
 
     blast_df['Species'] = species
+
+    # Add a random string column for each row
+    blast_df['Tag'] = [random_string_generator(defaults.RANDOM_ID_LENGTH) for _ in range(len(blast_df))]
+
+    # Remove duplicates
+    blast_df = blast_df.drop_duplicates().reset_index(drop=True)
+
     return blast_df
 
 

@@ -106,7 +106,7 @@ rule blaster:
         python scripts/blast.py 
         '''
 
-rule blaster_parser:
+rule blast_parser:
     input:
         blast_output=rules.blaster.output.parquet_files
     output:
@@ -115,7 +115,7 @@ rule blaster_parser:
         parquet_file='blast.parquet'
     shell:
         '''
-        python scripts/table_parser.py \
+        python scripts/blast_parser.py \
         --input_parquet_file {parquet_file:q} \
         --export_fasta
         '''

@@ -63,6 +63,7 @@ PATH_DICT['ASN_ROOT_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESUL
 PATH_DICT['RPSBPROC_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'rpsbproc'))
 PATH_DICT['XML_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'xml'))
 PATH_DICT['RANGE_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'ranges'))
+PATH_DICT['LOCI_TABLE_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['TABLE_OUTPUT_DIR'], 'loci_tables'))
 
 # === ASN Subdirectories ===
 PATH_DICT['ASN_TBLASTN_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'tblastn'))
@@ -86,6 +87,7 @@ QUERY_FILE: str = os.path.abspath(os.path.join(PATH_DICT['FASTA_DIR'], f'{QUERY_
 
 # Execution and requests
 NUM_CORES: int = config['execution'].get('num_cores', 1)
+RANDOM_ID_LENGTH: int = config['execution'].get('random_id_length', 6)
 USE_SPECIES_DICT: bool = config['execution'].get('use_species_dict', True)
 RETRIEVAL_TIME_LAG: float = config['execution'].get('retrieval_time_lag', 0.3)
 MAX_RETRIEVAL_ATTEMPTS: int = config['execution'].get('max_retrieval_attempts', 3)
