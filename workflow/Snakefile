@@ -65,6 +65,26 @@ rule query_downloader:
         echo "Query protein download completed"
         """
 
+rule pfam_hmm_downloader:
+    output:
+        md5=os.path.join(defaults.PATH_DICT['HMM_DB'], 'md5sum.txt'),
+        hmm=os.path.join(defaults.PATH_DICT['HMM_DB'], 'Pfam-A.hmm')
+    params:
+        hmm_profile_dir=defaults.PATH_DICT['HMM_DB'],
+        url='https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz',
+        md5_url='https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/md5_checksums'
+    threads:
+        workflow.cores
+    shell:
+        """
+        cd {params.hmm_profile_dir:q} && \
+        wget -O {output.hmm:q}.gz {params.url:q} && \
+        wget -O {output.md5:q} {params.md5_url:q} && \
+        grep "Pfam-A.hmm.gz" {output.md5:q} | md5sum -c - && \
+        echo "MD5 checksum for HMM profile is correct. Decompressing..." && \
+        gunzip -d -f -v -k {params.hmm_profile_dir:q}/Pfam-A.hmm.gz
+        """
+
 rule blast_db_generator_setup:
     input:
         fa = os.path.join(defaults.PATH_DICT['SPECIES_DB'], '{genome}.fa')
@@ -89,8 +109,6 @@ rule blast_db_generator:
         blast_db = expand(os.path.join(defaults.PATH_DICT['SPECIES_DB'], '{genome}/{genome}.{ext}'),
                           genome=defaults.SPECIES,
                           ext=BLAST_DB_EXT)
-
-# TODO: CDD DATABASE DOWNLOAD AND SETUP
 
 rule blaster:
     input:

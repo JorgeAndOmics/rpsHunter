@@ -49,6 +49,13 @@ PATH_DICT['RESULTS_DIR'] = os.path.abspath(os.path.join(config['root'].get('resu
 PATH_DICT['LOG_DIR'] = os.path.abspath(os.path.join(config['root'].get('logs_root_folder', os.path.join(PATH_DICT['ROOT'], 'logs'))))
 PATH_DICT['WORKFLOW_DIR'] = Path(__file__).parent
 
+# === Database Directories ===
+PATH_DICT['ROOT_DB'] = os.path.abspath(os.path.join(config['root'].get('db_root_folder')))
+PATH_DICT['SPECIES_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT_DB'], 'blast_dbs', 'species'))
+PATH_DICT['HMM_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT'], 'hmm_dbs'))
+PATH_DICT['RPS_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT_DB'], 'cdd_dbs', 'Cdd'))
+PATH_DICT['RPSBPROC_DB'] = os.path.abspath(os.path.join(config['root'].get('rpsbproc_annot_folder')))
+
 # === Data Subdirectories ===
 PATH_DICT['CONFIG_DIR'] = os.path.abspath(os.path.join(PATH_DICT['DATA_DIR'], 'config'))
 PATH_DICT['INPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['DATA_DIR'], 'input'))
@@ -65,16 +72,13 @@ PATH_DICT['XML_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DI
 PATH_DICT['RANGE_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'ranges'))
 PATH_DICT['LOCI_TABLE_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['TABLE_OUTPUT_DIR'], 'loci_tables'))
 
+# === HMM Subdirectories ===
+
+
 # === ASN Subdirectories ===
 PATH_DICT['ASN_TBLASTN_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'tblastn'))
 PATH_DICT['ASN_RPSBLAST_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'rpsblast'))
 PATH_DICT['ASN_RPS_PROTEIN_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'protein'))
-
-# === Database Directories ===
-PATH_DICT['ROOT_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT'], 'local'))
-PATH_DICT['SPECIES_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT_DB'], 'blast_dbs', 'species'))
-PATH_DICT['RPS_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT_DB'], 'cdd_dbs', 'Cdd'))
-PATH_DICT['RPSBPROC_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT_DB'], 'cdd_dbs', 'rpsbproc_annot1'))
 
 # Directory generation
 for value in PATH_DICT.values():

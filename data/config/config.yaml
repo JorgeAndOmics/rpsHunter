@@ -23,7 +23,8 @@ display:
   display_operation_info: false
 
 root:
-  db_root_folder: '/mnt/v/databases'
+  db_root_folder: '/mnt/v/databases/local'
+  rpsbproc_annot_folder: '/mnt/v/databases/local/cdd_dbs/rpsbproc_annot1'
   data_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/data'
   results_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/results'
   logs_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/logs'
@@ -39,6 +40,8 @@ logging:
     asctime: { color: 'green' }
     levelname: { color: 'green' }
     name: { color: 'green' }
+
+  # TODO: Implement hmmsearch domain search!!!
 
 species:
   'Desmodus_rotundus': 'Desmodus rotundus'
