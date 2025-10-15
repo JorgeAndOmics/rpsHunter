@@ -116,7 +116,6 @@ rule blaster:
         query=rules.query_downloader.input
     output:
         asn_files=expand(os.path.join(defaults.PATH_DICT['ASN_TBLASTN_DIR'],'{genome}.asn'),genome=defaults.SPECIES),
-        fasta_files=expand(os.path.join(defaults.PATH_DICT['FASTA_OUTPUT_DIR'],'{genome}.fa'),genome=defaults.SPECIES),
         csv_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'blast.csv'),
         parquet_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'blast.parquet')
     shell:
@@ -128,13 +127,13 @@ rule blast_parser:
     input:
         blast_output=rules.blaster.output.parquet_files
     output:
-        fasta_files=expand(os.path.join(defaults.PATH_DICT['FASTA_OUTPUT_DIR'],'{genome}.fa'),genome=SPECIES_POST)
+        fasta_files=expand(os.path.join(defaults.PATH_DICT['FASTA_OUTPUT_DIR'],'{genome}.fa'),genome=SPECIES_POST),
     params:
         parquet_file='blast.parquet'
     shell:
         '''
         python scripts/blast_parser.py \
-        --input_parquet_file {parquet_file:q} \
+        --input_parquet_file {params.parquet_file:q} \
         --export_fasta
         '''
 

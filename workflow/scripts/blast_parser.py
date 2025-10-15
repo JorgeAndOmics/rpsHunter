@@ -137,7 +137,7 @@ def fasta_generator(df: pd.DataFrame) -> Optional[None]:
 # -------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    colored_logging(log_file_name='table_parser.txt')
+    colored_logging(log_file_name='blast_parser.txt')
 
     parser = argparse.ArgumentParser(description='Parse and filter BLAST results.')
     parser.add_argument(

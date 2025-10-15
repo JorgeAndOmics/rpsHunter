@@ -277,6 +277,20 @@ def main() -> None:
 
         df.to_parquet(output_parquet_path, index=False)
         logging.info(f'Saved DataFrame as Parquet to {output_parquet_path}')
+
+        # Save separate tables for each species
+        unique_species = df['Species'].unique()
+        for species in unique_species:
+            species_df = df[df['Species'] == species]
+
+            species_csv_path = os.path.join(defaults.PATH_DICT['BLAST_TABLE_OUTPUT_DIR'], f'{species}.csv')
+            species_parquet_path = os.path.join(defaults.PATH_DICT['BLAST_TABLE_OUTPUT_DIR'], f'{species}.parquet')
+
+            species_df.to_csv(species_csv_path, index=False)
+            species_df.to_parquet(species_parquet_path, index=False)
+
+        logging.info(f'Saved {len(unique_species)} species-specific tables')
+
     else:
         logging.warning('No data frames to concatenate. No output files were created.')
 

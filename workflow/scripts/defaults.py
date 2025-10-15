@@ -51,7 +51,7 @@ PATH_DICT['WORKFLOW_DIR'] = Path(__file__).parent
 
 # === Database Directories ===
 PATH_DICT['ROOT_DB'] = os.path.abspath(os.path.join(config['root'].get('db_root_folder')))
-PATH_DICT['SPECIES_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT_DB'], 'blast_dbs', 'species'))
+PATH_DICT['SPECIES_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT_DB'], 'blast_dbs_OLD', 'species'))
 PATH_DICT['HMM_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT'], 'hmm_dbs'))
 PATH_DICT['RPS_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT_DB'], 'cdd_dbs', 'Cdd'))
 PATH_DICT['RPSBPROC_DB'] = os.path.abspath(os.path.join(config['root'].get('rpsbproc_annot_folder')))
@@ -65,6 +65,7 @@ PATH_DICT['TMP_DIR'] = os.path.abspath(os.path.join(PATH_DICT['DATA_DIR'], 'tmp'
 # === Results Subdirectories ===
 PATH_DICT['PLOT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'plots'))
 PATH_DICT['TABLE_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'tables'))
+PATH_DICT['BLAST_TABLE_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['TABLE_OUTPUT_DIR'], 'blast_tables'))
 PATH_DICT['FASTA_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'fastas'))
 PATH_DICT['ASN_ROOT_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'asn'))
 PATH_DICT['RPSBPROC_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'rpsbproc'))

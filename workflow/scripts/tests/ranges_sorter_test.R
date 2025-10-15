@@ -229,6 +229,8 @@ scatter.3D.plot <- plot_ly(
     title = "3D Scatter Plot of Species × Domain × Incomplete × Count"
   )
 
+
+
 # =============================================================================
 # EXPORTS (Save plots and tables)
 # =============================================================================
@@ -238,6 +240,11 @@ for (species in names(data.ranges.reduced.species)) {
     data.ranges.reduced.species[[species]], 
     file.path(args.output_table_folder, paste0(species, '.gff3')), 
     format = 'GFF3')
+}
+
+for (species in names(data.ranges.reduced.species)) {
+  table = as.data.frame(data.ranges.reduced.species[[species]])
+  write_csv2(table, file.path(args.output_table_folder, paste0(species, '.csv')))
 }
 
 htmlwidgets::saveWidget(
