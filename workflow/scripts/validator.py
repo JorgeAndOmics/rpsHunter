@@ -16,6 +16,7 @@ import time
 import argparse
 import subprocess
 import logging
+from pathlib import Path
 from typing import List, Optional
 
 import yamale
@@ -33,7 +34,7 @@ from colored_logging import colored_logging
 # YAML VALIDATION
 # -----------------------------------------------------------------------------
 
-def yaml_validator(yaml_file: str, yaml_schema: str) -> bool:
+def yaml_validator(yaml_file: Path, yaml_schema: Path) -> bool:
     """
     Validates the YAML configuration file against a Yamale schema.
 
@@ -51,8 +52,8 @@ def yaml_validator(yaml_file: str, yaml_schema: str) -> bool:
             :raises yamale.YamaleError: If YAML validation fails.
     """
     try:
-        schema = yamale.make_schema(yaml_schema)
-        data = yamale.make_data(yaml_file)
+        schema = yamale.make_schema(str(yaml_schema))
+        data = yamale.make_data(str(yaml_file))
         yamale.validate(schema, data)
         logging.info('YAML configuration file is valid.')
         return True
@@ -98,7 +99,7 @@ def query_validator(query_accession: str) -> bool:
 # FASTA VALIDATION
 # -----------------------------------------------------------------------------
 
-def fasta_validator(fasta_file: str) -> bool:
+def fasta_validator(fasta_file: Path) -> bool:
     """
     Validates a FASTA file for content and headers.
 
@@ -114,7 +115,7 @@ def fasta_validator(fasta_file: str) -> bool:
         ------
             :raises Exception: If parsing the file fails.
     """
-    if not os.path.exists(fasta_file):
+    if not fasta_file.exists():
         logging.warning(f'FASTA file does not exist: {fasta_file}')
         return False
 
@@ -201,7 +202,7 @@ def validate_ncbi_key() -> None:
 # MASTER VALIDATION ORCHESTRATOR
 # -----------------------------------------------------------------------------
 
-def main_validator(fasta_files: Optional[List[str]]) -> bool:
+def main_validator(fasta_files: Optional[List[Path]]) -> bool:
     """
     Orchestrates validation for YAML, Query accession, FASTA, external tools, and API key.
 
@@ -216,7 +217,7 @@ def main_validator(fasta_files: Optional[List[str]]) -> bool:
     logging.debug('Starting input validation process...')
 
     yaml_ok = yaml_validator(
-        yaml_schema=os.path.join(defaults.PATH_DICT['CONFIG_DIR'], 'schema.yaml'),
+        yaml_schema=defaults.PATH_DICT['CONFIG_DIR'] / 'schema.yaml',
         yaml_file=defaults.CONFIG_FILE
     )
 
@@ -273,7 +274,7 @@ def green_light(all_valid: bool) -> bool:
 # VALIDATION ENTRYPOINT
 # -----------------------------------------------------------------------------
 
-def validation_run(fasta_files: Optional[List[str]] = None) -> bool:
+def validation_run(fasta_files: Optional[List[Path]] = None) -> bool:
     """
     CLI entrypoint to trigger validation routines and prompt user to continue.
 

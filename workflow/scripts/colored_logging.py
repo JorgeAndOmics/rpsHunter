@@ -1,6 +1,6 @@
 import coloredlogs
 import logging
-import os
+from pathlib import Path
 
 import defaults
 
@@ -33,9 +33,11 @@ def colored_logging(log_file_name: str) -> None:
         ----------
             :param log_file_name: The name of the file to save the log in.
     """
+    log_file_path: Path = defaults.PATH_DICT['LOG_DIR'] / log_file_name
+
     # Configure coloredlogs with the custom field and level styles
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(message)s', handlers=[
-        logging.FileHandler(os.path.join(defaults.PATH_DICT['LOG_DIR'], log_file_name), mode='w'),
+        logging.FileHandler(log_file_path, mode='w'),
         logging.StreamHandler()
     ]
                         )

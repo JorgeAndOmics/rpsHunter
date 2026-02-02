@@ -9,7 +9,6 @@
 # DEPENDENCIES
 # -----------------------------------------------------------------------------
 
-import os
 import re
 import sys
 import logging
@@ -27,7 +26,7 @@ from validator import validation_run
 # FASTA EXTENSION STANDARDIZATION
 # -----------------------------------------------------------------------------
 
-def standardize_fasta_extensions(fasta_dir_path: str) -> None:
+def standardize_fasta_extensions(fasta_dir_path: Path) -> None:
     """
     Standardize extensions of all FASTA files in the provided directory to .fa.
 
@@ -45,14 +44,14 @@ def standardize_fasta_extensions(fasta_dir_path: str) -> None:
             :raises FileNotFoundError: If the specified directory does not exist.
             :raises OSError: If renaming a file fails.
     """
-    if not os.path.isdir(fasta_dir_path):
+    if not fasta_dir_path.is_dir():
         raise FileNotFoundError(f'Directory not found: {fasta_dir_path}')
 
     pattern = re.compile(r'\.(fasta|fna|fas)$', re.IGNORECASE)
 
-    for file in Path(fasta_dir_path).iterdir():
+    for file in fasta_dir_path.iterdir():
         if file.is_file() and pattern.search(file.name):
-            new_name = file.with_name(f'{file.stem}.fa')
+            new_name = file.with_suffix('.fa')
             logging.debug(f'Renaming: {file.name} -> {new_name.name}')
             file.rename(new_name)
 
@@ -133,22 +132,22 @@ def cli_entry() -> None:
         description='rpsHunter: A tool for gene domain identification and analysis.'
     )
 
-    parser.add_argument('--setup_databases', action='store_true',
+    parser.add_argument('--setup-databases', action='store_true',
                         help='Download and setup CDD and rpsbproc annotation databases.')
 
-    parser.add_argument('--download_genomes', action='store_true',
+    parser.add_argument('--download-genomes', action='store_true',
                         help='Download genomes listed in the .yaml file.')
 
-    parser.add_argument('--download_query', action='store_true',
+    parser.add_argument('--download-query', action='store_true',
                         help='Download the query protein sequence in FASTA format.')
 
-    parser.add_argument('--blast_dbs', action='store_true',
+    parser.add_argument('--blast-dbs', action='store_true',
                         help='Generate BLAST databases from downloaded genomes.')
 
     parser.add_argument('--blast', action='store_true',
                         help='Run tBLASTn of the query sequence against genome databases.')
 
-    parser.add_argument('--orf_analyser', action='store_true',
+    parser.add_argument('--orf-analyser', action='store_true',
                         help='Run ORF detection on BLAST hits. Enriches blast.parquet with ORF data; '
                              'downstream rules auto-detect and use only ORF-filtered sequences.')
 
@@ -158,16 +157,16 @@ def cli_entry() -> None:
     parser.add_argument('--rpsbproc', action='store_true',
                         help='Process RPS-BLAST ASN files with rpsbproc.')
 
-    parser.add_argument('--rpsbproc_parser', action='store_true',
+    parser.add_argument('--rpsbproc-parser', action='store_true',
                         help='Parse rpsbproc output into tabular format.')
 
-    parser.add_argument('--completeness_detector', action='store_true',
+    parser.add_argument('--completeness-detector', action='store_true',
                         help='Generate tile plot with highest-completeness degree per domain.')
 
-    parser.add_argument('--contingency_parser', action='store_true',
+    parser.add_argument('--contingency-parser', action='store_true',
                         help='Generate contingency tables and visual plots.')
 
-    parser.add_argument('--skip_validation', '-skp', action='store_true',
+    parser.add_argument('--skip-validation', '-skp', action='store_true',
                         help='Skip input validation checks.')
 
     args, unknown = parser.parse_known_args()
@@ -180,8 +179,8 @@ def cli_entry() -> None:
     # -------------------------------------------------------------------------
     # Validate Input Files
     # -------------------------------------------------------------------------
-    species_paths: List[str] = [
-        os.path.join(defaults.PATH_DICT['SPECIES_DB'], f'{species}.fa')
+    species_paths: List[Path] = [
+        defaults.PATH_DICT['SPECIES_DB'] / f'{species}.fa'
         for species in defaults.SPECIES
     ]
 

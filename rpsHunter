@@ -120,7 +120,7 @@ if __name__ == '__main__':
     if args.rpsbproc_parser:
         main_cmd.append('--rpsbproc_parser')
 
-    if args.contingency_parser:
+    if args.completeness_detector:
         main_cmd.append('--completeness_detector')
 
     if args.contingency_parser:

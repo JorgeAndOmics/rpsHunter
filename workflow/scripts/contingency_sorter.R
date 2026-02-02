@@ -32,17 +32,19 @@ print("Parsing domain data...")
 # =============================================================================
 data <- arrow::read_parquet(args.data)
 
-# Species
-full.species <- args.species
+# Extract species from data
+full.species <- unique(data$Species)
 
 # Clean empty strings and data types
+# Note: Start/End may have garbage suffixes like "|tag:XXX" - extract numeric part only
 data.clean <- data %>%
   filter(nzchar(Domain)) %>%
   mutate(
     Bitscore = as.numeric(Bitscore),
-    Start = as.integer(Start),
-    End = as.integer(End)
-  )
+    Start = as.integer(str_extract(as.character(Start), "^[0-9]+")),
+    End = as.integer(str_extract(as.character(End), "^[0-9]+"))
+  ) %>%
+  filter(!is.na(Start) & !is.na(End))
 
 # Standardize species names with a regex pattern
 chr.pattern <- "[A-Za-z]+_?[0-9]+[._]?[0-9]*"

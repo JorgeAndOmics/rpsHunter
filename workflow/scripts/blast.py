@@ -11,8 +11,8 @@ import concurrent.futures
 import logging
 import random
 import string
-import os
 import subprocess
+from pathlib import Path
 from typing import List, Optional, Tuple
 
 import pandas as pd
@@ -28,11 +28,11 @@ from colored_logging import colored_logging
 
 def blaster(
     command: str,
-    input_database_path: str,
-    query_file_path: str,
+    input_database_path: Path,
+    query_file_path: Path,
     subject: str,
     evalue: float,
-) -> Tuple[Optional[str], Optional[str]]:
+) -> Tuple[Optional[str], Optional[Path]]:
     """
     Runs a BLAST search for a given subject species against its genome database.
 
@@ -54,18 +54,18 @@ def blaster(
             :raises subprocess.CalledProcessError: If either BLAST or formatter fails.
             :raises Exception: For any other unexpected runtime issues.
     """
-    input_path = os.path.join(input_database_path, subject, subject)
+    input_path = input_database_path / subject / subject
     try:
-        asn_file_name = os.path.join(defaults.PATH_DICT['ASN_TBLASTN_DIR'], f'{subject}.asn')
+        asn_file_path = defaults.PATH_DICT['ASN_TBLASTN_DIR'] / f'{subject}.asn'
 
         # Construct the BLAST command
         blast_command = [
             command,
-            '-db', input_path,
-            '-query', query_file_path,
+            '-db', str(input_path),
+            '-query', str(query_file_path),
             '-evalue', str(evalue),
             '-outfmt', '11',
-            '-out', asn_file_name
+            '-out', str(asn_file_path)
         ]
 
         result = subprocess.run(blast_command, capture_output=True, text=True)
@@ -77,7 +77,7 @@ def blaster(
         # Format ASN.1 to tabular output with sequence data
         blast_formatter_command = [
             'blast_formatter',
-            '-archive', asn_file_name,
+            '-archive', str(asn_file_path),
             '-outfmt',
             '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore sseq'
         ]
@@ -88,7 +88,7 @@ def blaster(
             logging.error(f'Error running blast_formatter for {subject}: {formatter_result.stderr}')
             return None, None
 
-        return formatter_result.stdout, asn_file_name
+        return formatter_result.stdout, asn_file_path
 
     except Exception as e:
         logging.error(f'An exception occurred while running BLAST for {subject}: {str(e)}')
@@ -269,8 +269,8 @@ def main() -> None:
     if dfs:
         df = pd.concat(dfs, axis=0, ignore_index=True)
 
-        output_csv_path = os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'blast.csv')
-        output_parquet_path = os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'blast.parquet')
+        output_csv_path = defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.csv'
+        output_parquet_path = defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.parquet'
 
         df.to_csv(output_csv_path, index=False)
         logging.info(f'Saved DataFrame as CSV to {output_csv_path}')
@@ -283,8 +283,8 @@ def main() -> None:
         for species in unique_species:
             species_df = df[df['Species'] == species]
 
-            species_csv_path = os.path.join(defaults.PATH_DICT['BLAST_TABLE_OUTPUT_DIR'], f'{species}.csv')
-            species_parquet_path = os.path.join(defaults.PATH_DICT['BLAST_TABLE_OUTPUT_DIR'], f'{species}.parquet')
+            species_csv_path = defaults.PATH_DICT['BLAST_TABLE_OUTPUT_DIR'] / f'{species}.csv'
+            species_parquet_path = defaults.PATH_DICT['BLAST_TABLE_OUTPUT_DIR'] / f'{species}.parquet'
 
             species_df.to_csv(species_csv_path, index=False)
             species_df.to_parquet(species_parquet_path, index=False)

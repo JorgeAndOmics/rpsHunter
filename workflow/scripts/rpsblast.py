@@ -8,9 +8,9 @@
 import argparse
 import concurrent.futures
 import logging
-import os
 import re
 import subprocess
+from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Any
 
 from Bio import SeqIO
@@ -28,12 +28,12 @@ from colored_logging import colored_logging
 
 def rpsblaster(
     command: str,
-    input_database_path: str,
-    query_file_path: str,
+    input_database_path: Path,
+    query_file_path: Path,
     species: str,
     evalue: float,
-    asn_output_dir: str = None
-) -> Tuple[Optional[str], Optional[str]]:
+    asn_output_dir: Path = None
+) -> Tuple[Optional[str], Optional[Path]]:
     """
     Runs an RPS-BLAST search for given sequences against a given database.
 
@@ -59,15 +59,15 @@ def rpsblaster(
     try:
         if asn_output_dir is None:
             asn_output_dir = defaults.PATH_DICT['ASN_RPSBLAST_DIR']
-        asn_file_name: str = os.path.join(asn_output_dir, f'{species}.asn')
+        asn_file_path: Path = asn_output_dir / f'{species}.asn'
 
         rpsblast_command: List[str] = [
             command,
-            '-db', input_database_path,
-            '-query', query_file_path,
+            '-db', str(input_database_path),
+            '-query', str(query_file_path),
             '-evalue', str(evalue),
             '-outfmt', '11',
-            '-out', asn_file_name
+            '-out', str(asn_file_path)
         ]
 
         result = subprocess.run(rpsblast_command, capture_output=True, text=True)
@@ -78,7 +78,7 @@ def rpsblaster(
 
         blast_formatter_command: List[str] = [
             'blast_formatter',
-            '-archive', asn_file_name,
+            '-archive', str(asn_file_path),
             '-outfmt', '6 std stitle'
         ]
 
@@ -91,7 +91,7 @@ def rpsblaster(
             return None, None
 
         blast_output: str = formatter_result.stdout
-        return blast_output, asn_file_name
+        return blast_output, asn_file_path
 
     except Exception as e:
         logging.error(f'An exception occurred while running RPS-BLAST for {species}: {str(e)}')
@@ -119,7 +119,7 @@ def parse_blast_output(blast_output: str) -> pd.DataFrame:
             :raises ValueError: If the output format is unexpected.
     """
     columns: List[str] = [
-        'Query ID', 'Tag', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches', 'Gap Openings',
+        'Query ID', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches', 'Gap Openings',
         'Q. Start', 'Q. End', 'S. Start', 'S. End', 'E-value', 'Bit Score', 'Subject Title'
     ]
 
@@ -135,7 +135,7 @@ def parse_blast_output(blast_output: str) -> pd.DataFrame:
 # Per-Species RPS-BLAST Processing
 # -----------------------------------------------------------------------------
 
-def process_rps_species(species: str, fasta_input_dir: str = None, asn_output_dir: str = None) -> Optional[pd.DataFrame]:
+def process_rps_species(species: str, fasta_input_dir: Path = None, asn_output_dir: Path = None) -> Optional[pd.DataFrame]:
     """
     Processes a single species FASTA file with RPS-BLAST and returns filtered results.
 
@@ -158,9 +158,10 @@ def process_rps_species(species: str, fasta_input_dir: str = None, asn_output_di
         fasta_input_dir = defaults.PATH_DICT['FASTA_OUTPUT_DIR']
     if asn_output_dir is None:
         asn_output_dir = defaults.PATH_DICT['ASN_RPSBLAST_DIR']
-    fasta_file_path: str = os.path.join(fasta_input_dir, f'{species}.fa')
 
-    if not os.path.exists(fasta_file_path):
+    fasta_file_path: Path = fasta_input_dir / f'{species}.fa'
+
+    if not fasta_file_path.exists():
         logging.warning(f'FASTA file for species {species} does not exist at {fasta_file_path}.')
         return None
 
@@ -203,10 +204,10 @@ def process_rps_species(species: str, fasta_input_dir: str = None, asn_output_di
 
 def main(
     species_list: List[str],
-    fasta_input_dir: str = None,
-    output_csv: str = None,
-    output_parquet: str = None,
-    asn_output_dir: str = None
+    fasta_input_dir: Path = None,
+    output_csv: Path = None,
+    output_parquet: Path = None,
+    asn_output_dir: Path = None
 ) -> None:
     """
     Runs RPS-BLAST across all species in the provided list and saves results.
@@ -231,14 +232,14 @@ def main(
 
     # Set default output paths
     if output_csv is None:
-        output_csv = os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'rpsblast.csv')
+        output_csv = defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.csv'
     if output_parquet is None:
-        output_parquet = os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'rpsblast.parquet')
+        output_parquet = defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.parquet'
     if asn_output_dir is None:
         asn_output_dir = defaults.PATH_DICT['ASN_RPSBLAST_DIR']
 
     # Ensure ASN output directory exists
-    os.makedirs(asn_output_dir, exist_ok=True)
+    asn_output_dir.mkdir(parents=True, exist_ok=True)
 
     dfs: List[pd.DataFrame] = []
 
@@ -288,7 +289,7 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--species_list',
+        '--species-list',
         type=str,
         nargs='+',
         required=False,
@@ -297,28 +298,28 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--input_dir',
+        '--input-dir',
         type=str,
         default=None,
         help='Directory containing input FASTA files. Defaults to FASTA_OUTPUT_DIR.'
     )
 
     parser.add_argument(
-        '--output_csv',
+        '--output-csv',
         type=str,
         default=None,
         help='Output CSV path. Defaults to TABLE_OUTPUT_DIR/rpsblast.csv'
     )
 
     parser.add_argument(
-        '--output_parquet',
+        '--output-parquet',
         type=str,
         default=None,
         help='Output Parquet path. Defaults to TABLE_OUTPUT_DIR/rpsblast.parquet'
     )
 
     parser.add_argument(
-        '--asn_output_dir',
+        '--asn-output-dir',
         type=str,
         default=None,
         help='ASN output directory. Defaults to ASN_RPSBLAST_DIR'
@@ -329,8 +330,8 @@ if __name__ == '__main__':
 
     main(
         species_list=species_list,
-        fasta_input_dir=args.input_dir,
-        output_csv=args.output_csv,
-        output_parquet=args.output_parquet,
-        asn_output_dir=args.asn_output_dir
+        fasta_input_dir=Path(args.input_dir) if args.input_dir else None,
+        output_csv=Path(args.output_csv) if args.output_csv else None,
+        output_parquet=Path(args.output_parquet) if args.output_parquet else None,
+        asn_output_dir=Path(args.asn_output_dir) if args.asn_output_dir else None
     )

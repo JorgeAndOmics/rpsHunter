@@ -25,9 +25,9 @@ Requirements
 # Imports
 # -------------------------------------------------------------------------
 
-import os
 import argparse
 import logging
+from pathlib import Path
 from typing import List, Optional
 
 import pandas as pd
@@ -165,10 +165,7 @@ def fasta_generator(df: pd.DataFrame) -> Optional[None]:
         seq_records.append(SeqRecord(Seq(sequence), id=header, description=''))
 
     if seq_records:
-        output_fasta_path: str = os.path.join(
-            defaults.PATH_DICT['FASTA_OUTPUT_DIR'],
-            f'{species}.fa'
-        )
+        output_fasta_path: Path = defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / f'{species}.fa'
         SeqIO.write(seq_records, output_fasta_path, 'fasta')
 
 
@@ -181,23 +178,20 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Parse and filter BLAST results.')
     parser.add_argument(
-        '--input_parquet_file',
+        '--input-parquet-file',
         type=str,
         required=True,
         help='Path to the input Parquet file containing BLAST results.'
     )
     parser.add_argument(
-        '--export_fasta',
+        '--export-fasta',
         action='store_true',
         help='Export filtered sequences to FASTA files.'
     )
 
     args = parser.parse_args()
 
-    input_parquet_path: str = os.path.join(
-        defaults.PATH_DICT['TABLE_OUTPUT_DIR'],
-        args.input_parquet_file
-    )
+    input_parquet_path: Path = defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / args.input_parquet_file
     blast_df: pd.DataFrame = pd.read_parquet(input_parquet_path)
 
     # Apply quality thresholds

@@ -14,8 +14,7 @@ suppressMessages({
 args <- commandArgs(trailingOnly = TRUE)
 
 args.data <- args[1]
-args.species <- args[2]
-args.output_plot_folder <- args[3]
+args.output_plot_folder <- args[2]
 
 # =============================================================================
 # MESSAGE
@@ -27,8 +26,8 @@ print("Parsing domain data...")
 # =============================================================================
 data <- arrow::read_parquet(args.data)
 
-# Species
-full.species <- readLines(args.species)
+# Extract species from data
+full.species <- unique(data$Species)
 
 # Clean empty strings and data types
 data.clean <- data %>%

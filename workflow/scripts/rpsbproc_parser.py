@@ -9,9 +9,9 @@
 # DEPENDENCIES
 # -----------------------------------------------------------------------------
 
-import os
 import csv
 import logging
+from pathlib import Path
 from typing import List, Dict, Any
 
 from tqdm import tqdm
@@ -26,8 +26,8 @@ import colored_logging
 # -----------------------------------------------------------------------------
 
 def parse_rpsbproc_output(
-    input_dir: str,
-    output_dir: str,
+    input_dir: Path,
+    output_dir: Path,
     output_csv_name: str = None,
     output_parquet_name: str = None
 ) -> None:
@@ -50,7 +50,7 @@ def parse_rpsbproc_output(
             :raises FileNotFoundError: If input directory does not exist.
             :raises IOError: If output files cannot be written.
     """
-    if not os.path.exists(input_dir):
+    if not input_dir.exists():
         raise FileNotFoundError(f'Input directory not found: {input_dir}')
 
     domain_hits: List[Dict[str, Any]] = []
@@ -61,27 +61,23 @@ def parse_rpsbproc_output(
         'Accession', 'Domain', 'Incomplete', 'Superfamily_PSSM_ID'
     ]
 
-    files: List[str] = [
-        f for f in os.listdir(input_dir)
-        if os.path.isfile(os.path.join(input_dir, f))
-    ]
+    files: List[Path] = [f for f in input_dir.iterdir() if f.is_file()]
 
     total_files: int = len(files)
     file_bar = tqdm(total=total_files, desc='Processing files...')
 
-    for filename in files:
-        input_file = os.path.join(input_dir, filename)
-        if not os.path.isfile(input_file):
+    for filepath in files:
+        if not filepath.is_file():
             file_bar.update(1)
             continue
 
-        logging.info(f'Processing file: {input_file}...')
+        logging.info(f'Processing file: {filepath}...')
         data_started = False
         current_session: Dict[str, str] = {}
         current_query: Dict[str, str] = {}
-        file_name_without_ext = os.path.splitext(filename)[0]
+        file_name_without_ext = filepath.stem
 
-        with open(input_file, 'r') as file:
+        with open(filepath, 'r') as file:
             lines = file.readlines()
 
         index: int = 0
@@ -201,10 +197,7 @@ def parse_rpsbproc_output(
     # -------------------------------------------------------------------------
     csv_filename = output_csv_name if output_csv_name else 'domains.csv'
     # Handle both absolute paths and relative filenames
-    if os.path.isabs(csv_filename):
-        csv_output_file = csv_filename
-    else:
-        csv_output_file = os.path.join(output_dir, csv_filename)
+    csv_output_file = Path(csv_filename) if Path(csv_filename).is_absolute() else output_dir / csv_filename
     logging.info(f'Writing CSV to {csv_output_file}')
 
     with open(csv_output_file, 'w', newline='') as csvfile:
@@ -225,10 +218,7 @@ def parse_rpsbproc_output(
     df = pd.DataFrame(domain_hits)
     parquet_filename = output_parquet_name if output_parquet_name else 'domains.parquet'
     # Handle both absolute paths and relative filenames
-    if os.path.isabs(parquet_filename):
-        parquet_output_file = parquet_filename
-    else:
-        parquet_output_file = os.path.join(output_dir, parquet_filename)
+    parquet_output_file = Path(parquet_filename) if Path(parquet_filename).is_absolute() else output_dir / parquet_filename
     df.to_parquet(parquet_output_file, index=False)
     logging.info(f'Parquet output written to {parquet_output_file}')
 
@@ -245,21 +235,21 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--input_dir',
+        '--input-dir',
         type=str,
         default=None,
         help='RPSBPROC output directory. Defaults to RPSBPROC_OUTPUT_DIR'
     )
 
     parser.add_argument(
-        '--output_csv',
+        '--output-csv',
         type=str,
         default=None,
         help='Output CSV path. Defaults to TABLE_OUTPUT_DIR/domains.csv'
     )
 
     parser.add_argument(
-        '--output_parquet',
+        '--output-parquet',
         type=str,
         default=None,
         help='Output Parquet path. Defaults to TABLE_OUTPUT_DIR/domains.parquet'
@@ -267,7 +257,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    input_dir = args.input_dir if args.input_dir else defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR']
+    input_dir = Path(args.input_dir) if args.input_dir else defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR']
     output_dir = defaults.PATH_DICT['TABLE_OUTPUT_DIR']
 
     colored_logging.colored_logging(log_file_name='rpsbproc_parser.txt')

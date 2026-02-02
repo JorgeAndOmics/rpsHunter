@@ -5,8 +5,8 @@
     and writes the resulting `.txt` files to the output directory.
 """
 
-import os
 import subprocess
+from pathlib import Path
 from typing import List
 
 import defaults
@@ -16,7 +16,7 @@ import defaults
 # RPSBPROC Conversion Function
 # -----------------------------------------------------------------------------
 
-def main(input_dir: str, output_dir: str, db_path: str, t_option: str) -> None:
+def main(input_dir: Path, output_dir: Path, db_path: Path, t_option: str) -> None:
     """
     Processes all ASN.1 files in the input directory using `rpsbproc` and writes text outputs.
 
@@ -36,24 +36,20 @@ def main(input_dir: str, output_dir: str, db_path: str, t_option: str) -> None:
             :raises FileNotFoundError: If the input directory does not exist.
             :raises subprocess.CalledProcessError: If the `rpsbproc` command fails.
     """
-    if not os.path.isdir(input_dir):
+    if not input_dir.is_dir():
         raise FileNotFoundError(f'Input directory does not exist: {input_dir}')
 
-    input_files: List[str] = [
-        f for f in os.listdir(input_dir) if f.endswith('.asn')
-    ]
+    input_files: List[Path] = list(input_dir.glob('*.asn'))
 
-    for filename in input_files:
-        input_file: str = os.path.join(input_dir, filename)
-        output_filename: str = f'{os.path.splitext(filename)[0]}.txt'
-        output_file: str = os.path.join(output_dir, output_filename)
+    for input_file in input_files:
+        output_file: Path = output_dir / f'{input_file.stem}.txt'
 
         cmd: List[str] = [
             'rpsbproc',
-            '-i', input_file,
-            '-d', db_path,
+            '-i', str(input_file),
+            '-d', str(db_path),
             '-t', t_option,
-            '-o', output_file
+            '-o', str(output_file)
         ]
 
         print(f'Processing {input_file} -> {output_file}')
@@ -72,14 +68,14 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--asn_input_dir',
+        '--asn-input-dir',
         type=str,
         default=None,
         help='ASN input directory. Defaults to ASN_RPSBLAST_DIR'
     )
 
     parser.add_argument(
-        '--output_dir',
+        '--output-dir',
         type=str,
         default=None,
         help='Output directory for txt files. Defaults to RPSBPROC_OUTPUT_DIR'
@@ -87,9 +83,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    input_dir = args.asn_input_dir if args.asn_input_dir else defaults.PATH_DICT['ASN_RPSBLAST_DIR']
-    output_dir = args.output_dir if args.output_dir else defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR']
-    os.makedirs(output_dir, exist_ok=True)
+    input_dir = Path(args.asn_input_dir) if args.asn_input_dir else defaults.PATH_DICT['ASN_RPSBLAST_DIR']
+    output_dir = Path(args.output_dir) if args.output_dir else defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR']
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     main(
         input_dir=input_dir,

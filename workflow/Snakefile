@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 import pandas as pd
 from scripts import defaults
 
@@ -8,21 +8,21 @@ try:
 except ImportError:
     PYARROW_AVAILABLE = False
 
-def retrieve_species_list(parquet_path: str, csv_path: str, default: list[str] = None) -> list[str]:
+def retrieve_species_list(parquet_path: Path, csv_path: Path, default: list[str] = None) -> list[str]:
     """Read species from parquet (preferred) or CSV (fallback)."""
     try:
-        if PYARROW_AVAILABLE and os.path.exists(parquet_path):
+        if PYARROW_AVAILABLE and parquet_path.exists():
             table = pq.read_table(parquet_path, columns=['Species'])
             return table.to_pandas()['Species'].unique().tolist()
     except Exception:
         pass  # Fall back to CSV
-    if os.path.exists(csv_path):
+    if csv_path.exists():
         return pd.read_csv(csv_path)["Species"].unique().tolist()
     return default if default else []
 
-def retrieve_species_from_manifest(manifest_path: str, default: list[str] = None) -> list[str]:
+def retrieve_species_from_manifest(manifest_path: Path, default: list[str] = None) -> list[str]:
     """Read species list from simple text manifest file."""
-    if os.path.exists(manifest_path):
+    if manifest_path.exists():
         with open(manifest_path) as f:
             return [line.strip() for line in f if line.strip()]
     return default if default else []
@@ -34,19 +34,19 @@ def get_post_blast_species() -> list[str]:
     If ORF analysis was run (flag file exists), use the species manifest.
     Otherwise, read species from blast.parquet/csv.
     """
-    flag_file = os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'], 'orf_analysis.flag')
-    manifest_file = os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'], 'species_manifest.txt')
+    flag_file = defaults.PATH_DICT['ORF_OUTPUT_DIR'] / 'orf_analysis.flag'
+    manifest_file = defaults.PATH_DICT['ORF_OUTPUT_DIR'] / 'species_manifest.txt'
 
     # Check if ORF analysis was run
-    if os.path.exists(flag_file) and os.path.exists(manifest_file):
+    if flag_file.exists() and manifest_file.exists():
         species = retrieve_species_from_manifest(manifest_file)
         if species:
             return species
 
-    # Fall back to blast.parquet/csv species list
+    # Fall back to blast.parquet/csv species list (parquet preferred)
     return retrieve_species_list(
-        parquet_path=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'blast.parquet'),
-        csv_path=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'blast.csv'),
+        parquet_path=defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.parquet',
+        csv_path=defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.csv',
         default=list(defaults.SPECIES)
     )
 
@@ -57,14 +57,14 @@ SPECIES = defaults.SPECIES
 # This is dynamically computed to handle both ORF and non-ORF modes
 SPECIES_POST = get_post_blast_species()
 
-configfile: defaults.CONFIG_FILE
+configfile: str(defaults.CONFIG_FILE)
 
 rule genome_downloader_setup:
     output:
-        species=os.path.join(defaults.PATH_DICT['SPECIES_DB'], '{genome}.fa')
+        species=str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}.fa')
     params:
-        SPECIES_DB=defaults.PATH_DICT['SPECIES_DB'],
-        DOWNLOAD_LOG=os.path.join(defaults.PATH_DICT['CONFIG_DIR'], 'download.txt'),
+        SPECIES_DB=str(defaults.PATH_DICT['SPECIES_DB']),
+        DOWNLOAD_LOG=str(defaults.PATH_DICT['CONFIG_DIR'] / 'download.txt'),
         API_KEY=defaults.NCBI_API_TOKEN
     threads:
         workflow.cores / 3
@@ -76,7 +76,7 @@ rule genome_downloader_setup:
 
 rule genome_downloader:
     input:
-        species=expand(os.path.join(defaults.PATH_DICT['SPECIES_DB'], '{genome}.fa'), genome=defaults.SPECIES)
+        species=expand(str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}.fa'), genome=defaults.SPECIES)
     priority: 100
     shell:
         """
@@ -85,11 +85,11 @@ rule genome_downloader:
 
 rule query_downloader_setup:
     output:
-        species=os.path.join(defaults.QUERY_FILE)
+        species=str(defaults.QUERY_FILE)
     params:
         query_acc=defaults.QUERY_ACC,
-        query_dir=defaults.PATH_DICT['FASTA_DIR'],
-        download_log=os.path.join(defaults.PATH_DICT['CONFIG_DIR'], 'download.txt'),
+        query_dir=str(defaults.PATH_DICT['FASTA_DIR']),
+        download_log=str(defaults.PATH_DICT['CONFIG_DIR'] / 'download.txt'),
         entrez_email=defaults.ENTREZ_EMAIL
     shell:
         '''
@@ -100,7 +100,7 @@ rule query_downloader_setup:
 
 rule query_downloader:
     input:
-        query_file=defaults.QUERY_FILE
+        query_file=str(defaults.QUERY_FILE)
     priority: 100
     shell:
         """
@@ -109,10 +109,10 @@ rule query_downloader:
 
 rule pfam_hmm_downloader:
     output:
-        md5=os.path.join(defaults.PATH_DICT['HMM_DB'], 'md5sum.txt'),
-        hmm=os.path.join(defaults.PATH_DICT['HMM_DB'], 'Pfam-A.hmm')
+        md5=str(defaults.PATH_DICT['HMM_DB'] / 'md5sum.txt'),
+        hmm=str(defaults.PATH_DICT['HMM_DB'] / 'Pfam-A.hmm')
     params:
-        hmm_profile_dir=defaults.PATH_DICT['HMM_DB'],
+        hmm_profile_dir=str(defaults.PATH_DICT['HMM_DB']),
         url='https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz',
         md5_url='https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/md5_checksums'
     threads:
@@ -139,9 +139,9 @@ rule pfam_hmm_downloader:
 rule cdd_database_downloader:
     """Download and extract CDD database for RPSBLAST."""
     output:
-        pal=defaults.PATH_DICT['RPS_DB'] + '.pal',
+        pal=str(defaults.PATH_DICT['RPS_DB']) + '.pal',
     params:
-        cdd_dir=os.path.dirname(defaults.PATH_DICT['RPS_DB']),
+        cdd_dir=str(defaults.PATH_DICT['RPS_DB'].parent),
         url='https://ftp.ncbi.nih.gov/pub/mmdb/cdd/little_endian/Cdd_LE.tar.gz'
     threads:
         workflow.cores
@@ -160,14 +160,14 @@ rule cdd_database_downloader:
 rule rpsbproc_data_downloader:
     """Download rpsbproc annotation data files."""
     output:
-        cddid=os.path.join(defaults.PATH_DICT['RPSBPROC_DB'], 'cddid.tbl'),
-        cdtrack=os.path.join(defaults.PATH_DICT['RPSBPROC_DB'], 'cdtrack.txt'),
-        family_links=os.path.join(defaults.PATH_DICT['RPSBPROC_DB'], 'family_superfamily_links'),
-        cddannot=os.path.join(defaults.PATH_DICT['RPSBPROC_DB'], 'cddannot.dat'),
-        cddannot_generic=os.path.join(defaults.PATH_DICT['RPSBPROC_DB'], 'cddannot_generic.dat'),
-        bitscore=os.path.join(defaults.PATH_DICT['RPSBPROC_DB'], 'bitscore_specific.txt'),
+        cddid=str(defaults.PATH_DICT['RPSBPROC_DB'] / 'cddid.tbl'),
+        cdtrack=str(defaults.PATH_DICT['RPSBPROC_DB'] / 'cdtrack.txt'),
+        family_links=str(defaults.PATH_DICT['RPSBPROC_DB'] / 'family_superfamily_links'),
+        cddannot=str(defaults.PATH_DICT['RPSBPROC_DB'] / 'cddannot.dat'),
+        cddannot_generic=str(defaults.PATH_DICT['RPSBPROC_DB'] / 'cddannot_generic.dat'),
+        bitscore=str(defaults.PATH_DICT['RPSBPROC_DB'] / 'bitscore_specific.txt'),
     params:
-        rpsbproc_dir=defaults.PATH_DICT['RPSBPROC_DB'],
+        rpsbproc_dir=str(defaults.PATH_DICT['RPSBPROC_DB']),
         base_url='https://ftp.ncbi.nih.gov/pub/mmdb/cdd'
     shell:
         """
@@ -199,17 +199,17 @@ rule setup_databases:
 
 rule blast_db_generator_setup:
     input:
-        fa = os.path.join(defaults.PATH_DICT['SPECIES_DB'], '{genome}.fa')
+        fa = str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}.fa')
     output:
-        ndb_file=os.path.join(defaults.PATH_DICT['SPECIES_DB'],'{genome}','{genome}.ndb'),
-        nhr_file=os.path.join(defaults.PATH_DICT['SPECIES_DB'],'{genome}','{genome}.nhr'),
-        nin_file=os.path.join(defaults.PATH_DICT['SPECIES_DB'],'{genome}','{genome}.nin'),
-        not_file=os.path.join(defaults.PATH_DICT['SPECIES_DB'],'{genome}','{genome}.not'),
-        nsq_file=os.path.join(defaults.PATH_DICT['SPECIES_DB'],'{genome}','{genome}.nsq'),
-        ntf_file=os.path.join(defaults.PATH_DICT['SPECIES_DB'],'{genome}','{genome}.ntf'),
-        nto_file=os.path.join(defaults.PATH_DICT['SPECIES_DB'],'{genome}','{genome}.nto'),
+        ndb_file=str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}' / '{genome}.ndb'),
+        nhr_file=str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}' / '{genome}.nhr'),
+        nin_file=str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}' / '{genome}.nin'),
+        not_file=str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}' / '{genome}.not'),
+        nsq_file=str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}' / '{genome}.nsq'),
+        ntf_file=str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}' / '{genome}.ntf'),
+        nto_file=str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}' / '{genome}.nto'),
     params:
-        db_dir=defaults.PATH_DICT['SPECIES_DB']
+        db_dir=str(defaults.PATH_DICT['SPECIES_DB'])
     shell:
         """
         makeblastdb -in {input.fa:q} -dbtype nucl -parse_seqids \
@@ -218,7 +218,7 @@ rule blast_db_generator_setup:
 
 rule blast_db_generator:
     input:
-        blast_db = expand(os.path.join(defaults.PATH_DICT['SPECIES_DB'], '{genome}/{genome}.{ext}'),
+        blast_db = expand(str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}' / '{genome}.{ext}'),
                           genome=defaults.SPECIES,
                           ext=BLAST_DB_EXT)
 
@@ -227,9 +227,9 @@ rule blaster:
         blast_db=rules.blast_db_generator.input,
         query=rules.query_downloader.input
     output:
-        asn_files=expand(os.path.join(defaults.PATH_DICT['ASN_TBLASTN_DIR'],'{genome}.asn'),genome=defaults.SPECIES),
-        csv_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'blast.csv'),
-        parquet_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'blast.parquet')
+        asn_files=expand(str(defaults.PATH_DICT['ASN_TBLASTN_DIR'] / '{genome}.asn'), genome=defaults.SPECIES),
+        csv_files=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.csv'),
+        parquet_files=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.parquet')
     shell:
         '''
         python scripts/blast.py
@@ -247,11 +247,11 @@ rule orf_analyser:
     input:
         blast_parquet=rules.blaster.output.parquet_files
     output:
-        flag_file=os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'], 'orf_analysis.flag'),
-        manifest_file=os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'], 'species_manifest.txt'),
+        flag_file=str(defaults.PATH_DICT['ORF_OUTPUT_DIR'] / 'orf_analysis.flag'),
+        manifest_file=str(defaults.PATH_DICT['ORF_OUTPUT_DIR'] / 'species_manifest.txt'),
     params:
-        species_db=defaults.PATH_DICT['SPECIES_DB'],
-        output_folder=defaults.PATH_DICT['ORF_OUTPUT_DIR'],
+        species_db=str(defaults.PATH_DICT['SPECIES_DB']),
+        output_folder=str(defaults.PATH_DICT['ORF_OUTPUT_DIR']),
         min_orf_length=defaults.MIN_ORF_LENGTH
     shell:
         '''
@@ -266,14 +266,14 @@ rule blast_parser:
     input:
         blast_output=rules.blaster.output.parquet_files
     output:
-        fasta_files=expand(os.path.join(defaults.PATH_DICT['FASTA_OUTPUT_DIR'],'{genome}.fa'),genome=SPECIES_POST),
+        fasta_files=expand(str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{genome}.fa'), genome=SPECIES_POST),
     params:
         parquet_file='blast.parquet'
     shell:
         '''
         python scripts/blast_parser.py \
-        --input_parquet_file {params.parquet_file:q} \
-        --export_fasta
+        --input-parquet-file {params.parquet_file:q} \
+        --export-fasta
         '''
 
 rule rpsblaster:
@@ -281,9 +281,9 @@ rule rpsblaster:
         blast_output=rules.blaster.output,
         cdd_pal=rules.cdd_database_downloader.output.pal,
     output:
-        asn_files=expand(os.path.join(defaults.PATH_DICT['ASN_RPSBLAST_DIR'],'{genome}.asn'),genome=SPECIES_POST),
-        csv_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'rpsblast.csv'),
-        parquet_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'rpsblast.parquet')
+        asn_files=expand(str(defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / '{genome}.asn'), genome=SPECIES_POST),
+        csv_files=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.csv'),
+        parquet_files=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.parquet')
     shell:
         '''
         python scripts/rpsblast.py
@@ -294,7 +294,7 @@ rule rpsbproc:
         rpsblast_output=rules.rpsblaster.output,
         rpsbproc_data=rules.rpsbproc_data_downloader.output,
     output:
-        rpsbproc_txt=expand(os.path.join(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'],'{genome}.txt'),genome=SPECIES_POST),
+        rpsbproc_txt=expand(str(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'] / '{genome}.txt'), genome=SPECIES_POST),
     shell:
         '''
         python scripts/rpsbproc.py
@@ -304,8 +304,8 @@ rule rpsbproc_parser:
     input:
         rpsbproc_output=rules.rpsbproc.output,
     output:
-        csv_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'domains.csv'),
-        parquet_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'domains.parquet')
+        csv_files=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.csv'),
+        parquet_files=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.parquet')
     shell:
         '''
         python scripts/rpsbproc_parser.py
@@ -315,11 +315,11 @@ rule completeness_detector:
     input:
         domains=rules.rpsbproc_parser.output,
     output:
-        tile_plot=os.path.join(defaults.PATH_DICT['PLOT_DIR'],'tile_plot.png')
+        tile_plot=str(defaults.PATH_DICT['PLOT_DIR'] / 'tile_plot.png')
     params:
-        domain_data=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'domains.parquet'),
-        plot_output_folder=defaults.PATH_DICT['PLOT_DIR'],
-        table_output_folder=defaults.PATH_DICT['TABLE_OUTPUT_DIR']
+        domain_data=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.parquet'),
+        plot_output_folder=str(defaults.PATH_DICT['PLOT_DIR']),
+        table_output_folder=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'])
     shell:
         '''
         Rscript scripts/completeness_detector.R \
@@ -331,14 +331,14 @@ rule contingency_sorter:
     input:
         domains=rules.rpsbproc_parser.output,
     output:
-        domain_3d_plot=os.path.join(defaults.PATH_DICT['PLOT_DIR'],'scatter_3D_plot.html'),
-        contingency_table=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'contingency_table.csv'),
+        domain_3d_plot=str(defaults.PATH_DICT['PLOT_DIR'] / 'scatter_3D_plot.html'),
+        contingency_table=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'contingency_table.csv'),
     params:
-        domain_data=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'domains.parquet'),
+        domain_data=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.parquet'),
         species_list=defaults.SPECIES,
-        plot_output_folder=defaults.PATH_DICT['PLOT_DIR'],
-        table_output_folder=defaults.PATH_DICT['TABLE_OUTPUT_DIR'],
-        range_output_folder=defaults.PATH_DICT['RANGE_OUTPUT_DIR']
+        plot_output_folder=str(defaults.PATH_DICT['PLOT_DIR']),
+        table_output_folder=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR']),
+        range_output_folder=str(defaults.PATH_DICT['RANGE_OUTPUT_DIR'])
     shell:
         '''
         Rscript scripts/contingency_sorter.R \
