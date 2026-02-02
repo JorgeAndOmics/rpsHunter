@@ -108,11 +108,11 @@ check_downstream_outputs(blast_dir)
 # ==============================================================================
 
 # Normalizer for IDs (vectorized)
+# Handles FASTA headers with descriptions and optional version suffixes
 normalize_ids <- function(x) {
   x <- as.character(x)
   x <- trimws(x)                         # remove surrounding whitespace
-  x <- sub("^[^|]*\\|", "", x)           # drop leading DB prefix like 'ref|'/'gb|'/'emb|'
-  x <- sub("\\|$", "", x)                # drop trailing pipe if present
+  x <- sub(" .*$", "", x)                # drop description after first space (FASTA headers)
   x <- sub("^chr", "", x, ignore.case = TRUE) # drop 'chr' prefix (case-insensitive)
   x <- sub("\\.\\d+$", "", x)            # drop version suffix '.number' at end
   x
@@ -368,6 +368,10 @@ if (length(orf_data_list) == 0) {
     flag_file_path
   )
   message(sprintf("Wrote flag file: %s", flag_file_path))
+  # Write empty species manifest (required by Snakemake)
+  manifest_path <- file.path(args.output_folder, "species_manifest.txt")
+  writeLines(character(0), manifest_path)
+  message(sprintf("Wrote empty species manifest: %s", manifest_path))
   quit(save = "no", status = 0)
 }
 

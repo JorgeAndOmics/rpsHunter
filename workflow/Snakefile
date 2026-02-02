@@ -212,7 +212,7 @@ rule blast_db_generator_setup:
         db_dir=str(defaults.PATH_DICT['SPECIES_DB'])
     shell:
         """
-        makeblastdb -in {input.fa:q} -dbtype nucl -parse_seqids \
+        makeblastdb -in {input.fa:q} -dbtype nucl \
         -out {params.db_dir:q}/{wildcards.genome:q}/{wildcards.genome:q}
         """
 
