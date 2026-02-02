@@ -27,21 +27,35 @@ def retrieve_species_from_manifest(manifest_path: str, default: list[str] = None
             return [line.strip() for line in f if line.strip()]
     return default if default else []
 
+def get_post_blast_species() -> list[str]:
+    """
+    Get species list for post-BLAST rules.
+
+    If ORF analysis was run (flag file exists), use the species manifest.
+    Otherwise, read species from blast.parquet/csv.
+    """
+    flag_file = os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'], 'orf_analysis.flag')
+    manifest_file = os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'], 'species_manifest.txt')
+
+    # Check if ORF analysis was run
+    if os.path.exists(flag_file) and os.path.exists(manifest_file):
+        species = retrieve_species_from_manifest(manifest_file)
+        if species:
+            return species
+
+    # Fall back to blast.parquet/csv species list
+    return retrieve_species_list(
+        parquet_path=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'blast.parquet'),
+        csv_path=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'blast.csv'),
+        default=list(defaults.SPECIES)
+    )
+
 BLAST_DB_EXT = ['ndb', 'nhr', 'nin', 'not', 'nsq', 'ntf', 'nto']
 SPECIES = defaults.SPECIES
 
 # Species after BLAST (from blast.parquet or blast.csv)
-SPECIES_POST = retrieve_species_list(
-    parquet_path=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'blast.parquet'),
-    csv_path=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'blast.csv'),
-    default=list(defaults.SPECIES)
-)
-
-# Species after ORF analysis (may be fewer - some skipped if no ORFs)
-SPECIES_ORF = retrieve_species_from_manifest(
-    manifest_path=os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'], 'species_manifest.txt'),
-    default=SPECIES_POST
-)
+# This is dynamically computed to handle both ORF and non-ORF modes
+SPECIES_POST = get_post_blast_species()
 
 configfile: defaults.CONFIG_FILE
 
@@ -113,6 +127,76 @@ rule pfam_hmm_downloader:
         gunzip -d -f -v -k {params.hmm_profile_dir:q}/Pfam-A.hmm.gz
         """
 
+# =============================================================================
+# CDD Database Download Rules
+# =============================================================================
+# Downloads NCBI Conserved Domain Database for RPSBLAST and rpsbproc
+# Sources:
+#   - CDD BLAST database: https://ftp.ncbi.nih.gov/pub/mmdb/cdd/little_endian/
+#   - rpsbproc data files: https://ftp.ncbi.nih.gov/pub/mmdb/cdd/
+# =============================================================================
+
+rule cdd_database_downloader:
+    """Download and extract CDD database for RPSBLAST."""
+    output:
+        pal=defaults.PATH_DICT['RPS_DB'] + '.pal',
+    params:
+        cdd_dir=os.path.dirname(defaults.PATH_DICT['RPS_DB']),
+        url='https://ftp.ncbi.nih.gov/pub/mmdb/cdd/little_endian/Cdd_LE.tar.gz'
+    threads:
+        workflow.cores
+    shell:
+        """
+        mkdir -p {params.cdd_dir:q} && \
+        cd {params.cdd_dir:q} && \
+        echo "Downloading CDD database (~1.5 GB)..." && \
+        wget -q --show-progress -O Cdd_LE.tar.gz {params.url:q} && \
+        echo "Extracting CDD database..." && \
+        tar -xzf Cdd_LE.tar.gz && \
+        rm -f Cdd_LE.tar.gz && \
+        echo "CDD database download complete."
+        """
+
+rule rpsbproc_data_downloader:
+    """Download rpsbproc annotation data files."""
+    output:
+        cddid=os.path.join(defaults.PATH_DICT['RPSBPROC_DB'], 'cddid.tbl'),
+        cdtrack=os.path.join(defaults.PATH_DICT['RPSBPROC_DB'], 'cdtrack.txt'),
+        family_links=os.path.join(defaults.PATH_DICT['RPSBPROC_DB'], 'family_superfamily_links'),
+        cddannot=os.path.join(defaults.PATH_DICT['RPSBPROC_DB'], 'cddannot.dat'),
+        cddannot_generic=os.path.join(defaults.PATH_DICT['RPSBPROC_DB'], 'cddannot_generic.dat'),
+        bitscore=os.path.join(defaults.PATH_DICT['RPSBPROC_DB'], 'bitscore_specific.txt'),
+    params:
+        rpsbproc_dir=defaults.PATH_DICT['RPSBPROC_DB'],
+        base_url='https://ftp.ncbi.nih.gov/pub/mmdb/cdd'
+    shell:
+        """
+        mkdir -p {params.rpsbproc_dir:q} && \
+        cd {params.rpsbproc_dir:q} && \
+        echo "Downloading rpsbproc annotation data files..." && \
+        wget -q --show-progress -O cddid.tbl.gz {params.base_url}/cddid.tbl.gz && \
+        wget -q --show-progress -O cdtrack.txt {params.base_url}/cdtrack.txt && \
+        wget -q --show-progress -O family_superfamily_links {params.base_url}/family_superfamily_links && \
+        wget -q --show-progress -O cddannot.dat.gz {params.base_url}/cddannot.dat.gz && \
+        wget -q --show-progress -O cddannot_generic.dat.gz {params.base_url}/cddannot_generic.dat.gz && \
+        wget -q --show-progress -O bitscore_specific.txt {params.base_url}/bitscore_specific.txt && \
+        echo "Decompressing files..." && \
+        gunzip -f cddid.tbl.gz && \
+        gunzip -f cddannot.dat.gz && \
+        gunzip -f cddannot_generic.dat.gz && \
+        echo "rpsbproc data download complete."
+        """
+
+rule setup_databases:
+    """Master rule to download all required databases."""
+    input:
+        cdd_pal=rules.cdd_database_downloader.output.pal,
+        rpsbproc_data=rules.rpsbproc_data_downloader.output,
+    shell:
+        """
+        echo "All databases have been downloaded and configured."
+        """
+
 rule blast_db_generator_setup:
     input:
         fa = os.path.join(defaults.PATH_DICT['SPECIES_DB'], '{genome}.fa')
@@ -148,7 +232,34 @@ rule blaster:
         parquet_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'blast.parquet')
     shell:
         '''
-        python scripts/blast.py 
+        python scripts/blast.py
+        '''
+
+# =============================================================================
+# ORF Analysis (Optional)
+# =============================================================================
+# When run, this rule ENRICHES blast.parquet with ORF information.
+# It adds columns: ORF_Filtered (bool), ORF_COUNT (int), ORF_SUMMARY (string)
+# Downstream rules (blast_parser, rpsblaster) auto-detect ORF mode.
+# =============================================================================
+
+rule orf_analyser:
+    input:
+        blast_parquet=rules.blaster.output.parquet_files
+    output:
+        flag_file=os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'], 'orf_analysis.flag'),
+        manifest_file=os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'], 'species_manifest.txt'),
+    params:
+        species_db=defaults.PATH_DICT['SPECIES_DB'],
+        output_folder=defaults.PATH_DICT['ORF_OUTPUT_DIR'],
+        min_orf_length=defaults.MIN_ORF_LENGTH
+    shell:
+        '''
+        Rscript scripts/orf_analyser.R \
+        {input.blast_parquet:q} \
+        {params.species_db:q} \
+        {params.output_folder:q} \
+        {params.min_orf_length}
         '''
 
 rule blast_parser:
@@ -168,6 +279,7 @@ rule blast_parser:
 rule rpsblaster:
     input:
         blast_output=rules.blaster.output,
+        cdd_pal=rules.cdd_database_downloader.output.pal,
     output:
         asn_files=expand(os.path.join(defaults.PATH_DICT['ASN_RPSBLAST_DIR'],'{genome}.asn'),genome=SPECIES_POST),
         csv_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'rpsblast.csv'),
@@ -177,58 +289,15 @@ rule rpsblaster:
         python scripts/rpsblast.py
         '''
 
-rule orf_analyser:
-    input:
-        blast_parquet=rules.blaster.output.parquet_files
-    output:
-        parquet_file=os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'], 'orf.parquet'),
-        manifest_file=os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'], 'species_manifest.txt'),
-        fasta_files=expand(os.path.join(defaults.PATH_DICT['ORF_FASTA_OUTPUT_DIR'],'{genome}.fa'),genome=SPECIES_POST),
-        csv_files=expand(os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'],'{genome}_orf.csv'),genome=SPECIES_POST),
-        gff3_files=expand(os.path.join(defaults.PATH_DICT['ORF_OUTPUT_DIR'],'{genome}_orf.gff3'),genome=SPECIES_POST)
-    params:
-        species_db=defaults.PATH_DICT['SPECIES_DB'],
-        output_folder=defaults.PATH_DICT['ORF_OUTPUT_DIR'],
-        min_orf_length=defaults.MIN_ORF_LENGTH
-    shell:
-        '''
-        Rscript scripts/orf_analyser.R \
-        {input.blast_parquet:q} \
-        {params.species_db:q} \
-        {params.output_folder:q} \
-        {params.min_orf_length}
-        '''
-
-rule rpsblaster_orf:
-    input:
-        orf_output=rules.orf_analyser.output.fasta_files,
-        manifest=rules.orf_analyser.output.manifest_file
-    output:
-        asn_files=expand(os.path.join(defaults.PATH_DICT['ASN_RPSBLAST_ORF_DIR'],'{genome}.asn'),genome=SPECIES_ORF),
-        csv_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'rpsblast_orf.csv'),
-        parquet_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'rpsblast_orf.parquet')
-    params:
-        fasta_input_dir=defaults.PATH_DICT['ORF_FASTA_OUTPUT_DIR'],
-        output_csv=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'rpsblast_orf.csv'),
-        output_parquet=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'rpsblast_orf.parquet'),
-        asn_output_dir=defaults.PATH_DICT['ASN_RPSBLAST_ORF_DIR']
-    shell:
-        '''
-        python scripts/rpsblast.py \
-            --input_dir {params.fasta_input_dir:q} \
-            --output_csv {params.output_csv:q} \
-            --output_parquet {params.output_parquet:q} \
-            --asn_output_dir {params.asn_output_dir:q}
-        '''
-
 rule rpsbproc:
     input:
         rpsblast_output=rules.rpsblaster.output,
+        rpsbproc_data=rules.rpsbproc_data_downloader.output,
     output:
         rpsbproc_txt=expand(os.path.join(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'],'{genome}.txt'),genome=SPECIES_POST),
     shell:
         '''
-        python scripts/rpsbproc.py 
+        python scripts/rpsbproc.py
         '''
 
 rule rpsbproc_parser:
@@ -242,55 +311,19 @@ rule rpsbproc_parser:
         python scripts/rpsbproc_parser.py
         '''
 
-rule rpsbproc_orf:
-    input:
-        rpsblast_output=rules.rpsblaster_orf.output,
-    output:
-        rpsbproc_txt=expand(os.path.join(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'], 'orf', '{genome}.txt'), genome=SPECIES_ORF),
-    params:
-        asn_input_dir=defaults.PATH_DICT['ASN_RPSBLAST_ORF_DIR'],
-        output_dir=os.path.join(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'], 'orf')
-    shell:
-        '''
-        python scripts/rpsbproc.py \
-            --asn_input_dir {params.asn_input_dir:q} \
-            --output_dir {params.output_dir:q}
-        '''
-
-rule rpsbproc_parser_orf:
-    input:
-        rpsbproc_output=rules.rpsbproc_orf.output,
-    output:
-        csv_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'domains_orf.csv'),
-        parquet_files=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'domains_orf.parquet')
-    params:
-        input_dir=os.path.join(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'], 'orf'),
-        output_csv=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'domains_orf.csv'),
-        output_parquet=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'], 'domains_orf.parquet')
-    shell:
-        '''
-        python scripts/rpsbproc_parser.py \
-            --input_dir {params.input_dir:q} \
-            --output_csv {params.output_csv:q} \
-            --output_parquet {params.output_parquet:q}
-        '''
-
 rule completeness_detector:
     input:
         domains=rules.rpsbproc_parser.output,
-        species_list=defaults.SPECIES
     output:
         tile_plot=os.path.join(defaults.PATH_DICT['PLOT_DIR'],'tile_plot.png')
     params:
         domain_data=os.path.join(defaults.PATH_DICT['TABLE_OUTPUT_DIR'],'domains.parquet'),
-        species_list=defaults.SPECIES,
         plot_output_folder=defaults.PATH_DICT['PLOT_DIR'],
         table_output_folder=defaults.PATH_DICT['TABLE_OUTPUT_DIR']
     shell:
         '''
         Rscript scripts/completeness_detector.R \
         {params.domain_data:q} \
-        {params.species_list:q} \
         {params.plot_output_folder:q} \
         '''
 

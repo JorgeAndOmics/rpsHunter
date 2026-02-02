@@ -40,7 +40,7 @@ ACCESSION_ID_REGEX: str = r'[A-Z]{2,}_?[0-9]+\.[0-9]{1,2}'
 
 # Directories
 PATH_DICT: Dict[str, Any] = {
-    'ROOT': os.path.abspath(config['root'].get('db_root_folder', os.path.join('..')))
+    'ROOT': os.path.abspath(config['root'].get('db_root_folder'))
 }
 
 # === Root Directories ===
@@ -50,11 +50,10 @@ PATH_DICT['LOG_DIR'] = os.path.abspath(os.path.join(config['root'].get('logs_roo
 PATH_DICT['WORKFLOW_DIR'] = Path(__file__).parent
 
 # === Database Directories ===
-PATH_DICT['ROOT_DB'] = os.path.abspath(os.path.join(config['root'].get('db_root_folder')))
-PATH_DICT['SPECIES_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT_DB'], 'blast_dbs_OLD', 'species'))
+PATH_DICT['SPECIES_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT']))
 PATH_DICT['HMM_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT'], 'hmm_dbs'))
-PATH_DICT['RPS_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT_DB'], 'cdd_dbs', 'Cdd'))
-PATH_DICT['RPSBPROC_DB'] = os.path.abspath(os.path.join(config['root'].get('rpsbproc_annot_folder')))
+PATH_DICT['RPS_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT'], 'cdd_dbs', 'Cdd'))
+PATH_DICT['RPSBPROC_DB'] = os.path.abspath(os.path.join(PATH_DICT['ROOT'], 'rpsbproc_dbs'))
 
 # === Data Subdirectories ===
 PATH_DICT['CONFIG_DIR'] = os.path.abspath(os.path.join(PATH_DICT['DATA_DIR'], 'config'))
@@ -76,6 +75,7 @@ PATH_DICT['LOCI_TABLE_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['TAB
 # === ORF Analysis Directories ===
 PATH_DICT['ORF_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'orf'))
 PATH_DICT['ORF_FASTA_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ORF_OUTPUT_DIR'], 'fastas'))
+PATH_DICT['ORF_FLAG_FILE'] = os.path.abspath(os.path.join(PATH_DICT['ORF_OUTPUT_DIR'], 'orf_analysis.flag'))
 
 # === HMM Subdirectories ===
 
@@ -83,7 +83,6 @@ PATH_DICT['ORF_FASTA_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ORF_
 # === ASN Subdirectories ===
 PATH_DICT['ASN_TBLASTN_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'tblastn'))
 PATH_DICT['ASN_RPSBLAST_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'rpsblast'))
-PATH_DICT['ASN_RPSBLAST_ORF_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'rpsblast_orf'))
 PATH_DICT['ASN_RPS_PROTEIN_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'protein'))
 
 # Directory generation

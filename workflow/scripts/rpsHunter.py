@@ -133,6 +133,9 @@ def cli_entry() -> None:
         description='rpsHunter: A tool for gene domain identification and analysis.'
     )
 
+    parser.add_argument('--setup_databases', action='store_true',
+                        help='Download and setup CDD and rpsbproc annotation databases.')
+
     parser.add_argument('--download_genomes', action='store_true',
                         help='Download genomes listed in the .yaml file.')
 
@@ -146,7 +149,8 @@ def cli_entry() -> None:
                         help='Run tBLASTn of the query sequence against genome databases.')
 
     parser.add_argument('--orf_analyser', action='store_true',
-                        help='Run ORF detection on BLAST hits (filters sequences to those with ORFs).')
+                        help='Run ORF detection on BLAST hits. Enriches blast.parquet with ORF data; '
+                             'downstream rules auto-detect and use only ORF-filtered sequences.')
 
     parser.add_argument('--rpsblast', action='store_true',
                         help='Run RPS-BLAST against a domain database.')
@@ -193,6 +197,14 @@ def cli_entry() -> None:
     # -------------------------------------------------------------------------
     # Dispatch Snakemake Rules
     # -------------------------------------------------------------------------
+    if args.setup_databases:
+        run_snakemake_rule(
+            rule='setup_databases',
+            num_cores=defaults.NUM_CORES,
+            display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
+            snakemake_flags=unknown
+        )
+
     if args.download_genomes:
         run_snakemake_rule(
             rule='genome_downloader',
@@ -234,30 +246,24 @@ def cli_entry() -> None:
         )
 
     if args.rpsblast:
-        # Use ORF-filtered input if --orf_analyser was specified
-        rule_name = 'rpsblaster_orf' if args.orf_analyser else 'rpsblaster'
         run_snakemake_rule(
-            rule=rule_name,
+            rule='rpsblaster',
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown
         )
 
     if args.rpsbproc:
-        # Use ORF-filtered input if --orf_analyser was specified
-        rule_name = 'rpsbproc_orf' if args.orf_analyser else 'rpsbproc'
         run_snakemake_rule(
-            rule=rule_name,
+            rule='rpsbproc',
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown
         )
 
     if args.rpsbproc_parser:
-        # Use ORF-filtered input if --orf_analyser was specified
-        rule_name = 'rpsbproc_parser_orf' if args.orf_analyser else 'rpsbproc_parser'
         run_snakemake_rule(
-            rule=rule_name,
+            rule='rpsbproc_parser',
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown

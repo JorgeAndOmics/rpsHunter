@@ -6,6 +6,12 @@ Description
     Parses, filters, and optionally exports BLAST result sequences as per-species FASTA files.
     Applies filtering based on configurable identity, e-value, alignment length, and bitscore thresholds.
 
+    ORF-aware behavior (unified pipeline):
+    - If blast.parquet contains an 'ORF_Filtered' column with True values,
+      only those sequences are exported to FASTA (ORF-filtered sequences).
+    - If the column doesn't exist or has no True values, all sequences are used
+      (backward compatible behavior).
+
 Requirements
 ------------
     - pandas
@@ -61,6 +67,40 @@ def table_filter(df: pd.DataFrame) -> pd.DataFrame:
         (df['Alignment Length'] >= defaults.SEQ_LENGTH_THRESHOLD) &
         (df['Bit Score'] >= defaults.BITSCORE_THRESHOLD)
     ].copy()
+
+
+def orf_aware_filter(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Filters the table to ORF-filtered sequences if ORF analysis was run.
+
+    This enables the unified pipeline where ORF analysis enriches blast.parquet
+    with an 'ORF_Filtered' column. When this column exists and has True values,
+    only those sequences are used for downstream processing.
+
+        Parameters
+        ----------
+            :param df: The input DataFrame containing BLAST results.
+
+        Returns
+        -------
+            :returns: A DataFrame filtered to ORF-passing sequences if ORF analysis
+                      was run, otherwise the original DataFrame unchanged.
+    """
+    if 'ORF_Filtered' not in df.columns:
+        logging.info("No ORF_Filtered column found - using all sequences (no ORF analysis run)")
+        return df
+
+    # Check if there are any ORF-filtered sequences
+    orf_filtered_count = df['ORF_Filtered'].sum() if df['ORF_Filtered'].dtype == bool else (df['ORF_Filtered'] == True).sum()
+
+    if orf_filtered_count > 0:
+        filtered_df = df[df['ORF_Filtered'] == True].copy()
+        logging.info(f"ORF analysis detected - using {len(filtered_df)} ORF-filtered sequences "
+                     f"(from {len(df)} total rows)")
+        return filtered_df
+    else:
+        logging.warning("ORF_Filtered column exists but no TRUE values found - using all sequences")
+        return df
 
 
 def species_divider(df: pd.DataFrame) -> List[pd.DataFrame]:
@@ -160,10 +200,16 @@ if __name__ == '__main__':
     )
     blast_df: pd.DataFrame = pd.read_parquet(input_parquet_path)
 
+    # Apply quality thresholds
     blast_df = table_filter(blast_df)
+
+    # Apply ORF filtering if ORF analysis was run (unified pipeline)
+    blast_df = orf_aware_filter(blast_df)
 
     if args.export_fasta:
         species_dfs: List[pd.DataFrame] = species_divider(blast_df)
 
         for df in species_dfs:
             fasta_generator(df)
+
+        logging.info(f"Exported FASTA files for {len(species_dfs)} species")
