@@ -349,57 +349,49 @@ orf_results <- lapply(species_list, function(species) {
 })
 
 # ==============================================================================
-# 6) COMBINE ORF-FILTERED DATA
+# 6) COLLECT ORF METADATA
 # ==============================================================================
-# Collect all ORF-filtered data frames
+# Collect all ORF-filtered data frames (contains Tag + ORF columns)
 orf_data_list <- lapply(orf_results, function(x) x$orf_data)
 orf_data_list <- Filter(Negate(is.null), orf_data_list)
 
 if (length(orf_data_list) == 0) {
-  message("\nNo species produced ORF-filtered sequences.")
-  message("blast.parquet will not be modified.")
-  # Still create the flag file to indicate ORF analysis was attempted
-  writeLines(
-    c(
-      paste0("timestamp: ", Sys.time()),
-      paste0("min_orf_length: ", args.min_orf_length),
-      "status: no_orfs_found"
-    ),
-    flag_file_path
-  )
-  message(sprintf("Wrote flag file: %s", flag_file_path))
-  # Write empty species manifest (required by Snakemake)
-  manifest_path <- file.path(args.output_folder, "species_manifest.txt")
-  writeLines(character(0), manifest_path)
-  message(sprintf("Wrote empty species manifest: %s", manifest_path))
-  quit(save = "no", status = 0)
+  message("\nNo sequences with ORFs found.")
+  # Add ORF columns to original data (all FALSE/NA)
+  blast_enriched <- d0 %>%
+    mutate(
+      ORF_Filtered = FALSE,
+      ORF_COUNT = NA_integer_,
+      ORF_SUMMARY = NA_character_
+    )
+  message(sprintf("Final table: %d rows (0 with ORFs)", nrow(blast_enriched)))
+} else {
+  # Combine ORF results from all species
+  orf_combined <- bind_rows(orf_data_list)
+  message(sprintf("\nFound %d sequences with ORFs from %d species",
+                  nrow(orf_combined), length(orf_data_list)))
+
+  # ==============================================================================
+  # 7) UPDATE ORIGINAL DATA IN-PLACE
+  # ==============================================================================
+  # Extract just Tag + ORF columns for joining
+  orf_info <- orf_combined %>%
+    select(Tag, ORF_COUNT, ORF_SUMMARY) %>%
+    distinct()
+
+  # Join ORF info to original data using Tag as key
+  blast_enriched <- d0 %>%
+    left_join(orf_info, by = "Tag") %>%
+    mutate(
+      ORF_Filtered = !is.na(ORF_COUNT),
+      ORF_COUNT = as.integer(ORF_COUNT)
+    )
+
+  n_with_orfs <- sum(blast_enriched$ORF_Filtered)
+  n_without_orfs <- sum(!blast_enriched$ORF_Filtered)
+  message(sprintf("Final table: %d rows (%d with ORFs, %d without)",
+                  nrow(blast_enriched), n_with_orfs, n_without_orfs))
 }
-
-orf_combined <- bind_rows(orf_data_list)
-message(sprintf("\nCombined %d ORF-filtered sequences from %d species",
-                nrow(orf_combined), length(orf_data_list)))
-
-# ==============================================================================
-# 7) MERGE WITH ORIGINAL DATA
-# ==============================================================================
-# Add ORF columns to original data (all FALSE)
-d0_enriched <- d0 %>%
-  mutate(
-    ORF_Filtered = FALSE,
-    ORF_COUNT = NA_integer_,
-    ORF_SUMMARY = NA_character_
-  )
-
-# Ensure column order matches
-common_cols <- intersect(colnames(d0_enriched), colnames(orf_combined))
-d0_enriched <- d0_enriched %>% select(all_of(common_cols))
-orf_combined <- orf_combined %>% select(all_of(common_cols))
-
-# Combine: original (ORF_Filtered=FALSE) + ORF-passing (ORF_Filtered=TRUE)
-blast_enriched <- bind_rows(d0_enriched, orf_combined)
-
-message(sprintf("Final enriched table: %d rows (%d original + %d ORF-filtered)",
-                nrow(blast_enriched), nrow(d0_enriched), nrow(orf_combined)))
 
 # ==============================================================================
 # 8) WRITE ENRICHED DATA BACK
@@ -415,21 +407,24 @@ message(sprintf("  Updated: %s", blast_csv_path))
 # ==============================================================================
 # 9) WRITE FLAG FILE AND MANIFEST
 # ==============================================================================
+# Count ORF-filtered sequences from enriched table
+n_orf_filtered <- sum(blast_enriched$ORF_Filtered)
+species_with_orfs <- unique(blast_enriched$Species[blast_enriched$ORF_Filtered])
+
 # Flag file indicates ORF analysis has been run
 writeLines(
   c(
     paste0("timestamp: ", Sys.time()),
     paste0("min_orf_length: ", args.min_orf_length),
-    paste0("species_count: ", length(orf_data_list)),
-    paste0("orf_filtered_sequences: ", nrow(orf_combined)),
-    "status: complete"
+    paste0("species_count: ", length(species_with_orfs)),
+    paste0("orf_filtered_sequences: ", n_orf_filtered),
+    paste0("status: ", if (n_orf_filtered > 0) "complete" else "no_orfs_found")
   ),
   flag_file_path
 )
 message(sprintf("Wrote flag file: %s", flag_file_path))
 
 # Write species manifest (species that have ORF-filtered sequences)
-species_with_orfs <- unique(orf_combined$Species)
 manifest_path <- file.path(args.output_folder, "species_manifest.txt")
 writeLines(species_with_orfs, manifest_path)
 message(sprintf("Wrote species manifest: %s (%d species)",
@@ -438,19 +433,11 @@ message(sprintf("Wrote species manifest: %s (%d species)",
 # ==============================================================================
 # 10) SUMMARY
 # ==============================================================================
-stats <- lapply(orf_results, function(x) {
-  if (!is.null(x$orf_data)) {
-    list(total = x$total_hits, with_orfs = x$hits_with_orfs)
-  } else {
-    NULL
-  }
-})
-stats <- Filter(Negate(is.null), stats)
-
 message("\n=== ORF Analysis Summary ===")
-message(sprintf("Species with ORFs: %d of %d", length(stats), length(species_list)))
-message(sprintf("Total hits analyzed: %d", sum(sapply(stats, function(x) x$total))))
-message(sprintf("Total hits with ORFs: %d", sum(sapply(stats, function(x) x$with_orfs))))
+message(sprintf("Total BLAST hits: %d", nrow(blast_enriched)))
+message(sprintf("Hits with ORFs: %d", n_orf_filtered))
+message(sprintf("Hits without ORFs: %d", nrow(blast_enriched) - n_orf_filtered))
+message(sprintf("Species with ORFs: %d of %d", length(species_with_orfs), length(species_list)))
 message("")
 message("Pipeline behavior after ORF analysis:")
 message("  - blast_parser will export only ORF_Filtered=TRUE sequences to FASTA")
