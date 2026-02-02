@@ -57,6 +57,19 @@ SPECIES = defaults.SPECIES
 # This is dynamically computed to handle both ORF and non-ORF modes
 SPECIES_POST = get_post_blast_species()
 
+def check_orf_downstream_conflict():
+    """Warn if running ORF analysis after downstream outputs exist."""
+    downstream = [
+        defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.parquet',
+        defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.parquet',
+    ]
+    existing = [str(f.name) for f in downstream if f.exists()]
+    if existing:
+        print("\n" + "="*60)
+        print("WARNING: Downstream outputs exist: " + ", ".join(existing))
+        print("Rerun: --rpsblast --rpsbproc --rpsbproc-parser")
+        print("="*60 + "\n")
+
 configfile: str(defaults.CONFIG_FILE)
 
 rule genome_downloader_setup:
@@ -251,16 +264,15 @@ rule orf_analyser:
         manifest_file=str(defaults.PATH_DICT['ORF_OUTPUT_DIR'] / 'species_manifest.txt'),
     params:
         species_db=str(defaults.PATH_DICT['SPECIES_DB']),
-        output_folder=str(defaults.PATH_DICT['ORF_OUTPUT_DIR']),
-        min_orf_length=defaults.MIN_ORF_LENGTH
-    shell:
-        '''
+        output_folder=str(defaults.PATH_DICT['ORF_OUTPUT_DIR'])
+    run:
+        check_orf_downstream_conflict()
+        shell('''
         Rscript scripts/orf_analyser.R \
-        {input.blast_parquet:q} \
-        {params.species_db:q} \
-        {params.output_folder:q} \
-        {params.min_orf_length}
-        '''
+            {input.blast_parquet:q} \
+            {params.species_db:q} \
+            {params.output_folder:q}
+        ''')
 
 rule blast_parser:
     input:

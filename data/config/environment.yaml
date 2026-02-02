@@ -44,6 +44,7 @@ dependencies:
   - r-reticulate
   - r-tidyverse
   - r-waffle
+  - r-yaml
   - ratelimit=2.2.1
   - requests=2.32.3
   - samtools

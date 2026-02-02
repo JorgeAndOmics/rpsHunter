@@ -75,7 +75,6 @@ PATH_DICT['LOCI_TABLE_OUTPUT_DIR'] = PATH_DICT['TABLE_OUTPUT_DIR'] / 'loci_table
 # === ORF Analysis Directories ===
 PATH_DICT['ORF_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'orf'
 PATH_DICT['ORF_FASTA_OUTPUT_DIR'] = PATH_DICT['ORF_OUTPUT_DIR'] / 'fastas'
-PATH_DICT['ORF_FLAG_FILE'] = PATH_DICT['ORF_OUTPUT_DIR'] / 'orf_analysis.flag'
 
 # === ASN Subdirectories ===
 PATH_DICT['ASN_TBLASTN_DIR'] = PATH_DICT['ASN_ROOT_OUTPUT_DIR'] / 'tblastn'

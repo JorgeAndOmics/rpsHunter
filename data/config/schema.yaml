@@ -1,4 +1,5 @@
 blast: include('blast_schema')
+orf: include('orf_schema')
 query: include('query_schema')
 execution: include('execution_schema')
 root: include('root_schema')
@@ -63,3 +64,8 @@ color_bold_bg_schema:
   background: str()
 
 species_schema: map(str(), key=str())
+
+orf_schema:
+  min_orf_length: int(min=1)
+  start_codon: str(matches='^([ATGC]{3})?$')
+  longest_orf: bool()

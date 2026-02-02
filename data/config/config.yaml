@@ -5,7 +5,9 @@ blast:
   bitscore: 70
 
 orf:
-  min_orf_length: 200  # Minimum ORF length in nucleotides
+  min_orf_length: 200      # Minimum ORF length in nucleotides
+  start_codon: ''          # Start codon filter (empty string = no filter)
+  longest_orf: true        # If true, keep only longest ORF per reading frame
 
 query:
   format: 'fa'
@@ -26,8 +28,7 @@ display:
   display_operation_info: false
 
 root:
-  db_root_folder: '/mnt/v/databases/local'
-  rpsbproc_annot_folder: '/mnt/v/databases/local/cdd_dbs/rpsbproc_annot1'
+  db_root_folder: '/mnt/v/databases/bat-experimental'
   data_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/data'
   results_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/results'
   logs_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/logs'
@@ -48,27 +49,5 @@ logging:
 
 species:
   'Desmodus_rotundus': 'Desmodus rotundus'
-  # 'Miniopterus_schreibersii': 'Miniopterus schreibersii'
-  # 'Tadarida_brasiliensis': 'Tadarida brasiliensis'
-  'Antrozous_pallidus': 'Antrozous pallidus'
-  'Molossus_molossus': 'Molossus molossus'
-  # 'Artibeus_lituratus': 'Artibeus lituratus'
-  # 'Eptesicus_fuscus': 'Eptesicus fuscus'
-  # 'Myotis_myotis': 'Myotis myotis'
-  # 'Eptesicus_nilssonii': 'Eptesicus nilssonii'
-  # 'Pipistrellus_kuhlii': 'Pipistrellus kuhlii'
-  # 'Rhinolophus_ferrumequinum': 'Rhinolophus ferrumequinum'
-  # 'Saccopteryx_bilineata': 'Saccopteryx bilineata'
-  # 'Vespertilio_murinus': 'Vespertilio murinus'
-  # 'Plecotus_auritus': 'Plecotus auritus'
-  # 'Rhinolophus_hipposideros': 'Rhinolophus hipposideros'
-  # 'Phyllostomus_discolor': 'Phyllostomus discolor'
-  # 'Myotis_daubentonii': 'Myotis daubentonii'
-  # 'Myotis_mystacinus': 'Myotis mystacinus'
-  # 'Corynorhinus_townsendii': 'Corynorhinus townsendii'
-  # 'Hipposideros_larvatus': 'Hipposideros larvatus'
-  # 'Rhynchonycteris_naso': 'Rhynchonycteris naso'
-  # 'Saccopteryx_leptura': 'Saccopteryx leptura'
-  # 'Molossus_alvarezi': 'Molossus alvarezi'
-  # 'Glossophaga_mutica': 'Glossophaga mutica'
-  # 'Molossus_nigricans': 'Molossus nigricans'
+  # 'Antrozous_pallidus': 'Antrozous pallidus'
+  # 'Molossus_molossus': 'Molossus molossus'
