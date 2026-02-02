@@ -73,12 +73,17 @@ PATH_DICT['XML_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DI
 PATH_DICT['RANGE_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'ranges'))
 PATH_DICT['LOCI_TABLE_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['TABLE_OUTPUT_DIR'], 'loci_tables'))
 
+# === ORF Analysis Directories ===
+PATH_DICT['ORF_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['RESULTS_DIR'], 'orf'))
+PATH_DICT['ORF_FASTA_OUTPUT_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ORF_OUTPUT_DIR'], 'fastas'))
+
 # === HMM Subdirectories ===
 
 
 # === ASN Subdirectories ===
 PATH_DICT['ASN_TBLASTN_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'tblastn'))
 PATH_DICT['ASN_RPSBLAST_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'rpsblast'))
+PATH_DICT['ASN_RPSBLAST_ORF_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'rpsblast_orf'))
 PATH_DICT['ASN_RPS_PROTEIN_DIR'] = os.path.abspath(os.path.join(PATH_DICT['ASN_ROOT_OUTPUT_DIR'], 'protein'))
 
 # Directory generation
@@ -99,6 +104,9 @@ MAX_RETRIEVAL_ATTEMPTS: int = config['execution'].get('max_retrieval_attempts', 
 MAX_THREADPOOL_WORKERS: Optional[int] = config['execution'].get('max_threadpool_workers', None)
 ENTREZ_EMAIL: str = config['execution'].get('entrez_email', '')
 NCBI_API_TOKEN: str = config['execution'].get('ncbi_api_token', '')
+
+# ORF Analysis
+MIN_ORF_LENGTH: int = config.get('orf', {}).get('min_orf_length', 200)
 
 # Display
 DISPLAY_SNAKEMAKE_INFO: bool = config['display'].get('display_snakemake_info', False)

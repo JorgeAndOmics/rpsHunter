@@ -4,6 +4,9 @@ blast:
   seq_length: 50
   bitscore: 70
 
+orf:
+  min_orf_length: 200  # Minimum ORF length in nucleotides
+
 query:
   format: 'fa'
   accession: 'NP_001297143.1'  # Example accession number
@@ -45,27 +48,27 @@ logging:
 
 species:
   'Desmodus_rotundus': 'Desmodus rotundus'
-  'Miniopterus_schreibersii': 'Miniopterus schreibersii'
-  'Tadarida_brasiliensis': 'Tadarida brasiliensis'
+  # 'Miniopterus_schreibersii': 'Miniopterus schreibersii'
+  # 'Tadarida_brasiliensis': 'Tadarida brasiliensis'
   'Antrozous_pallidus': 'Antrozous pallidus'
   'Molossus_molossus': 'Molossus molossus'
-  'Artibeus_lituratus': 'Artibeus lituratus'
-  'Eptesicus_fuscus': 'Eptesicus fuscus'
-  'Myotis_myotis': 'Myotis myotis'
-  'Eptesicus_nilssonii': 'Eptesicus nilssonii'
-  'Pipistrellus_kuhlii': 'Pipistrellus kuhlii'
-  'Rhinolophus_ferrumequinum': 'Rhinolophus ferrumequinum'
-  'Saccopteryx_bilineata': 'Saccopteryx bilineata'
-  'Vespertilio_murinus': 'Vespertilio murinus'
-  'Plecotus_auritus': 'Plecotus auritus'
-  'Rhinolophus_hipposideros': 'Rhinolophus hipposideros'
-  'Phyllostomus_discolor': 'Phyllostomus discolor'
-  'Myotis_daubentonii': 'Myotis daubentonii'
-  'Myotis_mystacinus': 'Myotis mystacinus'
-  'Corynorhinus_townsendii': 'Corynorhinus townsendii'
-  'Hipposideros_larvatus': 'Hipposideros larvatus'
-  'Rhynchonycteris_naso': 'Rhynchonycteris naso'
-  'Saccopteryx_leptura': 'Saccopteryx leptura'
-  'Molossus_alvarezi': 'Molossus alvarezi'
-  'Glossophaga_mutica': 'Glossophaga mutica'
-  'Molossus_nigricans': 'Molossus nigricans'
+  # 'Artibeus_lituratus': 'Artibeus lituratus'
+  # 'Eptesicus_fuscus': 'Eptesicus fuscus'
+  # 'Myotis_myotis': 'Myotis myotis'
+  # 'Eptesicus_nilssonii': 'Eptesicus nilssonii'
+  # 'Pipistrellus_kuhlii': 'Pipistrellus kuhlii'
+  # 'Rhinolophus_ferrumequinum': 'Rhinolophus ferrumequinum'
+  # 'Saccopteryx_bilineata': 'Saccopteryx bilineata'
+  # 'Vespertilio_murinus': 'Vespertilio murinus'
+  # 'Plecotus_auritus': 'Plecotus auritus'
+  # 'Rhinolophus_hipposideros': 'Rhinolophus hipposideros'
+  # 'Phyllostomus_discolor': 'Phyllostomus discolor'
+  # 'Myotis_daubentonii': 'Myotis daubentonii'
+  # 'Myotis_mystacinus': 'Myotis mystacinus'
+  # 'Corynorhinus_townsendii': 'Corynorhinus townsendii'
+  # 'Hipposideros_larvatus': 'Hipposideros larvatus'
+  # 'Rhynchonycteris_naso': 'Rhynchonycteris naso'
+  # 'Saccopteryx_leptura': 'Saccopteryx leptura'
+  # 'Molossus_alvarezi': 'Molossus alvarezi'
+  # 'Glossophaga_mutica': 'Glossophaga mutica'
+  # 'Molossus_nigricans': 'Molossus nigricans'

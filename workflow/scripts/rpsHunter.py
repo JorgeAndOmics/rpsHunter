@@ -145,6 +145,9 @@ def cli_entry() -> None:
     parser.add_argument('--blast', action='store_true',
                         help='Run tBLASTn of the query sequence against genome databases.')
 
+    parser.add_argument('--orf_analyser', action='store_true',
+                        help='Run ORF detection on BLAST hits (filters sequences to those with ORFs).')
+
     parser.add_argument('--rpsblast', action='store_true',
                         help='Run RPS-BLAST against a domain database.')
 
@@ -222,25 +225,39 @@ def cli_entry() -> None:
             snakemake_flags=unknown
         )
 
-    if args.rpsblast:
+    if args.orf_analyser:
         run_snakemake_rule(
-            rule='rpsblaster',
+            rule='orf_analyser',
+            num_cores=defaults.NUM_CORES,
+            display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
+            snakemake_flags=unknown
+        )
+
+    if args.rpsblast:
+        # Use ORF-filtered input if --orf_analyser was specified
+        rule_name = 'rpsblaster_orf' if args.orf_analyser else 'rpsblaster'
+        run_snakemake_rule(
+            rule=rule_name,
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown
         )
 
     if args.rpsbproc:
+        # Use ORF-filtered input if --orf_analyser was specified
+        rule_name = 'rpsbproc_orf' if args.orf_analyser else 'rpsbproc'
         run_snakemake_rule(
-            rule='rpsbproc',
+            rule=rule_name,
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown
         )
 
     if args.rpsbproc_parser:
+        # Use ORF-filtered input if --orf_analyser was specified
+        rule_name = 'rpsbproc_parser_orf' if args.orf_analyser else 'rpsbproc_parser'
         run_snakemake_rule(
-            rule='rpsbproc_parser',
+            rule=rule_name,
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown

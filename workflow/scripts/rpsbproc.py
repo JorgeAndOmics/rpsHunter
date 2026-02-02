@@ -65,9 +65,35 @@ def main(input_dir: str, output_dir: str, db_path: str, t_option: str) -> None:
 # -----------------------------------------------------------------------------
 
 if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description='Process RPS-BLAST ASN.1 output files with rpsbproc.'
+    )
+
+    parser.add_argument(
+        '--asn_input_dir',
+        type=str,
+        default=None,
+        help='ASN input directory. Defaults to ASN_RPSBLAST_DIR'
+    )
+
+    parser.add_argument(
+        '--output_dir',
+        type=str,
+        default=None,
+        help='Output directory for txt files. Defaults to RPSBPROC_OUTPUT_DIR'
+    )
+
+    args = parser.parse_args()
+
+    input_dir = args.asn_input_dir if args.asn_input_dir else defaults.PATH_DICT['ASN_RPSBLAST_DIR']
+    output_dir = args.output_dir if args.output_dir else defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR']
+    os.makedirs(output_dir, exist_ok=True)
+
     main(
-        input_dir=defaults.ASN_RPSBLAST_DIR,
-        output_dir=defaults.RPSBPROC_OUTPUT_DIR,
-        db_path=defaults.RPSBPROC_DB,
+        input_dir=input_dir,
+        output_dir=output_dir,
+        db_path=defaults.PATH_DICT['RPSBPROC_DB'],
         t_option='both'
     )
