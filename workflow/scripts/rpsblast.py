@@ -6,17 +6,12 @@
 """
 
 import argparse
-import concurrent.futures
 import logging
-import re
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Tuple, Dict, Any
-
-from Bio import SeqIO
+from typing import List, Optional, Tuple
 
 import pandas as pd
-from tqdm import tqdm
 
 import defaults
 from colored_logging import colored_logging
@@ -202,81 +197,28 @@ def process_rps_species(species: str, fasta_input_dir: Path = None, asn_output_d
 # Main Workflow
 # -----------------------------------------------------------------------------
 
-def main(
-    species_list: List[str],
-    fasta_input_dir: Path = None,
-    output_csv: Path = None,
-    output_parquet: Path = None,
-    asn_output_dir: Path = None
-) -> None:
+def main() -> None:
     """
-    Runs RPS-BLAST across all species in the provided list and saves results.
-
-        Parameters
-        ----------
-            :param species_list: List of species names to run RPS-BLAST against.
-            :param fasta_input_dir: Directory containing input FASTA files. Defaults to FASTA_OUTPUT_DIR.
-            :param output_csv: Output CSV path. Defaults to TABLE_OUTPUT_DIR/rpsblast.csv.
-            :param output_parquet: Output Parquet path. Defaults to TABLE_OUTPUT_DIR/rpsblast.parquet.
-            :param asn_output_dir: ASN output directory. Defaults to ASN_RPSBLAST_DIR.
-
-        Returns
-        -------
-            :returns: None. Writes CSV and Parquet outputs to disk.
-
-        Raises
-        ------
-            :raises IOError: If result files cannot be written to disk.
+    Executes RPS-BLAST for a single species and writes per-species output.
     """
     colored_logging(log_file_name='rpsblast.txt')
 
-    # Set default output paths
-    if output_csv is None:
-        output_csv = defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.csv'
-    if output_parquet is None:
-        output_parquet = defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.parquet'
-    if asn_output_dir is None:
-        asn_output_dir = defaults.PATH_DICT['ASN_RPSBLAST_DIR']
+    parser = argparse.ArgumentParser(description='Run RPS-BLAST for a single species.')
+    parser.add_argument('--species', type=str, required=True,
+                        help='Species name to process.')
+    args = parser.parse_args()
 
-    # Ensure ASN output directory exists
-    asn_output_dir.mkdir(parents=True, exist_ok=True)
+    defaults.PATH_DICT['ASN_RPSBLAST_DIR'].mkdir(parents=True, exist_ok=True)
 
-    dfs: List[pd.DataFrame] = []
+    result_df = process_rps_species(args.species)
 
-    with tqdm(total=len(species_list), desc='Running RPSBLAST against species...') as pbar:
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=defaults.MAX_THREADPOOL_WORKERS
-        ) as executor:
-            future_to_species: Dict[concurrent.futures.Future, str] = {
-                executor.submit(process_rps_species, species, fasta_input_dir, asn_output_dir): species
-                for species in species_list
-            }
-
-            for future in concurrent.futures.as_completed(future_to_species):
-                species: str = future_to_species[future]
-                try:
-                    blast_df: Optional[pd.DataFrame] = future.result()
-                    if blast_df is not None and not blast_df.empty:
-                        dfs.append(blast_df)
-                except Exception as exc:
-                    logging.error(f'Error processing species {species}: {exc}')
-                finally:
-                    pbar.update(1)
-
-    if dfs:
-        df: pd.DataFrame = pd.concat(dfs, axis=0, ignore_index=True)
-
-        # Remove duplicates
-        df = df.drop_duplicates()
-
-        # Save outputs
-        df.to_csv(output_csv, index=False)
-        logging.info(f'Saved DataFrame as CSV to {output_csv}')
-
-        df.to_parquet(output_parquet, index=False)
-        logging.info(f'Saved DataFrame as Parquet to {output_parquet}')
+    if result_df is not None and not result_df.empty:
+        output_dir = defaults.PATH_DICT['RPSBLAST_SPECIES_DIR']
+        output_dir.mkdir(parents=True, exist_ok=True)
+        result_df.to_parquet(output_dir / f'{args.species}.parquet', index=False)
+        logging.info(f'Saved {len(result_df)} rows for {args.species}')
     else:
-        logging.warning('No data frames to concatenate. No output files were created.')
+        logging.warning(f'No RPS-BLAST results for {args.species}.')
 
 
 # -----------------------------------------------------------------------------
@@ -284,54 +226,4 @@ def main(
 # -----------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        description='Run RPS-BLAST for a list of species.'
-    )
-
-    parser.add_argument(
-        '--species-list',
-        type=str,
-        nargs='+',
-        required=False,
-        default=None,
-        help='List of species to process. Defaults to species from config.'
-    )
-
-    parser.add_argument(
-        '--input-dir',
-        type=str,
-        default=None,
-        help='Directory containing input FASTA files. Defaults to FASTA_OUTPUT_DIR.'
-    )
-
-    parser.add_argument(
-        '--output-csv',
-        type=str,
-        default=None,
-        help='Output CSV path. Defaults to TABLE_OUTPUT_DIR/rpsblast.csv'
-    )
-
-    parser.add_argument(
-        '--output-parquet',
-        type=str,
-        default=None,
-        help='Output Parquet path. Defaults to TABLE_OUTPUT_DIR/rpsblast.parquet'
-    )
-
-    parser.add_argument(
-        '--asn-output-dir',
-        type=str,
-        default=None,
-        help='ASN output directory. Defaults to ASN_RPSBLAST_DIR'
-    )
-
-    args: argparse.Namespace = parser.parse_args()
-    species_list: List[str] = args.species_list if args.species_list else list(defaults.SPECIES)
-
-    main(
-        species_list=species_list,
-        fasta_input_dir=Path(args.input_dir) if args.input_dir else None,
-        output_csv=Path(args.output_csv) if args.output_csv else None,
-        output_parquet=Path(args.output_parquet) if args.output_parquet else None,
-        asn_output_dir=Path(args.asn_output_dir) if args.asn_output_dir else None
-    )
+    main()

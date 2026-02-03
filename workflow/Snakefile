@@ -1,76 +1,33 @@
 from pathlib import Path
-import pandas as pd
 from scripts import defaults
 
-try:
-    import pyarrow.parquet as pq
-    PYARROW_AVAILABLE = True
-except ImportError:
-    PYARROW_AVAILABLE = False
-
-def retrieve_species_list(parquet_path: Path, csv_path: Path, default: list[str] = None) -> list[str]:
-    """Read species from parquet (preferred) or CSV (fallback)."""
-    try:
-        if PYARROW_AVAILABLE and parquet_path.exists():
-            table = pq.read_table(parquet_path, columns=['Species'])
-            return table.to_pandas()['Species'].unique().tolist()
-    except Exception:
-        pass  # Fall back to CSV
-    if csv_path.exists():
-        return pd.read_csv(csv_path)["Species"].unique().tolist()
-    return default if default else []
-
-def retrieve_species_from_manifest(manifest_path: Path, default: list[str] = None) -> list[str]:
-    """Read species list from simple text manifest file."""
-    if manifest_path.exists():
-        with open(manifest_path) as f:
-            return [line.strip() for line in f if line.strip()]
-    return default if default else []
-
-def get_post_blast_species() -> list[str]:
-    """
-    Get species list for post-BLAST rules.
-
-    If ORF analysis was run (flag file exists), use the species manifest.
-    Otherwise, read species from blast.parquet/csv.
-    """
-    flag_file = defaults.PATH_DICT['ORF_OUTPUT_DIR'] / 'orf_analysis.flag'
-    manifest_file = defaults.PATH_DICT['ORF_OUTPUT_DIR'] / 'species_manifest.txt'
-
-    # Check if ORF analysis was run
-    if flag_file.exists() and manifest_file.exists():
-        species = retrieve_species_from_manifest(manifest_file)
-        if species:
-            return species
-
-    # Fall back to blast.parquet/csv species list (parquet preferred)
-    return retrieve_species_list(
-        parquet_path=defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.parquet',
-        csv_path=defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.csv',
-        default=list(defaults.SPECIES)
-    )
+# =============================================================================
+# Top-level constants
+# =============================================================================
 
 BLAST_DB_EXT = ['ndb', 'nhr', 'nin', 'not', 'nsq', 'ntf', 'nto']
 SPECIES = defaults.SPECIES
 
-# Species after BLAST (from blast.parquet or blast.csv)
-# This is dynamically computed to handle both ORF and non-ORF modes
-SPECIES_POST = get_post_blast_species()
+# Resolved once at parse time.  Determines which per-species directory holds
+# the "final" blast parquet after all enabled enrichment steps.
+ENRICHED_BLAST_DIR: Path = (
+    defaults.PATH_DICT['HMM_OUTPUT_DIR']      if defaults.HMMER_ENABLED
+    else defaults.PATH_DICT['ORF_OUTPUT_DIR']  if defaults.ORF_ENABLED
+    else defaults.PATH_DICT['BLAST_SPECIES_DIR']
+)
 
-def check_orf_downstream_conflict():
-    """Warn if running ORF analysis after downstream outputs exist."""
-    downstream = [
-        defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.parquet',
-        defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.parquet',
-    ]
-    existing = [str(f.name) for f in downstream if f.exists()]
-    if existing:
-        print("\n" + "="*60)
-        print("WARNING: Downstream outputs exist: " + ", ".join(existing))
-        print("Rerun: --rpsblast --rpsbproc --rpsbproc-parser")
-        print("="*60 + "\n")
+# Input directory for HMMER (one step back from ENRICHED_BLAST_DIR).
+# Only referenced inside the conditional hmmer_species block.
+PRE_HMMER_DIR: Path = (
+    defaults.PATH_DICT['ORF_OUTPUT_DIR']     if defaults.ORF_ENABLED
+    else defaults.PATH_DICT['BLAST_SPECIES_DIR']
+)
 
 configfile: str(defaults.CONFIG_FILE)
+
+# =============================================================================
+# Genome & Query Download Rules
+# =============================================================================
 
 rule genome_downloader_setup:
     output:
@@ -120,6 +77,10 @@ rule query_downloader:
         echo "Query protein download completed"
         """
 
+# =============================================================================
+# Database Download Rules
+# =============================================================================
+
 rule pfam_hmm_downloader:
     output:
         md5=str(defaults.PATH_DICT['HMM_DB'] / 'md5sum.txt'),
@@ -139,15 +100,6 @@ rule pfam_hmm_downloader:
         echo "MD5 checksum for HMM profile is correct. Decompressing..." && \
         gunzip -d -f -v -k {params.hmm_profile_dir:q}/Pfam-A.hmm.gz
         """
-
-# =============================================================================
-# CDD Database Download Rules
-# =============================================================================
-# Downloads NCBI Conserved Domain Database for RPSBLAST and rpsbproc
-# Sources:
-#   - CDD BLAST database: https://ftp.ncbi.nih.gov/pub/mmdb/cdd/little_endian/
-#   - rpsbproc data files: https://ftp.ncbi.nih.gov/pub/mmdb/cdd/
-# =============================================================================
 
 rule cdd_database_downloader:
     """Download and extract CDD database for RPSBLAST."""
@@ -210,6 +162,10 @@ rule setup_databases:
         echo "All databases have been downloaded and configured."
         """
 
+# =============================================================================
+# BLAST DB Generation
+# =============================================================================
+
 rule blast_db_generator_setup:
     input:
         fa = str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}.fa')
@@ -235,97 +191,228 @@ rule blast_db_generator:
                           genome=defaults.SPECIES,
                           ext=BLAST_DB_EXT)
 
-rule blaster:
+# =============================================================================
+# Per-Species BLAST
+# =============================================================================
+
+rule blast_species:
     input:
-        blast_db=rules.blast_db_generator.input,
-        query=rules.query_downloader.input
+        db=str(defaults.PATH_DICT['SPECIES_DB'] / '{species}' / '{species}.ndb'),
+        query=str(defaults.QUERY_FILE)
     output:
-        asn_files=expand(str(defaults.PATH_DICT['ASN_TBLASTN_DIR'] / '{genome}.asn'), genome=defaults.SPECIES),
-        csv_files=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.csv'),
-        parquet_files=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.parquet')
+        parquet=str(defaults.PATH_DICT['BLAST_SPECIES_DIR'] / '{species}.parquet'),
+        csv=str(defaults.PATH_DICT['BLAST_SPECIES_DIR'] / '{species}.csv'),
+        asn=str(defaults.PATH_DICT['ASN_TBLASTN_DIR'] / '{species}.asn')
     shell:
         '''
-        python scripts/blast.py
+        python scripts/blast.py --species {wildcards.species}
         '''
 
 # =============================================================================
-# ORF Analysis (Optional)
-# =============================================================================
-# When run, this rule ENRICHES blast.parquet with ORF information.
-# It adds columns: ORF_Filtered (bool), ORF_COUNT (int), ORF_SUMMARY (string)
-# Downstream rules (blast_parser, rpsblaster) auto-detect ORF mode.
+# Per-Species ORF Analysis (conditional)
 # =============================================================================
 
-rule orf_analyser:
-    input:
-        blast_parquet=rules.blaster.output.parquet_files
-    output:
-        flag_file=str(defaults.PATH_DICT['ORF_OUTPUT_DIR'] / 'orf_analysis.flag'),
-        manifest_file=str(defaults.PATH_DICT['ORF_OUTPUT_DIR'] / 'species_manifest.txt'),
-    params:
-        species_db=str(defaults.PATH_DICT['SPECIES_DB']),
-        output_folder=str(defaults.PATH_DICT['ORF_OUTPUT_DIR'])
-    run:
-        check_orf_downstream_conflict()
-        shell('''
-        Rscript scripts/orf_analyser.R \
-            {input.blast_parquet:q} \
-            {params.species_db:q} \
-            {params.output_folder:q}
-        ''')
+if defaults.ORF_ENABLED:
+    rule orf_species:
+        input:
+            parquet=str(defaults.PATH_DICT['BLAST_SPECIES_DIR'] / '{species}.parquet'),
+            genome=str(defaults.PATH_DICT['SPECIES_DB'] / '{species}.fa')
+        output:
+            parquet=str(defaults.PATH_DICT['ORF_OUTPUT_DIR'] / '{species}.parquet')
+        shell:
+            '''
+            Rscript scripts/orf_analyser.R \
+                --species {wildcards.species} \
+                {input.parquet:q} \
+                {input.genome:q} \
+                {output.parquet:q}
+            '''
 
-rule blast_parser:
+# =============================================================================
+# Per-Species HMMER (conditional)
+# =============================================================================
+
+if defaults.HMMER_ENABLED:
+    rule hmmer_species:
+        input:
+            parquet=str(PRE_HMMER_DIR / '{species}.parquet'),
+            pfam_hmm=str(defaults.PATH_DICT['HMM_DB'] / 'Pfam-A.hmm')
+        output:
+            parquet=str(defaults.PATH_DICT['HMM_OUTPUT_DIR'] / '{species}.parquet')
+        threads:
+            workflow.cores
+        shell:
+            '''
+            python scripts/hmmer.py \
+                --species {wildcards.species} \
+                --threads {threads} \
+                {input.parquet:q} \
+                {input.pfam_hmm:q} \
+                {output.parquet:q}
+            '''
+
+# =============================================================================
+# Per-Species BLAST Parser
+# =============================================================================
+
+rule blast_parser_species:
     input:
-        blast_output=rules.blaster.output.parquet_files
+        parquet=str(ENRICHED_BLAST_DIR / '{species}.parquet')
     output:
-        fasta_files=expand(str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{genome}.fa'), genome=SPECIES_POST),
-    params:
-        parquet_file='blast.parquet'
+        fasta=str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.fa')
     shell:
         '''
         python scripts/blast_parser.py \
-        --input-parquet-file {params.parquet_file:q} \
-        --export-fasta
+            --species {wildcards.species} \
+            --input-parquet {input.parquet:q} \
+            --output-fasta {output.fasta:q}
         '''
+
+# =============================================================================
+# Per-Species RPSBLAST
+# =============================================================================
+
+rule rpsblast_species:
+    input:
+        fasta=str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.fa'),
+        cdd_pal=str(defaults.PATH_DICT['RPS_DB']) + '.pal'
+    output:
+        parquet=str(defaults.PATH_DICT['RPSBLAST_SPECIES_DIR'] / '{species}.parquet'),
+        asn=str(defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / '{species}.asn')
+    shell:
+        '''
+        python scripts/rpsblast.py --species {wildcards.species}
+        '''
+
+# =============================================================================
+# Per-Species rpsbproc
+# =============================================================================
+
+rule rpsbproc_species:
+    input:
+        asn=str(defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / '{species}.asn'),
+        rpsbproc_data=rules.rpsbproc_data_downloader.output
+    output:
+        txt=str(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'] / '{species}.txt')
+    shell:
+        '''
+        python scripts/rpsbproc.py --species {wildcards.species}
+        '''
+
+# =============================================================================
+# Per-Species rpsbproc Parser
+# =============================================================================
+
+rule rpsbproc_parser_species:
+    input:
+        txt=str(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'] / '{species}.txt')
+    output:
+        parquet=str(defaults.PATH_DICT['DOMAINS_SPECIES_DIR'] / '{species}.parquet')
+    shell:
+        '''
+        python scripts/rpsbproc_parser.py \
+            --input-txt {input.txt:q} \
+            --output-parquet {output.parquet:q}
+        '''
+
+# =============================================================================
+# Aggregation Rules
+# =============================================================================
+
+rule aggregate_blast:
+    """Aggregates the FINAL enriched blast parquets (after ORF/HMM if enabled).
+       tables/blast.parquet therefore always reflects the last enrichment step,
+       matching what blast_parser actually consumes."""
+    input:
+        expand(str(ENRICHED_BLAST_DIR / '{species}.parquet'),
+               species=defaults.SPECIES)
+    output:
+        parquet=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.parquet'),
+        csv=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.csv')
+    shell:
+        '''
+        python scripts/aggregate.py blast {output.parquet:q} {input}
+        '''
+
+rule aggregate_rpsblast:
+    input:
+        expand(str(defaults.PATH_DICT['RPSBLAST_SPECIES_DIR'] / '{species}.parquet'),
+               species=defaults.SPECIES)
+    output:
+        parquet=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.parquet'),
+        csv=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.csv')
+    shell:
+        '''
+        python scripts/aggregate.py rpsblast {output.parquet:q} {input}
+        '''
+
+rule aggregate_domains:
+    input:
+        expand(str(defaults.PATH_DICT['DOMAINS_SPECIES_DIR'] / '{species}.parquet'),
+               species=defaults.SPECIES)
+    output:
+        parquet=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.parquet'),
+        csv=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.csv')
+    shell:
+        '''
+        python scripts/aggregate.py domains {output.parquet:q} {input}
+        '''
+
+# =============================================================================
+# Target Rules (CLI entry points — one per pipeline stage)
+# Each triggers only its own per-species jobs.  Snakemake resolves upstream
+# dependencies automatically.
+# =============================================================================
+
+rule blaster:
+    """Per-species BLAST."""
+    input:
+        expand(str(defaults.PATH_DICT['BLAST_SPECIES_DIR'] / '{species}.parquet'),
+               species=defaults.SPECIES)
+
+rule orf_analyser:
+    """Per-species ORF analysis (no-op if orf.enabled: false)."""
+    input:
+        expand(str(defaults.PATH_DICT['ORF_OUTPUT_DIR'] / '{species}.parquet'),
+               species=defaults.SPECIES) if defaults.ORF_ENABLED else []
+
+rule hmmer:
+    """Per-species HMMER filtering (no-op if hmmer.enabled: false)."""
+    input:
+        expand(str(defaults.PATH_DICT['HMM_OUTPUT_DIR'] / '{species}.parquet'),
+               species=defaults.SPECIES) if defaults.HMMER_ENABLED else []
+
+rule blast_parser:
+    """Per-species FASTA export (reads from ENRICHED_BLAST_DIR)."""
+    input:
+        expand(str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.fa'),
+               species=defaults.SPECIES)
 
 rule rpsblaster:
+    """Per-species RPSBLAST."""
     input:
-        blast_output=rules.blaster.output,
-        cdd_pal=rules.cdd_database_downloader.output.pal,
-    output:
-        asn_files=expand(str(defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / '{genome}.asn'), genome=SPECIES_POST),
-        csv_files=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.csv'),
-        parquet_files=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.parquet')
-    shell:
-        '''
-        python scripts/rpsblast.py
-        '''
+        expand(str(defaults.PATH_DICT['RPSBLAST_SPECIES_DIR'] / '{species}.parquet'),
+               species=defaults.SPECIES)
 
 rule rpsbproc:
+    """Per-species rpsbproc annotation."""
     input:
-        rpsblast_output=rules.rpsblaster.output,
-        rpsbproc_data=rules.rpsbproc_data_downloader.output,
-    output:
-        rpsbproc_txt=expand(str(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'] / '{genome}.txt'), genome=SPECIES_POST),
-    shell:
-        '''
-        python scripts/rpsbproc.py
-        '''
+        expand(str(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'] / '{species}.txt'),
+               species=defaults.SPECIES)
 
 rule rpsbproc_parser:
-    input:
-        rpsbproc_output=rules.rpsbproc.output,
-    output:
-        csv_files=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.csv'),
-        parquet_files=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.parquet')
-    shell:
-        '''
-        python scripts/rpsbproc_parser.py
-        '''
+    """Per-species parsing + aggregate → tables/domains.parquet.
+       This is the only target that includes aggregation, because the
+       visualization rules (completeness_detector, contingency_sorter) need it."""
+    input: rules.aggregate_domains.output
+
+# =============================================================================
+# Visualization Rules
+# =============================================================================
 
 rule completeness_detector:
     input:
-        domains=rules.rpsbproc_parser.output,
+        domains=rules.aggregate_domains.output
     output:
         tile_plot=str(defaults.PATH_DICT['PLOT_DIR'] / 'tile_plot.png')
     params:
@@ -336,12 +423,12 @@ rule completeness_detector:
         '''
         Rscript scripts/completeness_detector.R \
         {params.domain_data:q} \
-        {params.plot_output_folder:q} \
+        {params.plot_output_folder:q}
         '''
 
 rule contingency_sorter:
     input:
-        domains=rules.rpsbproc_parser.output,
+        domains=rules.aggregate_domains.output
     output:
         domain_3d_plot=str(defaults.PATH_DICT['PLOT_DIR'] / 'scatter_3D_plot.html'),
         contingency_table=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'contingency_table.csv'),

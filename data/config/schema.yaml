@@ -1,5 +1,6 @@
 blast: include('blast_schema')
 orf: include('orf_schema')
+hmmer: include('hmmer_schema')
 query: include('query_schema')
 execution: include('execution_schema')
 root: include('root_schema')
@@ -21,7 +22,6 @@ execution_schema:
   use_species_list: bool()
   retrieval_time_lag: num(min=0)
   max_retrieval_attempts: int(min=1)
-  max_threadpool_workers: any(int(min=1), null())
   entrez_email: str()
 
 display:
@@ -66,6 +66,20 @@ color_bold_bg_schema:
 species_schema: map(str(), key=str())
 
 orf_schema:
+  enabled: bool()
   min_orf_length: int(min=1)
   start_codon: str(matches='^([ATGC]{3})?$')
   longest_orf: bool()
+
+hmmer_schema:
+  enabled: bool()
+  profiles: list(str(), required=False)
+  use_gathering_threshold: bool()
+  evalue: num(min=0, required=False)
+  dom_evalue: num(min=0, required=False)
+  min_score: any(num(min=0), null(), required=False)
+  min_coverage: num(min=0, max=1)
+  min_alignment_length: int(min=1)
+  max_sensitivity: bool()
+  bias_filter: bool()
+  seed: int(min=0)

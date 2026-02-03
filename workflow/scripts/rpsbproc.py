@@ -64,32 +64,30 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Process RPS-BLAST ASN.1 output files with rpsbproc.'
+        description='Process a single RPS-BLAST ASN.1 file with rpsbproc.'
     )
 
     parser.add_argument(
-        '--asn-input-dir',
+        '--species',
         type=str,
-        default=None,
-        help='ASN input directory. Defaults to ASN_RPSBLAST_DIR'
-    )
-
-    parser.add_argument(
-        '--output-dir',
-        type=str,
-        default=None,
-        help='Output directory for txt files. Defaults to RPSBPROC_OUTPUT_DIR'
+        required=True,
+        help='Species name to process.'
     )
 
     args = parser.parse_args()
 
-    input_dir = Path(args.asn_input_dir) if args.asn_input_dir else defaults.PATH_DICT['ASN_RPSBLAST_DIR']
-    output_dir = Path(args.output_dir) if args.output_dir else defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR']
+    input_file  = defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / f'{args.species}.asn'
+    output_dir  = defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR']
     output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / f'{args.species}.txt'
 
-    main(
-        input_dir=input_dir,
-        output_dir=output_dir,
-        db_path=defaults.PATH_DICT['RPSBPROC_DB'],
-        t_option='both'
-    )
+    cmd: List[str] = [
+        'rpsbproc',
+        '-i', str(input_file),
+        '-d', str(defaults.PATH_DICT['RPSBPROC_DB']),
+        '-t', 'both',
+        '-o', str(output_file)
+    ]
+
+    print(f'Processing {input_file} -> {output_file}')
+    subprocess.run(cmd, check=True)

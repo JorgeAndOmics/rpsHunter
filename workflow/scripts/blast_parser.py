@@ -28,13 +28,12 @@ Requirements
 import argparse
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from tqdm import tqdm
 
 import defaults
 from colored_logging import colored_logging
@@ -103,72 +102,6 @@ def orf_aware_filter(df: pd.DataFrame) -> pd.DataFrame:
         return df
 
 
-def species_divider(df: pd.DataFrame) -> List[pd.DataFrame]:
-    """
-    Divides the filtered DataFrame into a list of species-specific DataFrames.
-
-        Parameters
-        ----------
-            :param df: A filtered DataFrame that includes a 'Species' column.
-
-        Returns
-        -------
-            :returns: A list of DataFrames, each corresponding to a unique species in the input data.
-
-        Raises
-        ------
-            :raises KeyError: If the 'Species' column is not present in the DataFrame.
-    """
-    species_list = df['Species'].unique()
-    species_dfs: List[pd.DataFrame] = []
-
-    for species in species_list:
-        species_df = df[df['Species'] == species].copy()
-        species_dfs.append(species_df)
-
-    return species_dfs
-
-
-def fasta_generator(df: pd.DataFrame) -> Optional[None]:
-    """
-    Generates and writes a FASTA file for the provided species-specific DataFrame.
-
-        Parameters
-        ----------
-            :param df: A DataFrame containing BLAST sequences for a single species.
-                       Must contain 'Subject Sequence', 'Subject ID', 'S. Start', 'S. End', and 'Species' columns.
-
-        Returns
-        -------
-            :returns: None. Writes a FASTA file to disk for the species represented in the DataFrame.
-
-        Raises
-        ------
-            :raises KeyError: If expected columns are missing from the DataFrame.
-            :raises IOError: If the FASTA file cannot be written to disk.
-    """
-    if 'Subject Sequence' not in df.columns:
-        return
-
-    species: Optional[str] = None if df.empty else df['Species'].unique()[0]
-
-    df['Subject Sequence'] = (
-        df['Subject Sequence']
-        .str.replace('-', '', regex=False)
-        .str.replace('*', '', regex=False)
-    )
-
-    seq_records: List[SeqRecord] = []
-    for _, row in df.iterrows():
-        header: str = f"{row['Subject ID']}:{row['S. Start']}-{row['S. End']}|tag:{row['Tag']}"
-        sequence: str = str(row['Subject Sequence'])
-        seq_records.append(SeqRecord(Seq(sequence), id=header, description=''))
-
-    if seq_records:
-        output_fasta_path: Path = defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / f'{species}.fa'
-        SeqIO.write(seq_records, output_fasta_path, 'fasta')
-
-
 # -------------------------------------------------------------------------
 # Main Execution
 # -------------------------------------------------------------------------
@@ -176,23 +109,17 @@ def fasta_generator(df: pd.DataFrame) -> Optional[None]:
 if __name__ == '__main__':
     colored_logging(log_file_name='blast_parser.txt')
 
-    parser = argparse.ArgumentParser(description='Parse and filter BLAST results.')
-    parser.add_argument(
-        '--input-parquet-file',
-        type=str,
-        required=True,
-        help='Path to the input Parquet file containing BLAST results.'
-    )
-    parser.add_argument(
-        '--export-fasta',
-        action='store_true',
-        help='Export filtered sequences to FASTA files.'
-    )
+    parser = argparse.ArgumentParser(description='Parse and filter BLAST results for a single species.')
+    parser.add_argument('--species', type=str, required=True,
+                        help='Species name to process.')
+    parser.add_argument('--input-parquet', type=str, required=True,
+                        help='Path to the per-species enriched Parquet file.')
+    parser.add_argument('--output-fasta', type=str, required=True,
+                        help='Path to the output FASTA file.')
 
     args = parser.parse_args()
 
-    input_parquet_path: Path = defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / args.input_parquet_file
-    blast_df: pd.DataFrame = pd.read_parquet(input_parquet_path)
+    blast_df: pd.DataFrame = pd.read_parquet(args.input_parquet)
 
     # Apply quality thresholds
     blast_df = table_filter(blast_df)
@@ -200,10 +127,24 @@ if __name__ == '__main__':
     # Apply ORF filtering if ORF analysis was run (unified pipeline)
     blast_df = orf_aware_filter(blast_df)
 
-    if args.export_fasta:
-        species_dfs: List[pd.DataFrame] = species_divider(blast_df)
+    # Write FASTA for this species
+    output_fasta_path: Path = Path(args.output_fasta)
+    output_fasta_path.parent.mkdir(parents=True, exist_ok=True)
 
-        for df in species_dfs:
-            fasta_generator(df)
+    if 'Subject Sequence' in blast_df.columns and not blast_df.empty:
+        blast_df['Subject Sequence'] = (
+            blast_df['Subject Sequence']
+            .str.replace('-', '', regex=False)
+            .str.replace('*', '', regex=False)
+        )
 
-        logging.info(f"Exported FASTA files for {len(species_dfs)} species")
+        seq_records: List[SeqRecord] = []
+        for _, row in blast_df.iterrows():
+            header: str = f"{row['Subject ID']}:{row['S. Start']}-{row['S. End']}|tag:{row['Tag']}"
+            seq_records.append(SeqRecord(Seq(str(row['Subject Sequence'])), id=header, description=''))
+
+        if seq_records:
+            SeqIO.write(seq_records, output_fasta_path, 'fasta')
+            logging.info(f"Exported {len(seq_records)} sequences to {output_fasta_path}")
+    else:
+        logging.warning(f"No sequences to export for {args.species}")

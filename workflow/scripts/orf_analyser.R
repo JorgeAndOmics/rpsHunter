@@ -20,25 +20,29 @@ suppressMessages({
 # ==============================================================================
 # SECTION 2: ARGUMENT PARSING
 # ==============================================================================
-parser <- ArgumentParser(description = "Enrich blast.parquet with ORF detection results")
+parser <- ArgumentParser(description = "Enrich a single-species blast parquet with ORF detection results")
 
-parser$add_argument("blast_parquet",
-  help = "Path to blast.parquet file (will be modified in place)")
+parser$add_argument("--species", required = TRUE,
+  help = "Species name to process")
 
-parser$add_argument("species_db",
-  help = "Directory containing genome FASTA files ({Species}.fa)")
+parser$add_argument("input_parquet",
+  help = "Path to per-species blast parquet (input)")
 
-parser$add_argument("output_folder",
-  help = "Output directory for flag file and species manifest")
+parser$add_argument("genome_path",
+  help = "Path to species genome FASTA file")
+
+parser$add_argument("output_parquet",
+  help = "Path to write the enriched parquet (output)")
 
 args <- parser$parse_args()
 
 # ==============================================================================
 # SECTION 3: CONFIGURATION
 # ==============================================================================
-# Read ORF parameters from config.yaml
-CONFIG_PATH <- file.path(dirname(args$blast_parquet), "..", "..", "data", "config", "config.yaml")
-config <- yaml::read_yaml(CONFIG_PATH)
+# Locate config.yaml relative to this script (workflow/scripts/ → data/config/)
+SCRIPT_DIR     <- dirname(normalizePath(sub("--file=", "", grep("--file=", commandArgs(trailingOnly = FALSE), value = TRUE))))
+CONFIG_PATH    <- file.path(SCRIPT_DIR, "..", "..", "data", "config", "config.yaml")
+config         <- yaml::read_yaml(CONFIG_PATH)
 
 # ORF parameters
 MIN_ORF_LENGTH <- config$orf$min_orf_length %||% 200L
@@ -48,13 +52,7 @@ START_CODON    <- {
 }
 LONGEST_ORF    <- config$orf$longest_orf %||% TRUE
 
-# Derived paths
-BLAST_DIR      <- dirname(args$blast_parquet)
-BLAST_CSV      <- file.path(BLAST_DIR, "blast.csv")
-FLAG_FILE      <- file.path(args$output_folder, "orf_analysis.flag")
-MANIFEST_FILE  <- file.path(args$output_folder, "species_manifest.txt")
-
-dir.create(args$output_folder, showWarnings = FALSE, recursive = TRUE)
+dir.create(dirname(args$output_parquet), showWarnings = FALSE, recursive = TRUE)
 
 # ==============================================================================
 # SECTION 4: HELPER FUNCTIONS
@@ -99,7 +97,7 @@ summarize_orfs <- function(orf_iranges, parent_granges) {
 
 #' Process one species: find ORFs and return Tag + ORF metadata
 #' @return tibble(Tag, ORF_COUNT, ORF_SUMMARY) or NULL if no ORFs found
-process_species <- function(species, blast_data, species_db) {
+process_species <- function(species, blast_data, genome_path) {
 
   # --- 5.1 Filter BLAST hits for this species ---
   hits <- blast_data %>%
@@ -113,7 +111,6 @@ process_species <- function(species, blast_data, species_db) {
   if (nrow(hits) == 0) return(NULL)
 
   # --- 5.2 Load genome FASTA ---
-  genome_path <- file.path(species_db, paste0(species, ".fa"))
   if (!file.exists(genome_path)) {
     warning("Genome not found: ", genome_path)
     return(NULL)
@@ -169,13 +166,13 @@ process_species <- function(species, blast_data, species_db) {
 # SECTION 6: MAIN EXECUTION
 # ==============================================================================
 
-message("ORF Analysis")
+message("ORF Analysis: ", args$species)
 message("  Config: min_length=", MIN_ORF_LENGTH,
         ", start_codon=", START_CODON %||% "any",
         ", longest_orf=", LONGEST_ORF)
 
-# --- 6.1 Load BLAST data ---
-blast_data <- read_parquet(args$blast_parquet)
+# --- 6.1 Load BLAST data for this species ---
+blast_data <- read_parquet(args$input_parquet)
 
 # Remove previous ORF columns if re-running
 if ("ORF_Filtered" %in% names(blast_data)) {
@@ -183,17 +180,14 @@ if ("ORF_Filtered" %in% names(blast_data)) {
   blast_data <- select(blast_data, -any_of(c("ORF_Filtered", "ORF_COUNT", "ORF_SUMMARY")))
 }
 
-species_list <- unique(blast_data$Species)
-message("  Species: ", length(species_list))
-
-# --- 6.2 Process all species ---
-orf_results <- lapply(species_list, function(sp) {
-  tryCatch(process_species(sp, blast_data, args$species_db), error = function(e) NULL)
-})
-orf_info <- bind_rows(Filter(Negate(is.null), orf_results))
+# --- 6.2 Process single species ---
+orf_info <- tryCatch(
+  process_species(args$species, blast_data, args$genome_path),
+  error = function(e) { message("  Error: ", e$message); NULL }
+)
 
 # --- 6.3 Enrich BLAST data with ORF columns ---
-if (nrow(orf_info) == 0) {
+if (is.null(orf_info) || nrow(orf_info) == 0) {
   message("  No ORFs found")
   blast_enriched <- mutate(blast_data,
     ORF_Filtered = FALSE, ORF_COUNT = NA_integer_, ORF_SUMMARY = NA_character_)
@@ -210,22 +204,6 @@ message("  Result: ", n_with_orf, "/", nrow(blast_enriched), " sequences with OR
 # SECTION 7: OUTPUT
 # ==============================================================================
 
-# --- 7.1 Write enriched BLAST tables ---
-write_parquet(blast_enriched, args$blast_parquet)
-write_csv(blast_enriched, BLAST_CSV)
-
-# --- 7.2 Write flag file ---
-writeLines(c(
-  paste0("timestamp: ", Sys.time()),
-  paste0("min_orf_length: ", MIN_ORF_LENGTH),
-  paste0("start_codon: ", START_CODON %||% ""),
-  paste0("longest_orf: ", LONGEST_ORF),
-  paste0("sequences_with_orfs: ", n_with_orf),
-  paste0("status: ", if (n_with_orf > 0) "complete" else "no_orfs_found")
-), FLAG_FILE)
-
-# --- 7.3 Write species manifest ---
-species_with_orfs <- unique(blast_enriched$Species[blast_enriched$ORF_Filtered])
-writeLines(species_with_orfs, MANIFEST_FILE)
-
+write_parquet(blast_enriched, args$output_parquet)
+message("  Wrote enriched parquet: ", args$output_parquet)
 message("Done")

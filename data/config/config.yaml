@@ -5,9 +5,35 @@ blast:
   bitscore: 70
 
 orf:
+  enabled: true            # Toggle ORF analysis on/off
   min_orf_length: 200      # Minimum ORF length in nucleotides
   start_codon: ''          # Start codon filter (empty string = no filter)
   longest_orf: true        # If true, keep only longest ORF per reading frame
+
+hmmer:
+  enabled: true            # Toggle HMMER on/off
+
+  # Profile selection
+  profiles: ['PF00855', 'PF00096']  # SET domain + C2H2 zinc finger (empty = all Pfam)
+
+  # Threshold strategy
+  use_gathering_threshold: false  # Use Pfam's curated --cut_ga
+
+  # Manual thresholds (ignored if use_gathering_threshold: true)
+  evalue: 1e-5
+  dom_evalue: 1e-3
+  min_score: null          # null = disabled
+
+  # Quality filters
+  min_coverage: 0.5
+  min_alignment_length: 20
+
+  # Sensitivity
+  max_sensitivity: false   # --max flag (slow)
+  bias_filter: true
+
+  # Reproducibility
+  seed: 67
 
 query:
   format: 'fa'
@@ -19,7 +45,6 @@ execution:
   random_id_length: 6
   retrieval_time_lag: 0.3
   max_retrieval_attempts: 9
-  max_threadpool_workers: null
   entrez_email: 'your_email@example.com'
 
 display:
@@ -45,9 +70,7 @@ logging:
     levelname: { color: 'green' }
     name: { color: 'green' }
 
-  # TODO: Implement hmmsearch domain search!!!
-
 species:
   'Desmodus_rotundus': 'Desmodus rotundus'
-  # 'Antrozous_pallidus': 'Antrozous pallidus'
-  # 'Molossus_molossus': 'Molossus molossus'
+  'Antrozous_pallidus': 'Antrozous pallidus'
+  'Molossus_molossus': 'Molossus molossus'

@@ -18,7 +18,7 @@ Usage:
 """
 
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 import yaml
 
@@ -64,7 +64,6 @@ PATH_DICT['TMP_DIR'] = PATH_DICT['DATA_DIR'] / 'tmp'
 # === Results Subdirectories ===
 PATH_DICT['PLOT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'plots'
 PATH_DICT['TABLE_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'tables'
-PATH_DICT['BLAST_TABLE_OUTPUT_DIR'] = PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast_tables'
 PATH_DICT['FASTA_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'fastas'
 PATH_DICT['ASN_ROOT_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'asn'
 PATH_DICT['RPSBPROC_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'rpsbproc'
@@ -72,9 +71,14 @@ PATH_DICT['XML_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'xml'
 PATH_DICT['RANGE_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'ranges'
 PATH_DICT['LOCI_TABLE_OUTPUT_DIR'] = PATH_DICT['TABLE_OUTPUT_DIR'] / 'loci_tables'
 
-# === ORF Analysis Directories ===
-PATH_DICT['ORF_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'orf'
-PATH_DICT['ORF_FASTA_OUTPUT_DIR'] = PATH_DICT['ORF_OUTPUT_DIR'] / 'fastas'
+# === Per-Species Intermediate Directories ===
+# Each step that produces per-species parquets before aggregation gets its own directory.
+# Aggregate rules in Snakefile combine these into results/tables/*.parquet.
+PATH_DICT['BLAST_SPECIES_DIR']    = PATH_DICT['RESULTS_DIR'] / 'blast'
+PATH_DICT['ORF_OUTPUT_DIR']       = PATH_DICT['RESULTS_DIR'] / 'orf'
+PATH_DICT['HMM_OUTPUT_DIR']       = PATH_DICT['RESULTS_DIR'] / 'hmmer'
+PATH_DICT['RPSBLAST_SPECIES_DIR'] = PATH_DICT['RESULTS_DIR'] / 'rpsblast'
+PATH_DICT['DOMAINS_SPECIES_DIR']  = PATH_DICT['RESULTS_DIR'] / 'domains'
 
 # === ASN Subdirectories ===
 PATH_DICT['ASN_TBLASTN_DIR'] = PATH_DICT['ASN_ROOT_OUTPUT_DIR'] / 'tblastn'
@@ -97,12 +101,25 @@ RANDOM_ID_LENGTH: int = config['execution'].get('random_id_length', 6)
 USE_SPECIES_DICT: bool = config['execution'].get('use_species_dict', True)
 RETRIEVAL_TIME_LAG: float = config['execution'].get('retrieval_time_lag', 0.3)
 MAX_RETRIEVAL_ATTEMPTS: int = config['execution'].get('max_retrieval_attempts', 3)
-MAX_THREADPOOL_WORKERS: Optional[int] = config['execution'].get('max_threadpool_workers', None)
 ENTREZ_EMAIL: str = config['execution'].get('entrez_email', '')
 NCBI_API_TOKEN: str = config['execution'].get('ncbi_api_token', '')
 
-# ORF Analysis
+# === ORF Configuration ===
+ORF_ENABLED: bool = config.get('orf', {}).get('enabled', False)
 MIN_ORF_LENGTH: int = config.get('orf', {}).get('min_orf_length', 200)
+
+# === HMMER Configuration ===
+HMMER_ENABLED: bool       = config.get('hmmer', {}).get('enabled', False)
+HMMER_PROFILES: list      = config.get('hmmer', {}).get('profiles', [])
+HMMER_USE_GA: bool        = config.get('hmmer', {}).get('use_gathering_threshold', False)
+HMMER_EVALUE: float       = config.get('hmmer', {}).get('evalue', 1e-5)
+HMMER_DOM_EVALUE: float   = config.get('hmmer', {}).get('dom_evalue', 1e-3)
+HMMER_MIN_SCORE           = config.get('hmmer', {}).get('min_score', None)
+HMMER_MIN_COVERAGE: float = config.get('hmmer', {}).get('min_coverage', 0.5)
+HMMER_MIN_ALN_LEN: int    = config.get('hmmer', {}).get('min_alignment_length', 50)
+HMMER_MAX_SENS: bool      = config.get('hmmer', {}).get('max_sensitivity', False)
+HMMER_BIAS_FILTER: bool   = config.get('hmmer', {}).get('bias_filter', True)
+HMMER_SEED: int           = config.get('hmmer', {}).get('seed', 67)
 
 # Display
 DISPLAY_SNAKEMAKE_INFO: bool = config['display'].get('display_snakemake_info', False)

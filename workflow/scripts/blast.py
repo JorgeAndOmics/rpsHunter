@@ -7,16 +7,15 @@
     Requires definitions from a `defaults` module and `colored_logging` for log setup.
 """
 
-import concurrent.futures
+import argparse
 import logging
 import random
 import string
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 import pandas as pd
-from tqdm import tqdm
 
 import defaults
 from colored_logging import colored_logging
@@ -225,74 +224,25 @@ def process_species(species: str) -> Optional[pd.DataFrame]:
 
 def main() -> None:
     """
-    Executes the multi-threaded BLAST workflow and saves results to disk.
-
-        Parameters
-        ----------
-            :param None
-
-        Returns
-        -------
-            :returns: None. Writes results to CSV and Parquet files.
-
-        Raises
-        ------
-            :raises IOError: If the result files cannot be written to disk.
+    Executes tBLASTn for a single species and writes per-species outputs.
     """
     colored_logging(log_file_name='blast.txt')
-    dfs: List[pd.DataFrame] = []
-    species_list: List[str] = defaults.SPECIES
 
-    # Execute BLASTs in parallel
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = {
-            executor.submit(process_species, species): species
-            for species in species_list
-        }
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--species', required=True, help='Single species to process')
+    args = parser.parse_args()
 
-        with tqdm(total=len(futures), desc='Running tBLASTn against select species...') as pbar:
-            for future in concurrent.futures.as_completed(futures):
-                species = futures[future]
-                try:
-                    blast_df = future.result()
-                except Exception as exc:
-                    logging.error(f'Exception processing {species}: {exc}')
-                    pbar.update(1)
-                    continue
+    blast_df = process_species(args.species)
 
-                if blast_df is not None and not blast_df.empty:
-                    dfs.append(blast_df)
+    if blast_df is not None and not blast_df.empty:
+        output_dir = defaults.PATH_DICT['BLAST_SPECIES_DIR']
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-                pbar.update(1)
-
-    # Save outputs if any data collected
-    if dfs:
-        df = pd.concat(dfs, axis=0, ignore_index=True)
-
-        output_csv_path = defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.csv'
-        output_parquet_path = defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.parquet'
-
-        df.to_csv(output_csv_path, index=False)
-        logging.info(f'Saved DataFrame as CSV to {output_csv_path}')
-
-        df.to_parquet(output_parquet_path, index=False)
-        logging.info(f'Saved DataFrame as Parquet to {output_parquet_path}')
-
-        # Save separate tables for each species
-        unique_species = df['Species'].unique()
-        for species in unique_species:
-            species_df = df[df['Species'] == species]
-
-            species_csv_path = defaults.PATH_DICT['BLAST_TABLE_OUTPUT_DIR'] / f'{species}.csv'
-            species_parquet_path = defaults.PATH_DICT['BLAST_TABLE_OUTPUT_DIR'] / f'{species}.parquet'
-
-            species_df.to_csv(species_csv_path, index=False)
-            species_df.to_parquet(species_parquet_path, index=False)
-
-        logging.info(f'Saved {len(unique_species)} species-specific tables')
-
+        blast_df.to_parquet(output_dir / f'{args.species}.parquet', index=False)
+        blast_df.to_csv(output_dir / f'{args.species}.csv', index=False)
+        logging.info(f'Saved {len(blast_df)} rows for {args.species}')
     else:
-        logging.warning('No data frames to concatenate. No output files were created.')
+        logging.warning(f'No BLAST results for {args.species}.')
 
 
 # -----------------------------------------------------------------------------
