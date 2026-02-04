@@ -259,15 +259,18 @@ rule blast_parser_species:
     input:
         parquet=str(ENRICHED_BLAST_DIR / '{species}.parquet')
     output:
-        fasta =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.fa'),
-        audit =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.parquet')
+        fasta        =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.fa'),
+        audit        =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.parquet'),
+        selected     =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}_selected.parquet'),
+        selected_csv =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}_selected.csv')
     shell:
         '''
         python scripts/blast_parser.py \
             --species {wildcards.species} \
             --input-parquet {input.parquet:q} \
             --output-fasta {output.fasta:q} \
-            --output-audit {output.audit:q}
+            --output-audit {output.audit:q} \
+            --output-selected {output.selected:q}
         '''
 
 # =============================================================================

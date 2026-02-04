@@ -49,6 +49,18 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
+        '--orf_analyser',
+        action='store_true',
+        help="Runs ORF detection on BLAST hits."
+    )
+
+    parser.add_argument(
+        '--hmmer',
+        action='store_true',
+        help="Runs HMMER domain filtering on BLAST hits."
+    )
+
+    parser.add_argument(
         '--rpsblast',
         action='store_true',
         help="Runs rpsblast of provided protein accession sequence against domain database."
@@ -110,6 +122,12 @@ if __name__ == '__main__':
 
     if args.blast:
         main_cmd.append('--blast')
+
+    if args.orf_analyser:
+        main_cmd.append('--orf_analyser')
+
+    if args.hmmer:
+        main_cmd.append('--hmmer')
 
     if args.rpsblast:
         main_cmd.append('--rpsblast')

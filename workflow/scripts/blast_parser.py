@@ -140,6 +140,8 @@ if __name__ == '__main__':
                         help='Path to the output FASTA file.')
     parser.add_argument('--output-audit', type=str, required=True,
                         help='Path to the per-species audit Parquet file.')
+    parser.add_argument('--output-selected', type=str, required=True,
+                        help='Path to the per-species selected-only Parquet file (rows that passed all gates).')
 
     args = parser.parse_args()
 
@@ -180,6 +182,18 @@ if __name__ == '__main__':
     output_audit_path.parent.mkdir(parents=True, exist_ok=True)
     raw_df.to_parquet(output_audit_path, index=False)
     logging.info(f"Audit parquet written: {len(raw_df)} rows, {raw_df['Selected'].sum()} selected → {output_audit_path}")
+
+    # ── Write selected-only parquet + CSV ───────────────────────────────────
+    # Contains only the rows that passed every active gate.  Flag columns are
+    # dropped — they are all True by construction here; the audit parquet is
+    # the place to inspect per-row pass/fail detail.
+    output_selected_path: Path = Path(args.output_selected)
+    output_selected_path.parent.mkdir(parents=True, exist_ok=True)
+    flag_cols = ['Quality_Pass', 'ORF_Pass', 'HMM_Pass']
+    selected_df = blast_df.drop(columns=[c for c in flag_cols if c in blast_df.columns])
+    selected_df.to_parquet(output_selected_path, index=False)
+    selected_df.to_csv(output_selected_path.with_suffix('.csv'), index=False)
+    logging.info(f"Selected parquet + CSV written: {len(selected_df)} rows → {output_selected_path}")
 
     # ── Write FASTA ─────────────────────────────────────────────────────────
     output_fasta_path: Path = Path(args.output_fasta)

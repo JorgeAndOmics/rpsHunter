@@ -42,12 +42,12 @@ def df_to_fasta(df: pd.DataFrame, fasta_path: Path) -> None:
 # Profile extraction (hmmfetch subset)
 # -----------------------------------------------------------------------------
 
-def extract_profiles(full_hmm: Path, accessions: list, subset_hmm: Path) -> None:
+def extract_profiles(full_hmm: Path, domains: list, subset_hmm: Path) -> None:
     """Extract a subset of HMM profiles from a pressed database using hmmfetch.
 
-    Accessions are bare (e.g. PF00855).  Pfam ACC fields are versioned
-    (PF00855.24), so we grep to resolve each accession to its HMM NAME,
-    then fetch by NAME (hmmfetch default).
+    domains are Pfam NAMEs (e.g. 'zf-C2H2').  Existence is validated against
+    the flat file before fetching; a missing name raises early with an
+    explicit error.
 
     Presses full_hmm if not already pressed.  Writes the extracted profiles
     to subset_hmm and presses that file so hmmsearch can use it directly.
@@ -63,21 +63,26 @@ def extract_profiles(full_hmm: Path, accessions: list, subset_hmm: Path) -> None
         if result.returncode != 0:
             raise RuntimeError(f'hmmpress failed: {result.stderr}')
 
-    # Resolve bare accessions → HMM NAMEs via grep on the flat file.
-    # Pattern matches "ACC   PF00855." (prefix + dot) so version is irrelevant.
-    pattern = '|'.join(f'^ACC   {acc}\\.' for acc in accessions)
-    result = subprocess.run(
-        ['grep', '-B1', '-E', pattern, str(full_hmm)],
+    # Validate that every requested NAME exists in the flat file.
+    pattern = '^NAME  (' + '|'.join(domains) + ')$'
+    count_result = subprocess.run(
+        ['grep', '-cE', pattern, str(full_hmm)],
         capture_output=True, text=True
     )
-    names = [line.split()[1] for line in result.stdout.split('\n') if line.startswith('NAME')]
-    if not names:
-        raise RuntimeError(f'No matching HMM profiles found for accessions {accessions}')
-    logging.info(f'Resolved {accessions} → {names}')
+    found_count = int(count_result.stdout.strip()) if count_result.stdout.strip() else 0
+    if found_count != len(domains):
+        match_result = subprocess.run(
+            ['grep', '-oP', pattern, str(full_hmm)],
+            capture_output=True, text=True
+        )
+        found_names = {line.split()[1] for line in match_result.stdout.strip().splitlines() if line}
+        missing = sorted(set(domains) - found_names)
+        raise RuntimeError(f'Domain name(s) not found in {full_hmm}: {missing}')
+    logging.info(f'Validated profiles: {domains}')
 
     # Write NAME key file and fetch
     key_file = subset_hmm.with_suffix('.keys')
-    key_file.write_text('\n'.join(names) + '\n')
+    key_file.write_text('\n'.join(domains) + '\n')
 
     result = subprocess.run(
         ['hmmfetch', '-f', str(full_hmm), str(key_file)],
@@ -86,7 +91,7 @@ def extract_profiles(full_hmm: Path, accessions: list, subset_hmm: Path) -> None
     if result.returncode != 0:
         raise RuntimeError(f'hmmfetch failed: {result.stderr}')
     if not result.stdout.strip():
-        raise RuntimeError(f'hmmfetch returned no profiles for {names}')
+        raise RuntimeError(f'hmmfetch returned no profiles for {domains}')
     subset_hmm.write_text(result.stdout)
 
     # Press the subset so hmmsearch can use it
@@ -94,7 +99,7 @@ def extract_profiles(full_hmm: Path, accessions: list, subset_hmm: Path) -> None
     if result.returncode != 0:
         raise RuntimeError(f'hmmpress on subset failed: {result.stderr}')
 
-    logging.info(f'Extracted {len(names)} profiles → {subset_hmm}')
+    logging.info(f'Extracted {len(domains)} profiles → {subset_hmm}')
 
 
 # -----------------------------------------------------------------------------

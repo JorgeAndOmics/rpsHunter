@@ -234,15 +234,29 @@ def main() -> None:
 
     blast_df = process_species(args.species)
 
-    if blast_df is not None and not blast_df.empty:
-        output_dir = defaults.PATH_DICT['BLAST_SPECIES_DIR']
-        output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = defaults.PATH_DICT['BLAST_SPECIES_DIR']
+    output_dir.mkdir(parents=True, exist_ok=True)
+    parquet_path = output_dir / f'{args.species}.parquet'
+    csv_path     = output_dir / f'{args.species}.csv'
+    asn_path     = defaults.PATH_DICT['ASN_TBLASTN_DIR'] / f'{args.species}.asn'
 
-        blast_df.to_parquet(output_dir / f'{args.species}.parquet', index=False)
-        blast_df.to_csv(output_dir / f'{args.species}.csv', index=False)
+    if blast_df is not None and not blast_df.empty:
+        blast_df.to_parquet(parquet_path, index=False)
+        blast_df.to_csv(csv_path, index=False)
         logging.info(f'Saved {len(blast_df)} rows for {args.species}')
     else:
-        logging.warning(f'No BLAST results for {args.species}.')
+        # Write an empty parquet with the correct schema so downstream rules don't crash.
+        empty_columns = [
+            'Query ID', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches',
+            'Gap Openings', 'Q. Start', 'Q. End', 'S. Start', 'S. End', 'E-value',
+            'Bit Score', 'Subject Sequence', 'Species', 'Tag'
+        ]
+        pd.DataFrame(columns=empty_columns).to_parquet(parquet_path, index=False)
+        csv_path.touch()
+        # Touch the ASN only if tBLASTn did not already write it (paths 2 & 3).
+        if not asn_path.exists():
+            asn_path.touch()
+        logging.warning(f'No BLAST results for {args.species} — empty outputs written.')
 
 
 # -----------------------------------------------------------------------------
