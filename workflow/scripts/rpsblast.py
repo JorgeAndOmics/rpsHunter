@@ -212,13 +212,25 @@ def main() -> None:
 
     result_df = process_rps_species(args.species)
 
+    output_dir = defaults.PATH_DICT['RPSBLAST_SPECIES_DIR']
+    output_dir.mkdir(parents=True, exist_ok=True)
+    parquet_path = output_dir / f'{args.species}.parquet'
+    asn_path = defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / f'{args.species}.asn'
+
     if result_df is not None and not result_df.empty:
-        output_dir = defaults.PATH_DICT['RPSBLAST_SPECIES_DIR']
-        output_dir.mkdir(parents=True, exist_ok=True)
-        result_df.to_parquet(output_dir / f'{args.species}.parquet', index=False)
+        result_df.to_parquet(parquet_path, index=False)
         logging.info(f'Saved {len(result_df)} rows for {args.species}')
     else:
-        logging.warning(f'No RPS-BLAST results for {args.species}.')
+        # Write an empty parquet with the correct schema so downstream rules don't crash.
+        empty_columns = [
+            'Query ID', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches',
+            'Gap Openings', 'Q. Start', 'Q. End', 'S. Start', 'S. End', 'E-value',
+            'Bit Score', 'Subject Title', 'Species', 'Tag'
+        ]
+        pd.DataFrame(columns=empty_columns).to_parquet(parquet_path, index=False)
+        # Touch the ASN file so rpsbproc_species input is satisfied.
+        asn_path.touch()
+        logging.warning(f'No RPS-BLAST results for {args.species} — empty outputs written.')
 
 
 # -----------------------------------------------------------------------------

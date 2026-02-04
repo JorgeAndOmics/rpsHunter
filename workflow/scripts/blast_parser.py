@@ -3,20 +3,27 @@ Module: blast_parser.py
 
 Description
 -----------
-    Parses, filters, and optionally exports BLAST result sequences as per-species FASTA files.
-    Applies filtering based on configurable identity, e-value, alignment length, and bitscore thresholds.
+    Parses, filters, and exports BLAST result sequences as per-species FASTA files.
+    Applies a strict, auditable filter chain:
 
-    ORF-aware behavior (unified pipeline):
-    - If blast.parquet contains an 'ORF_Filtered' column with True values,
-      only those sequences are exported to FASTA (ORF-filtered sequences).
-    - If the column doesn't exist or has no True values, all sequences are used
-      (backward compatible behavior).
+        table_filter  →  orf_aware_filter  →  hmm_aware_filter  →  FASTA export
+
+    Each gate follows the same contract:
+        - Column missing        → step was disabled → pass through unchanged.
+        - Column present, ≥1 True  → keep only True rows.
+        - Column present, 0 True   → return empty DF (species legitimately produced 0 hits).
+
+    An audit parquet is written to fastas/{species}.parquet before any filtering.
+    It contains every input row plus four boolean columns:
+        Quality_Pass  – passed table_filter thresholds
+        ORF_Pass      – True/False/NaN (NaN = ORF step not run)
+        HMM_Pass      – True/False/NaN (NaN = HMMER step not run)
+        Selected      – made it through all gates to FASTA export
 
 Requirements
 ------------
     - pandas
     - biopython
-    - tqdm
     - defaults (user-defined thresholds and paths)
     - colored_logging (custom logging utility)
 """
@@ -70,11 +77,12 @@ def table_filter(df: pd.DataFrame) -> pd.DataFrame:
 
 def orf_aware_filter(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Filters the table to ORF-filtered sequences if ORF analysis was run.
+    Strict ORF gate: keeps only rows where ORF_Filtered is True.
 
-    This enables the unified pipeline where ORF analysis enriches blast.parquet
-    with an 'ORF_Filtered' column. When this column exists and has True values,
-    only those sequences are used for downstream processing.
+    Contract:
+        - Column missing        → ORF step was disabled → pass through unchanged.
+        - Column present, ≥1 True  → keep only True rows.
+        - Column present, 0 True   → return empty DF (real result: ORF ran, nothing passed).
 
         Parameters
         ----------
@@ -82,24 +90,38 @@ def orf_aware_filter(df: pd.DataFrame) -> pd.DataFrame:
 
         Returns
         -------
-            :returns: A DataFrame filtered to ORF-passing sequences if ORF analysis
-                      was run, otherwise the original DataFrame unchanged.
+            :returns: Filtered DataFrame (may be empty).
     """
     if 'ORF_Filtered' not in df.columns:
-        logging.info("No ORF_Filtered column found - using all sequences (no ORF analysis run)")
+        logging.info("No ORF_Filtered column — ORF step was not run; passing through")
         return df
 
-    # Check if there are any ORF-filtered sequences
-    orf_filtered_count = df['ORF_Filtered'].sum() if df['ORF_Filtered'].dtype == bool else (df['ORF_Filtered'] == True).sum()
+    filtered_df = df[df['ORF_Filtered'] == True].copy()
+    logging.info(f"ORF gate: {len(filtered_df)}/{len(df)} rows passed")
+    return filtered_df
 
-    if orf_filtered_count > 0:
-        filtered_df = df[df['ORF_Filtered'] == True].copy()
-        logging.info(f"ORF analysis detected - using {len(filtered_df)} ORF-filtered sequences "
-                     f"(from {len(df)} total rows)")
-        return filtered_df
-    else:
-        logging.warning("ORF_Filtered column exists but no TRUE values found - using all sequences")
+
+def hmm_aware_filter(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Strict HMM gate: keeps only rows where HMM_Filtered is True.
+
+    Same contract as orf_aware_filter but on the HMM_Filtered column.
+
+        Parameters
+        ----------
+            :param df: The input DataFrame containing BLAST results.
+
+        Returns
+        -------
+            :returns: Filtered DataFrame (may be empty).
+    """
+    if 'HMM_Filtered' not in df.columns:
+        logging.info("No HMM_Filtered column — HMMER step was not run; passing through")
         return df
+
+    filtered_df = df[df['HMM_Filtered'] == True].copy()
+    logging.info(f"HMM gate: {len(filtered_df)}/{len(df)} rows passed")
+    return filtered_df
 
 
 # -------------------------------------------------------------------------
@@ -116,18 +138,50 @@ if __name__ == '__main__':
                         help='Path to the per-species enriched Parquet file.')
     parser.add_argument('--output-fasta', type=str, required=True,
                         help='Path to the output FASTA file.')
+    parser.add_argument('--output-audit', type=str, required=True,
+                        help='Path to the per-species audit Parquet file.')
 
     args = parser.parse_args()
 
-    blast_df: pd.DataFrame = pd.read_parquet(args.input_parquet)
+    # ── Read full input ─────────────────────────────────────────────────────
+    raw_df: pd.DataFrame = pd.read_parquet(args.input_parquet)
 
-    # Apply quality thresholds
-    blast_df = table_filter(blast_df)
+    # ── Compute audit flags on the full input (before any row is dropped) ───
+    quality_mask = (
+        (raw_df['Pct Identity']      >= defaults.PERC_IDENTITY_THRESHOLD) &
+        (raw_df['E-value']           <= defaults.E_VALUE_THRESHOLD) &
+        (raw_df['Alignment Length']  >= defaults.SEQ_LENGTH_THRESHOLD) &
+        (raw_df['Bit Score']         >= defaults.BITSCORE_THRESHOLD)
+    )
+    raw_df['Quality_Pass'] = quality_mask
 
-    # Apply ORF filtering if ORF analysis was run (unified pipeline)
+    # ORF_Pass / HMM_Pass: True/False if the column exists, NaN if the step was not run
+    if 'ORF_Filtered' in raw_df.columns:
+        raw_df['ORF_Pass'] = raw_df['ORF_Filtered'].astype(bool)
+    else:
+        raw_df['ORF_Pass'] = pd.array([pd.NA] * len(raw_df), dtype=pd.BooleanDtype())
+
+    if 'HMM_Filtered' in raw_df.columns:
+        raw_df['HMM_Pass'] = raw_df['HMM_Filtered'].astype(bool)
+    else:
+        raw_df['HMM_Pass'] = pd.array([pd.NA] * len(raw_df), dtype=pd.BooleanDtype())
+
+    # ── Run the filter chain ────────────────────────────────────────────────
+    blast_df = table_filter(raw_df)
     blast_df = orf_aware_filter(blast_df)
+    blast_df = hmm_aware_filter(blast_df)
 
-    # Write FASTA for this species
+    # ── Mark Selected on the full audit frame ──────────────────────────────
+    selected_idx = blast_df.index
+    raw_df['Selected'] = raw_df.index.isin(selected_idx)
+
+    # ── Write audit parquet ─────────────────────────────────────────────────
+    output_audit_path: Path = Path(args.output_audit)
+    output_audit_path.parent.mkdir(parents=True, exist_ok=True)
+    raw_df.to_parquet(output_audit_path, index=False)
+    logging.info(f"Audit parquet written: {len(raw_df)} rows, {raw_df['Selected'].sum()} selected → {output_audit_path}")
+
+    # ── Write FASTA ─────────────────────────────────────────────────────────
     output_fasta_path: Path = Path(args.output_fasta)
     output_fasta_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -143,8 +197,9 @@ if __name__ == '__main__':
             header: str = f"{row['Subject ID']}:{row['S. Start']}-{row['S. End']}|tag:{row['Tag']}"
             seq_records.append(SeqRecord(Seq(str(row['Subject Sequence'])), id=header, description=''))
 
-        if seq_records:
-            SeqIO.write(seq_records, output_fasta_path, 'fasta')
-            logging.info(f"Exported {len(seq_records)} sequences to {output_fasta_path}")
+        SeqIO.write(seq_records, output_fasta_path, 'fasta')
+        logging.info(f"Exported {len(seq_records)} sequences to {output_fasta_path}")
     else:
-        logging.warning(f"No sequences to export for {args.species}")
+        # Touch an empty FASTA so Snakemake output is satisfied
+        output_fasta_path.touch()
+        logging.warning(f"No sequences passed all gates for {args.species} — empty FASTA written")

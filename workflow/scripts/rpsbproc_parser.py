@@ -184,7 +184,7 @@ def parse_rpsbproc_output(
     # -------------------------------------------------------------------------
     # Write Parquet Output
     # -------------------------------------------------------------------------
-    df = pd.DataFrame(domain_hits)
+    df = pd.DataFrame(domain_hits, columns=fieldnames)
     output_parquet.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(output_parquet, index=False)
     logging.info(f'Parquet output written to {output_parquet} ({len(domain_hits)} domain hits)')
