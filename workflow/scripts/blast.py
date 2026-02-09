@@ -75,7 +75,7 @@ def blaster(
 
         # Format ASN.1 to tabular output with sequence data
         blast_formatter_command = [
-            'blast_formatter',
+            defaults.BLAST_FORMATTER_CMD,
             '-archive', str(asn_file_path),
             '-outfmt',
             '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore sseq'
@@ -175,7 +175,7 @@ def process_species(species: str) -> Optional[pd.DataFrame]:
             :raises Exception: Propagates exceptions from BLAST or parsing steps.
     """
     blast_output, asn_file_name = blaster(
-        command='tblastn',
+        command=defaults.TBLASTN_CMD,
         input_database_path=defaults.PATH_DICT['SPECIES_DB'],
         query_file_path=defaults.QUERY_FILE,
         subject=species,

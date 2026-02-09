@@ -35,6 +35,15 @@ hmmer:
   # Reproducibility
   seed: 67
 
+# Optional: Override BLAST+ program names (defaults match bioconda package)
+# Uncomment and modify if your system uses different naming (e.g., rpsblast+)
+#programs:
+#  tblastn: 'tblastn'
+#  rpsblast: 'rpsblast'
+#  blast_formatter: 'blast_formatter'
+#  makeblastdb: 'makeblastdb'
+#  rpsbproc: 'rpsbproc'
+
 query:
   format: 'fa'
   accession: 'NP_001297143.1'  # Example accession number

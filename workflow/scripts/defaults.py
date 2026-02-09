@@ -121,6 +121,14 @@ HMMER_MAX_SENS: bool      = config.get('hmmer', {}).get('max_sensitivity', False
 HMMER_BIAS_FILTER: bool   = config.get('hmmer', {}).get('bias_filter', True)
 HMMER_SEED: int           = config.get('hmmer', {}).get('seed', 67)
 
+# === External Program Names ===
+_programs = config.get('programs', {})
+TBLASTN_CMD: str          = _programs.get('tblastn', 'tblastn')
+RPSBLAST_CMD: str         = _programs.get('rpsblast', 'rpsblast')
+BLAST_FORMATTER_CMD: str  = _programs.get('blast_formatter', 'blast_formatter')
+MAKEBLASTDB_CMD: str      = _programs.get('makeblastdb', 'makeblastdb')
+RPSBPROC_CMD: str         = _programs.get('rpsbproc', 'rpsbproc')
+
 # Display
 DISPLAY_SNAKEMAKE_INFO: bool = config['display'].get('display_snakemake_info', False)
 DISPLAY_REQUESTS_WARNING: bool = config['display'].get('display_requests_warning', False)

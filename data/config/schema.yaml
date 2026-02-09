@@ -1,30 +1,52 @@
 blast: include('blast_schema')
 orf: include('orf_schema')
 hmmer: include('hmmer_schema')
+programs: include('programs_schema', required=False)
 query: include('query_schema')
 execution: include('execution_schema')
+display: include('display_schema')
 root: include('root_schema')
 logging: include('logging_schema')
 species: include('species_schema')
-
+---
 blast_schema:
   e_value: num(min=0)
   perc_identity: num(min=0, max=100)
   seq_length: int(min=1)
   bitscore: num(min=0)
 
+orf_schema:
+  enabled: bool()
+  min_orf_length: int(min=1)
+  start_codon: str(matches='^([ATGC]{3})?$')
+  longest_orf: bool()
+
+hmmer_schema:
+  enabled: bool()
+  profiles: list(str(), required=False)
+  use_gathering_threshold: bool()
+  evalue: num(min=0, required=False)
+  dom_evalue: num(min=0, required=False)
+  min_score: any(num(min=0), null(), required=False)
+  min_coverage: num(min=0, max=1)
+  min_alignment_length: int(min=0)
+  max_sensitivity: bool()
+  bias_filter: bool()
+  seed: int(min=0)
+
 query_schema:
   format: str()
-  accession: str(matches='[A-Z]{2,}_?[0-9]+\.[0-9]{1,2}')
+  accession: str(matches='[A-Z]{2,}_?[0-9]+\\.[0-9]{1,2}')
 
 execution_schema:
   num_cores: int(min=1)
   use_species_list: bool()
+  random_id_length: int(min=1)
   retrieval_time_lag: num(min=0)
   max_retrieval_attempts: int(min=1)
   entrez_email: str()
 
-display:
+display_schema:
   display_snakemake_info: bool()
   display_requests_warning: bool()
   display_operation_info: bool()
@@ -65,21 +87,9 @@ color_bold_bg_schema:
 
 species_schema: map(str(), key=str())
 
-orf_schema:
-  enabled: bool()
-  min_orf_length: int(min=1)
-  start_codon: str(matches='^([ATGC]{3})?$')
-  longest_orf: bool()
-
-hmmer_schema:
-  enabled: bool()
-  profiles: list(str(), required=False)
-  use_gathering_threshold: bool()
-  evalue: num(min=0, required=False)
-  dom_evalue: num(min=0, required=False)
-  min_score: any(num(min=0), null(), required=False)
-  min_coverage: num(min=0, max=1)
-  min_alignment_length: int(min=1)
-  max_sensitivity: bool()
-  bias_filter: bool()
-  seed: int(min=0)
+programs_schema:
+  tblastn: str(required=False)
+  rpsblast: str(required=False)
+  blast_formatter: str(required=False)
+  makeblastdb: str(required=False)
+  rpsbproc: str(required=False)

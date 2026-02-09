@@ -19,6 +19,7 @@ dependencies:
   - cloudpickle=3.0.0
   - colorama=0.4.6
   - coloredlogs=15.0.1
+  - blast
   - diamond
   - dill=0.3.9
   - hmmer
@@ -47,6 +48,7 @@ dependencies:
   - r-yaml
   - ratelimit=2.2.1
   - requests=2.32.3
+  - rpsbproc
   - samtools
   - six=1.16.0
   - taxonkit

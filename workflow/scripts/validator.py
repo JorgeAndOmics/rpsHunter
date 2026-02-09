@@ -159,10 +159,20 @@ def validate_programs() -> bool:
             return False
 
     checks = {
-        'BLAST+': check_version('tblastn', '-version'),
-        'rpsbproc': check_version('rpsbproc', '-version'),
+        'tblastn': check_version(defaults.TBLASTN_CMD, '-version'),
+        'rpsblast': check_version(defaults.RPSBLAST_CMD, '-version'),
+        'blast_formatter': check_version(defaults.BLAST_FORMATTER_CMD, '-version'),
+        'makeblastdb': check_version(defaults.MAKEBLASTDB_CMD, '-version'),
+        'rpsbproc': check_version(defaults.RPSBPROC_CMD, '-version'),
         'Datasets': check_version('datasets', '--version')
     }
+
+    if defaults.HMMER_ENABLED:
+        checks.update({
+            'hmmsearch': check_version('hmmsearch', '-h'),
+            'hmmfetch':  check_version('hmmfetch',  '-h'),
+            'hmmpress':  check_version('hmmpress',  '-h'),
+        })
 
     for tool, status in checks.items():
         log_fn = logging.info if status else logging.warning

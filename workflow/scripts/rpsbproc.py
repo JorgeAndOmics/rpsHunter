@@ -45,7 +45,7 @@ def main(input_dir: Path, output_dir: Path, db_path: Path, t_option: str) -> Non
         output_file: Path = output_dir / f'{input_file.stem}.txt'
 
         cmd: List[str] = [
-            'rpsbproc',
+            defaults.RPSBPROC_CMD,
             '-i', str(input_file),
             '-d', str(db_path),
             '-t', t_option,
@@ -89,7 +89,7 @@ if __name__ == '__main__':
         print(f'Empty ASN for {args.species} — skipping rpsbproc, touched {output_file}')
     else:
         cmd: List[str] = [
-            'rpsbproc',
+            defaults.RPSBPROC_CMD,
             '-i', str(input_file),
             '-d', str(defaults.PATH_DICT['RPSBPROC_DB']),
             '-t', 'both',

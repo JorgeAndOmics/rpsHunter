@@ -178,10 +178,11 @@ rule blast_db_generator_setup:
         ntf_file=str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}' / '{genome}.ntf'),
         nto_file=str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}' / '{genome}.nto'),
     params:
-        db_dir=str(defaults.PATH_DICT['SPECIES_DB'])
+        db_dir=str(defaults.PATH_DICT['SPECIES_DB']),
+        makeblastdb_cmd=defaults.MAKEBLASTDB_CMD
     shell:
         """
-        makeblastdb -in {input.fa:q} -dbtype nucl \
+        {params.makeblastdb_cmd} -in {input.fa:q} -dbtype nucl \
         -out {params.db_dir:q}/{wildcards.genome:q}/{wildcards.genome:q}
         """
 

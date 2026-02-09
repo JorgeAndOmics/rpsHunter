@@ -72,7 +72,7 @@ def rpsblaster(
             return None, None
 
         blast_formatter_command: List[str] = [
-            'blast_formatter',
+            defaults.BLAST_FORMATTER_CMD,
             '-archive', str(asn_file_path),
             '-outfmt', '6 std stitle'
         ]
@@ -161,7 +161,7 @@ def process_rps_species(species: str, fasta_input_dir: Path = None, asn_output_d
         return None
 
     blast_output, asn_file_name = rpsblaster(
-        command='rpsblast',
+        command=defaults.RPSBLAST_CMD,
         input_database_path=defaults.PATH_DICT['RPS_DB'],
         query_file_path=fasta_file_path,
         species=species,
