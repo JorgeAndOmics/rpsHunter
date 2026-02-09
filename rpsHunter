@@ -4,7 +4,7 @@
 # DEPENDENCIES
 # -------------------
 
-import os
+import sys
 import subprocess
 import argparse
 from pathlib import Path
@@ -23,21 +23,27 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--download_genomes',
+        '--setup-databases',
+        action='store_true',
+        help="Downloads and sets up CDD and rpsbproc annotation databases."
+    )
+
+    parser.add_argument(
+        '--download-genomes',
         action='store_true',
         help="Downloads genomes specified in .yaml file. "
              "Will skip download if the same files exist currently in the target directory."
     )
 
     parser.add_argument(
-        '--download_query',
+        '--download-query',
         action='store_true',
         help="Downloads query protein sequence in fasta format."
              " Will skip download if the same file exists currently in the target directory."
     )
 
     parser.add_argument(
-        '--blast_dbs',
+        '--blast-dbs',
         action='store_true',
         help="Generates BLAST databases from genomes."
     )
@@ -49,7 +55,7 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--orf_analyser',
+        '--orf-analyser',
         action='store_true',
         help="Runs ORF detection on BLAST hits."
     )
@@ -73,25 +79,25 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--rpsbproc_parser',
+        '--rpsbproc-parser',
         action='store_true',
         help="Parses the rpsbproc output to table format."
     )
 
     parser.add_argument(
-        '--completeness_detector',
+        '--completeness-detector',
         action='store_true',
         help="Generates tile plot with highest-completeness degree per domain."
     )
 
     parser.add_argument(
-        '--contingency_parser',
+        '--contingency-parser',
         action='store_true',
         help="Generates contingency tables and plots."
     )
 
     parser.add_argument(
-        '--skip_validation', '-skp',
+        '--skip-validation', '-skp',
         action='store_true',
         help='Skip input validation.'
     )
@@ -106,25 +112,28 @@ if __name__ == '__main__':
     # -----------------------------
     # EXECUTE MAIN PIPELINE
     # -----------------------------
-    main_cmd: list = ['python', 'scripts/rpsHunter.py']
+    main_cmd: list = [sys.executable, 'scripts/rpsHunter.py']
 
     if args.skip_validation:
-        main_cmd.append('--skip_validation')
+        main_cmd.append('--skip-validation')
+
+    if args.setup_databases:
+        main_cmd.append('--setup-databases')
 
     if args.download_genomes:
-        main_cmd.append('--download_genomes')
+        main_cmd.append('--download-genomes')
 
     if args.download_query:
-        main_cmd.append('--download_query')
+        main_cmd.append('--download-query')
 
     if args.blast_dbs:
-        main_cmd.append('--blast_dbs')
+        main_cmd.append('--blast-dbs')
 
     if args.blast:
         main_cmd.append('--blast')
 
     if args.orf_analyser:
-        main_cmd.append('--orf_analyser')
+        main_cmd.append('--orf-analyser')
 
     if args.hmmer:
         main_cmd.append('--hmmer')
@@ -136,15 +145,16 @@ if __name__ == '__main__':
         main_cmd.append('--rpsbproc')
 
     if args.rpsbproc_parser:
-        main_cmd.append('--rpsbproc_parser')
+        main_cmd.append('--rpsbproc-parser')
 
     if args.completeness_detector:
-        main_cmd.append('--completeness_detector')
+        main_cmd.append('--completeness-detector')
 
     if args.contingency_parser:
-        main_cmd.append('--contingency_parser')
+        main_cmd.append('--contingency-parser')
 
     if unknown:
         main_cmd.extend(unknown)
 
-    subprocess.run(main_cmd, cwd=script_dir)
+    result = subprocess.run(main_cmd, cwd=script_dir)
+    sys.exit(result.returncode)
