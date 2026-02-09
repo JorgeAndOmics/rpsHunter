@@ -204,6 +204,7 @@ rule blast_species:
         parquet=str(defaults.PATH_DICT['BLAST_SPECIES_DIR'] / '{species}.parquet'),
         csv=str(defaults.PATH_DICT['BLAST_SPECIES_DIR'] / '{species}.csv'),
         asn=str(defaults.PATH_DICT['ASN_TBLASTN_DIR'] / '{species}.asn')
+    threads: 1
     shell:
         '''
         python scripts/blast.py --species {wildcards.species}
@@ -220,6 +221,7 @@ if defaults.ORF_ENABLED:
             genome=str(defaults.PATH_DICT['SPECIES_DB'] / '{species}.fa')
         output:
             parquet=str(defaults.PATH_DICT['ORF_OUTPUT_DIR'] / '{species}.parquet')
+        threads: 1
         shell:
             '''
             Rscript scripts/orf_analyser.R \
@@ -264,6 +266,7 @@ rule blast_parser_species:
         audit        =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.parquet'),
         selected     =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}_selected.parquet'),
         selected_csv =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}_selected.csv')
+    threads: 1
     shell:
         '''
         python scripts/blast_parser.py \
@@ -285,6 +288,7 @@ rule rpsblast_species:
     output:
         parquet=str(defaults.PATH_DICT['RPSBLAST_SPECIES_DIR'] / '{species}.parquet'),
         asn=str(defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / '{species}.asn')
+    threads: 1
     shell:
         '''
         python scripts/rpsblast.py --species {wildcards.species}
@@ -300,6 +304,7 @@ rule rpsbproc_species:
         rpsbproc_data=rules.rpsbproc_data_downloader.output
     output:
         txt=str(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'] / '{species}.txt')
+    threads: 1
     shell:
         '''
         python scripts/rpsbproc.py --species {wildcards.species}
@@ -314,6 +319,7 @@ rule rpsbproc_parser_species:
         txt=str(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'] / '{species}.txt')
     output:
         parquet=str(defaults.PATH_DICT['DOMAINS_SPECIES_DIR'] / '{species}.parquet')
+    threads: 1
     shell:
         '''
         python scripts/rpsbproc_parser.py \
