@@ -5,7 +5,7 @@ blast:
   bitscore: 70
 
 orf:
-  enabled: false           # Toggle ORF analysis on/off
+  enabled: true            # Toggle ORF analysis on/off
   min_orf_length: 200      # Minimum ORF length in nucleotides
   start_codon: ''          # Start codon filter (empty string = no filter)
   longest_orf: true        # If true, keep only longest ORF per reading frame
@@ -20,13 +20,13 @@ hmmer:
   use_gathering_threshold: false  # Use Pfam's curated --cut_ga
 
   # Manual thresholds (ignored if use_gathering_threshold: true)
-  evalue: 10               # hmmsearch default — effectively no E-value gate
-  dom_evalue: 1            # hmmsearch default — effectively no domain E-value gate
+  evalue: 1e-5             # E-value threshold for hmmsearch
+  dom_evalue: 1e-3         # Domain E-value threshold
   min_score: null          # null = disabled
 
   # Quality filters
-  min_coverage: 0          # 0 = disabled
-  min_alignment_length: 0  # 0 = disabled
+  min_coverage: 0.5        # Minimum query coverage (0-1)
+  min_alignment_length: 20 # Minimum alignment length in amino acids
 
   # Sensitivity
   max_sensitivity: false   # --max flag (slow)
