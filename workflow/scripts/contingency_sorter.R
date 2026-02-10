@@ -49,7 +49,8 @@ data.clean <- data %>%
 # Standardize species names with a regex pattern
 chr.pattern <- "[A-Za-z]+_?[0-9]+[._]?[0-9]*"
 data.clean <- data.clean %>%
-  mutate(Chromosome = str_extract(Chromosome, chr.pattern))
+  mutate(Chromosome = str_extract(Chromosome, chr.pattern)) %>%
+  filter(!is.na(Chromosome) & nzchar(Chromosome))
 
 # Set up strand based on start-end directionality. Fix start-end directionality
 data.clean <- data.clean %>%
