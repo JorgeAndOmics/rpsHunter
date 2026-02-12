@@ -4,195 +4,186 @@
 [![linkedin](https://img.shields.io/badge/linkedin-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/jorge-gonzalez-garcia/)
 
 
-
 [![rpsHunter](images/logo.png)](images/logo.png)
 
 
 
 # rpsHunter
 
-**rpsHunter** is an object-oriented, fully parallelized computational pipeline for the detection, quantification, and classification of protein domains in user-specified genomes, based on protein-coding genes. Developed using the Snakemake workflow management system, rpsHunter prioritizes scalability, modularity, reproducibility, and fault tolerance, ensuring reliable and efficient domain annotation across diverse datasets.
-
-**rpsHunter** automates the acquisition, validation, and indexing of reference genomes, streamlining database preparation. For domain discovery, rpsHunter employs a configurable homology-based search using the BLAST+ suite’s RPSBLAST tool in conjunction with the NCBI Conserved Domain Database (CDD). Results are further refined and interpreted through automated parsing and integration with HMM profile analyses. This combined approach enables sensitive and specific identification of protein domains, supporting robust cross-genome comparative analysis and confident domain assignment.
-
-## Features
-
-- **Seamless data acquisition** through automated genome downloads, robust database generation, and efficient serialized file management.
-
-- **Flexible configuration** to accommodate a wide range of experimental protocols. Execute arbitrary Snakemake rules directly on your protein domain queries.
-
-- **Comprehensive end-to-end automation** for protein-coding gene retrieval, homology-based domain detection, and structured result parsing.
-
-- **Scalable execution** in any computing environment, leveraging Snakemake’s dynamic workflow orchestration for parallelized, high-throughput analyses.
-
-- **Rich, structured logging** for transparent and auditable workflows.
-
-- **Modular and extensible architecture** supporting straightforward integration, adaptation, and strict reproducibility.
-
-- **User-friendly command-line interface** optimized for streamlined operation and minimal learning curve.
-
-- **Extensive, well-annotated outputs** in standard formats including FASTA, GFF3, and comprehensive tabular reports.
-
-- **Integrated, publication-quality reporting** featuring comprehensive, high-resolution visualizations for downstream analysis and communication.
-
-
-
-## Technologies
-
-![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)
-
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)
 ![R](https://img.shields.io/badge/R-4.x-blue?logo=r&logoColor=white)
+![Snakemake](https://img.shields.io/badge/Snakemake-%E2%89%A57.0-green?logo=snakemake&logoColor=white)
+![BLAST+](https://img.shields.io/badge/BLAST+-NCBI-lightblue)
+![HMMER](https://img.shields.io/badge/HMMER-3.x-orange)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-![NCBI](https://img.shields.io/badge/NCBI-Entrez%20%26%20Datasets-lightblue)
+**rpsHunter** is a production-grade bioinformatics pipeline for detecting, quantifying, and classifying protein domains in genomic sequences. It combines homology-based searches (tBLASTn) with specialized domain detection (RPSBLAST against NCBI CDD) and HMM-based filtering (HMMER against Pfam) to identify conserved protein domains across multiple genomes.
 
-![Bash](https://img.shields.io/badge/Bash-Scripting-green?logo=gnubash&logoColor=white)
+Built on Snakemake, rpsHunter provides fully parallelized, reproducible, and fault-tolerant execution from genome acquisition through publication-quality visualization.
 
+## Key Features
+
+- **Two-database domain detection** combining NCBI CDD (RPSBLAST) and Pfam (HMMER) for sensitive and specific identification
+- **Multi-gate filtering** with configurable BLAST quality, ORF detection, and HMMER thresholds --- each independently toggleable
+- **CDD subset searching** to target specific domain families instead of the full database
+- **HMMER profile isolation** to search only user-specified Pfam domains
+- **Multi-domain capture** retaining all quality-passing HMMER hits per sequence, not just the best
+- **Snakemake-orchestrated parallelism** with per-species wildcard rules and automatic dependency resolution
+- **Comprehensive audit trail** with per-sequence pass/fail flags at every filtering gate
+- **Dual output formats** (Parquet + CSV) for all tables, GFF3 for genomic coordinates
+- **Publication-quality visualizations** including domain completeness heatmaps and interactive 3D scatter plots
+- **Cross-platform support** for Linux, macOS, and Windows (WSL)
+
+## Quick Start
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/JorgeAndOmics/rpsHunter.git
+cd rpsHunter
+
+# 2. Create the conda environment
+conda env create -f data/config/environment.yaml
+
+# 3. Configure your analysis
+#    Edit data/config/config.yaml with your species, query protein, and thresholds
+
+# 4. Download databases (one-time setup)
+conda run -n rpsHunter ./rpsHunter --setup-databases --skip-validation
+
+# 5. Run the pipeline (each stage separately)
+conda run -n rpsHunter ./rpsHunter --download-genomes --skip-validation
+conda run -n rpsHunter ./rpsHunter --download-query --skip-validation
+conda run -n rpsHunter ./rpsHunter --blast-dbs --skip-validation
+conda run -n rpsHunter ./rpsHunter --blast --skip-validation
+conda run -n rpsHunter ./rpsHunter --hmmer --skip-validation
+conda run -n rpsHunter ./rpsHunter --rpsblast --skip-validation
+conda run -n rpsHunter ./rpsHunter --rpsbproc --skip-validation
+conda run -n rpsHunter ./rpsHunter --rpsbproc-parser --skip-validation
+conda run -n rpsHunter ./rpsHunter --completeness-detector --skip-validation
+conda run -n rpsHunter ./rpsHunter --contingency-parser --skip-validation
+```
+
+> **Important:** Each CLI flag dispatches a separate Snakemake subprocess. Run one flag per invocation. See the [CLI Reference](docs/cli-reference.md) for details.
 
 ## Installation
 
-## Installation
+### Prerequisites
 
-To set up and run **rpsHunter**, follow these steps:
+- [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Mamba](https://mamba.readthedocs.io/) (recommended)
+- Git
 
-1. **Download rpsHunter**: Obtain the latest version from the [Releases](#) section.
+### Setup
 
-2. **Install Dependencies**: rpsHunter requires the following tools installed on your host system:
-   - [BLAST+ (version 2.12 or higher)](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html)
-   - [NCBI Datasets](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/command-line-tools/download-and-install/)
-   - [rpsbproc](https://ftp.ncbi.nih.gov/pub/mmdb/cdd/rpsbproc/RpsbProc-x64-linux.tar.gz) (NCBI's RPS-BLAST post-processing tool)
-
-Furthermore, make sure to run `getcdddata.sh` within the rpsbproc tar.gz file to download the required accessory files for rpsbproc. Edit `db_root_folder` in the `config.yaml` file located in `data/config`. Create the following folders: `accessory/rpsbproc_annot1` within the specified `db_root_folder` path and uncompress the downloaded files within before executing the pipeline.
-
-3. **Create Conda Environment**: After installing the dependencies, set up a new Conda environment using the provided `rpsHunter.yaml` file located in `data/config`:
+1. **Clone the repository:**
 
    ```bash
-   conda env create -f data/config/rpsHunter.yaml
-```
+   git clone https://github.com/JorgeAndOmics/rpsHunter.git
+   cd rpsHunter
+   ```
 
-**Note**: Miniconda is recommended for optimal compatibility. However, you may use Mamba as a faster and more streamlined alternative for managing Conda environments.
+2. **Create the conda environment** from the provided specification:
 
-4. **Configure rpsHunter**: Edit the `config.yaml` file located in `data/config` to match your specific research requirements and pipeline settings.
+   ```bash
+   conda env create -f data/config/environment.yaml
+   ```
 
-5. **Prepare Input Data**: Update the required accession query in `config.yaml` (default location: `data/config`) along with any other experimental parameters. A template file is provided for your convenience. Additionally, if you prefer not to have **rpsHunter** automatically download genome FASTA files, you can supply your own custom FASTA files. Use the species dictionary within `config.yaml` to map accession codes to descriptive names, as these will appear in output data and visualizations.
+   This installs all dependencies including Python 3.12, R 4.x, BLAST+, HMMER, Snakemake, rpsbproc, and all required R/Python packages.
 
-6. **Execute rpsHunter**: **rpsHunter** automatically validates all input files (configuration, query sequence, host genome FASTA files and dependencies) by default, prompting the user before initiating the pipeline run.
+3. **Download required databases** (CDD, rpsbproc annotation data, CDD SMP files):
 
+   ```bash
+   conda run -n rpsHunter ./rpsHunter --setup-databases --skip-validation
+   ```
 
+4. **Download the Pfam HMM database** (required if using HMMER filtering):
 
-    
-## Environment Variables
+   The Pfam database is downloaded automatically when HMMER rules are first invoked. No manual setup is needed.
 
-To enhance performance when downloading data from NCBI, you may optionally provide an NCBI API key. This significantly increases the request rate limit for NCBI services, leading to faster downloads. Instructions for obtaining an API key can be found in the [NCBI documentation](https://support.nlm.nih.gov/kbArticle/?pn=KA-05317).
+5. **Configure your analysis** by editing `data/config/config.yaml`:
+   - Set `query.accession` to your protein of interest
+   - Define your species in the `species:` dictionary
+   - Set `root.db_root_folder` to where databases should be stored
+   - Adjust thresholds as needed (see [Configuration Reference](docs/configuration.md))
 
-When launching the pipeline, **rpsHunter** will prompt you to enter your API key unless input validation is explicitly skipped using `--skip_validation` or `-skp`. The token only needs to be provided once per session. Your API key is sensitive and should not be shared or exposed under any circumstances.
+6. **Prepare rpsbproc annotation data:**
 
-Additionally, it is **mandatory** to provide a valid email address under the `entrez_email` field in your `config.yaml` file. This is required by NCBI’s Entrez API for responsible use and must be present for any remote queries.
+   After running `--setup-databases`, the rpsbproc annotation files are placed in `db_root_folder/rpsbproc_dbs/`. No further manual configuration is needed.
+
 ## Usage
 
-**rpsHunter** is executed from the command line, offering fine-grained control over each stage of the pipeline. Navigate to the project root and run:
+rpsHunter is executed from the project root directory. Each pipeline stage is invoked with its own CLI flag:
 
 ```bash
-./rpsHunter
+# Run BLAST searches and generate filtered FASTAs + aggregate table
+conda run -n rpsHunter ./rpsHunter --blast --skip-validation
+
+# Run HMMER domain filtering
+conda run -n rpsHunter ./rpsHunter --hmmer --skip-validation
+
+# Run RPSBLAST domain detection
+conda run -n rpsHunter ./rpsHunter --rpsblast --skip-validation
+
+# Generate domain completeness heatmap
+conda run -n rpsHunter ./rpsHunter --completeness-detector --skip-validation
 ```
 
-### Command-Line Arguments
+For the complete flag reference and workflow recipes, see the [CLI Reference](docs/cli-reference.md).
 
-- `--download_genomes`: Download genomes as specified in the `.yaml` configuration file. Skips download if identical files already exist in the target directory.
+## Documentation
 
-- `--download_query`: Download the query protein sequence in FASTA format. Skips download if the file already exists in the target directory.
-
-- `--blast_dbs`: Generate BLAST databases from genome FASTA files.
-
-- `--blast`: Run tBLASTn using the provided protein accession sequence against the genome databases.
-
-- `--rpsblast`: Execute rpsblast using the provided protein accession sequence against the domain database.
-
-- `--rpsbproc`: Process rpsblast output with rpsbproc for domain annotation.
-
-- `--rpsbproc_parser`: Parse rpsbproc output and format as tables for downstream analysis.
-
-- `--contingency_parser`: Generate contingency tables and analytical plots from parsed results.
-
-- `--skip_validation`, `-skp`: Skip pre-run input and configuration validation checks.
-
-
-**rpsHunter** also supports execution of arbitrary Snakemake workflows to enhance adaptability across environments, including HPC clusters and cloud platforms. For advanced customization, refer to the [Snakemake documentation](https://snakemake.readthedocs.io).
-
-### Example Usage
-
-**rpsHunter** is designed for resilience and flexibility. In the event of a crash or interruption (e.g., power outage), the pipeline will resume from the most recent successful checkpoint, avoiding the need to reprocess completed steps.
-
-To execute the full pipeline using all available CPU cores and skip input validation:
-
-```bash
-# Build BLAST databases for all specified genomes, utilizing all CPU cores and silencing standard output:
-./rpsHunter --blast_dbs --cores all --quiet
-```
-
-```bash
-# Quetly download the query protein sequence in FASTA format:
-./rpsHunter --download_query -q
-```
-
-```bash
-# Run rpsblast followed by rpsbproc and parse the results, using four cores in parallel:
-./rpsHunter --rpsblast --rpsbproc --rpsbproc_parser --cores 4
-```
-
-```bash
-# Generate contingency plots and tables from annotated domain results:
-./rpsHunter --contingency_parser
-```
-
-```bash
-# Execute a custom Snakemake rule, enabling cluster mode with a user-defined profile:
-./rpsHunter --snakemake my_custom_rule --profile slurm_cluster --latency-wait 60
-```
-
-```bash
-# Skip all validation checks and run only the rpsbproc output parsing step:
-./rpsHunter --rpsbproc_parser --skip_validation
-```
-
-```bash
-# Run BLAST searches with a specific number of threads and keep intermediate files:
-./rpsHunter --blast --cores 8 --keep-going --notemp
-```
-
-```
-# Produce domain architecture summary plots for all processed genomes:
-./rpsHunter --contingency_parser --generate_global_plots --cores 2
-```
-
-
-**rpsHunter** accepts any combination of Snakemake-compatible options to fine-tune performance and scheduling on a wide range of environments, from local development machines to cloud-based and high-performance compute clusters. RetroSeek will generate the optimal Directed Acyclic Graph (DAG) of operations to minimize execution time given the provided resources.
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/architecture.md) | Pipeline stages, data flow diagrams, parallelism model, design principles |
+| [Configuration](docs/configuration.md) | Complete `config.yaml` parameter reference with types, defaults, and examples |
+| [Filtering](docs/filtering.md) | BLAST quality gate, ORF gate, HMMER two-level filtering, the "riding" edge case |
+| [Outputs](docs/outputs.md) | Output directory structure, parquet column schemas, file format descriptions |
+| [CLI Reference](docs/cli-reference.md) | All CLI flags, invocation patterns, flag-to-rule mapping, rerun recipes |
+| [Troubleshooting](docs/troubleshooting.md) | Common issues, empty species handling, Windows/WSL caveats |
 
 ## Screenshots
 
+### Domain Completeness Heatmap
+
 [![tile-plot.jpg](images/tile-plot.jpg)](images/tile-plot.jpg)
+
+### Interactive 3D Domain Scatter Plot
 
 [![3D-plot.png](images/3D-plot.png)](images/3D-plot.png)
 
+## Environment Variables
+
+To enhance performance when downloading data from NCBI, you may optionally provide an NCBI API key. This significantly increases the request rate limit for NCBI services. Instructions for obtaining an API key can be found in the [NCBI documentation](https://support.nlm.nih.gov/kbArticle/?pn=KA-05317).
+
+When launching the pipeline, rpsHunter will prompt you to enter your API key unless input validation is explicitly skipped using `--skip-validation` or `-skp`. Your API key is sensitive and should not be shared.
+
+Additionally, a valid email address must be provided under the `entrez_email` field in `config.yaml`. This is required by NCBI's Entrez API for responsible use.
 
 ## Acknowledgments
 
 [![TCD](images/TCD.png)](images/TCD.png)
 
-- Ní Leathlobhair lab @ Moyne
+- Ni Leathlobhair lab @ Moyne
 
 ## Contributing
 
-Contributions are always welcome! Feel free to generate a pull request, or contact me at jgonzlez@tcd.ie for any questions!
-
+Contributions are always welcome! Feel free to generate a pull request, or contact me at jgonzlez@tcd.ie for any questions.
 
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
 
-
 ## References
 
 Camacho, C., Coulouris, G., Avagyan, V., Ma, N., Papadopoulos, J., Bealer, K., & Madden, T. L. (2009). BLAST+: Architecture and applications. *BMC Bioinformatics, 10*, 421. https://doi.org/10.1186/1471-2105-10-421
 
-Sayers, E. W., Bolton, E. E., Brister, J. R., Canese, K., Chan, J., Comeau, D. C., ... & Ostell, J. (2022). Database resources of the National Center for Biotechnology Information. *Nucleic Acids Research, 50*(D1), D20–D26. https://doi.org/10.1093/nar/gkab1112  
+Sayers, E. W., Bolton, E. E., Brister, J. R., Canese, K., Chan, J., Comeau, D. C., ... & Ostell, J. (2022). Database resources of the National Center for Biotechnology Information. *Nucleic Acids Research, 50*(D1), D20-D26. https://doi.org/10.1093/nar/gkab1112
 (*Reference for NCBI Datasets and API services*)
+
+Eddy, S. R. (2011). Accelerated profile HMM searches. *PLoS Computational Biology, 7*(10), e1002195. https://doi.org/10.1371/journal.pcbi.1002195
+(*Reference for HMMER*)
+
+Mistry, J., Chuguransky, S., Williams, L., Qureshi, M., Salazar, G. A., Sonnhammer, E. L., ... & Bateman, A. (2021). Pfam: The protein families database in 2021. *Nucleic Acids Research, 49*(D1), D412-D419. https://doi.org/10.1093/nar/gkaa913
+(*Reference for the Pfam database*)
+
+Molder, F., Jablonski, K. P., Letcher, B., Hall, M. B., Tomkins-Tinch, C. H., Sochat, V., ... & Koster, J. (2021). Sustainable data analysis with Snakemake. *F1000Research, 10*, 33. https://doi.org/10.12688/f1000research.29032.2
+(*Reference for the Snakemake workflow management system*)
