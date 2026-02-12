@@ -3,11 +3,13 @@ HMMER domain filtering — single-species mode.
 
 Reads a per-species blast parquet, extracts Subject Sequence, runs hmmsearch
 against a Pfam HMM database, and enriches the parquet with HMM_* columns:
-    HMM_Filtered   (bool)   – passed all HMMER quality filters
-    HMM_Evalue     (float)  – best per-domain E-value
-    HMM_Score      (float)  – best domain bit score
-    HMM_Domain     (str)    – best matching Pfam domain name
-    HMM_Coverage   (float)  – fraction of HMM model covered by best hit
+    HMM_Filtered   (bool)   – True if sequence passed any HMMER quality filter
+    HMM_Evalue     (list)   – per-domain E-values for all quality-passing hits
+    HMM_Score      (list)   – domain bit scores for all quality-passing hits
+    HMM_Domain     (list)   – Pfam domain names for all quality-passing hits
+    HMM_Coverage   (list)   – fraction of HMM model covered per quality-passing hit
+
+Lists are sorted by E-value ascending (best first).
 
 Usage (invoked by Snakefile):
     python hmmer.py --species <name> <input.parquet> <Pfam-A.hmm> <output.parquet>
@@ -179,15 +181,8 @@ def parse_domtbl(domtbl_path: Path) -> pd.DataFrame:
 
 
 # -----------------------------------------------------------------------------
-# Per-sequence best-hit selection + quality filtering
+# Quality filtering
 # -----------------------------------------------------------------------------
-
-def best_hits(domtbl: pd.DataFrame) -> pd.DataFrame:
-    """For each target sequence keep only the hit with lowest E-value."""
-    if domtbl.empty:
-        return domtbl
-    return domtbl.sort_values('evalue').drop_duplicates(subset='target_name', keep='first')
-
 
 def quality_filter(hits: pd.DataFrame) -> pd.DataFrame:
     """Apply min_coverage and min_alignment_length filters."""
@@ -209,12 +204,16 @@ def quality_filter(hits: pd.DataFrame) -> pd.DataFrame:
 def enrich(blast_df: pd.DataFrame, hits: pd.DataFrame) -> pd.DataFrame:
     """
     Add HMM_* columns to blast_df.  hits is indexed by 'seq_{row_index}'.
+
+    HMM_Filtered is a scalar bool (True if any domain passed quality filters).
+    HMM_Domain, HMM_Evalue, HMM_Score, HMM_Coverage are lists of all
+    quality-passing hits sorted by E-value ascending (best first).
     """
-    # Build a lookup: seq_N → row fields
-    lookup = {}
+    # Build lookup: seq index → list of hit rows
+    lookup: dict[int, list] = {}
     for _, row in hits.iterrows():
         idx = int(row['target_name'].split('_')[1])
-        lookup[idx] = row
+        lookup.setdefault(idx, []).append(row)
 
     hmm_filtered = []
     hmm_evalue  = []
@@ -224,17 +223,17 @@ def enrich(blast_df: pd.DataFrame, hits: pd.DataFrame) -> pd.DataFrame:
 
     for idx in range(len(blast_df)):
         if idx in lookup:
-            h = lookup[idx]
+            rows = sorted(lookup[idx], key=lambda r: r['evalue'])
             hmm_filtered.append(True)
-            hmm_evalue.append(h['evalue'])
-            hmm_score.append(h['score'])
-            hmm_domain.append(h['query_name'])
-            hmm_cov.append(h['coverage'])
+            hmm_domain.append([r['query_name'] for r in rows])
+            hmm_evalue.append([r['evalue'] for r in rows])
+            hmm_score.append([r['score'] for r in rows])
+            hmm_cov.append([r['coverage'] for r in rows])
         else:
             hmm_filtered.append(False)
+            hmm_domain.append(None)
             hmm_evalue.append(None)
             hmm_score.append(None)
-            hmm_domain.append(None)
             hmm_cov.append(None)
 
     blast_df = blast_df.copy()
@@ -313,7 +312,7 @@ def main():
 
                 domtbl_path = tbl_path.with_suffix('.domtbl')
                 domtbl = parse_domtbl(domtbl_path)
-                hits = quality_filter(best_hits(domtbl))
+                hits = quality_filter(domtbl)
 
     blast_enriched = enrich(blast_df, hits)
 
