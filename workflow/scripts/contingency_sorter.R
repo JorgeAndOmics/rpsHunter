@@ -10,6 +10,7 @@ suppressMessages({
   library(GenomicRanges)
   library(plyranges)
   library(rtracklayer)
+  library(yaml)
 })
 
 # =============================================================================
@@ -21,6 +22,7 @@ args.data <- args[1]
 args.output_plot_folder <- args[2]
 args.output_table_folder <- args[3]
 args.output_range_folder <- args[4]
+args.config_path <- args[5]
 
 # =============================================================================
 # MESSAGE
@@ -28,9 +30,32 @@ args.output_range_folder <- args[4]
 print("Parsing domain data...")
 
 # =============================================================================
+# SPECIES DISPLAY NAME MAPPING
+# =============================================================================
+config <- yaml::read_yaml(args.config_path)
+species_raw <- config$species
+if (is.list(species_raw) && !is.null(names(species_raw))) {
+  species_map <- unlist(species_raw)
+} else {
+  species_map <- setNames(unlist(species_raw), unlist(species_raw))
+}
+# Reverse map: display name -> file key (for GFF3 filenames)
+species_key_map <- setNames(names(species_map), species_map)
+
+# =============================================================================
 # DATA IMPORT
 # =============================================================================
 data <- arrow::read_parquet(args.data)
+
+# Save original species keys for GFF3 filenames
+data$Species_Key <- data$Species
+
+# Remap Species to display names
+data$Species <- ifelse(
+  data$Species %in% names(species_map),
+  species_map[data$Species],
+  data$Species
+)
 
 # Extract species from data
 full.species <- unique(data$Species)
@@ -72,11 +97,12 @@ data.clean <- data.clean %>%
 data.ranges <- GRanges(
   seqnames = data.clean$Chromosome,
   ranges = IRanges(
-    start = data.clean$Start, 
+    start = data.clean$Start,
     end = data.clean$End
   ),
   strand = data.clean$Strand,
   species = data.clean$Species,
+  species_key = data.clean$Species_Key,
   domain = data.clean$Domain,
   bitscore = data.clean$Bitscore,
   evalue = data.clean$Evalue,
@@ -86,13 +112,13 @@ data.ranges <- GRanges(
 )
 
 data.ranges.reduced <- data.ranges %>%
-  group_by(species, domain, incomplete) %>%
+  group_by(species, species_key, domain, incomplete) %>%
   reduce_ranges_directed(
     mean_bitscore = mean(bitscore),
   )
 
-# Separate ranges by species
-data.ranges.reduced.species <- split(data.ranges.reduced, mcols(data.ranges.reduced)$species)
+# Separate ranges by species_key (file-friendly keys for GFF3 filenames)
+data.ranges.reduced.species <- split(data.ranges.reduced, mcols(data.ranges.reduced)$species_key)
 
 
 # Convert to a tidy data frame
@@ -223,5 +249,17 @@ htmlwidgets::saveWidget(
   file.path(args.output_plot_folder, "scatter_3D_plot.html")
 )
 
-# Contingency table export
-write_csv(data.full.contingency, file.path(args.output_table_folder, "contingency_table.csv"))
+# Contingency table export (both Species key and display name)
+contingency_output <- data.full.contingency %>%
+  mutate(
+    Species_Name = Species,
+    Species = ifelse(
+      Species_Name %in% names(species_key_map),
+      species_key_map[Species_Name],
+      Species_Name
+    )
+  ) %>%
+  select(Species, Species_Name, everything())
+
+write_csv(contingency_output, file.path(args.output_table_folder, "contingency_table.csv"))
+arrow::write_parquet(contingency_output, file.path(args.output_table_folder, "contingency_table.parquet"))

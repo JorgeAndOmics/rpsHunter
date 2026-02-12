@@ -47,7 +47,7 @@ def parse_rpsbproc_output(
     """
     domain_hits: List[Dict[str, Any]] = []
     fieldnames: List[str] = [
-        'Species', 'Session_ordinal', 'Program', 'Version', 'Database', 'Score_matrix', 'Evalue_threshold',
+        'Species', 'Species_Name', 'Session_ordinal', 'Program', 'Version', 'Database', 'Score_matrix', 'Evalue_threshold',
         'Query_ID', 'Seq_type', 'Seq_length', 'Definition', 'Chromosome', 'Start', 'End',
         'Hit_type', 'PSSM_ID', 'From', 'To', 'Evalue', 'Bitscore',
         'Accession', 'Domain', 'Incomplete', 'Superfamily_PSSM_ID'
@@ -115,6 +115,7 @@ def parse_rpsbproc_output(
                         domain_parts = domain_line.split('\t')
                         domain_hit = {
                             'Species': file_name_without_ext,
+                            'Species_Name': defaults.SPECIES_DICT.get(file_name_without_ext, file_name_without_ext),
                             'Session_ordinal': domain_parts[0],
                             'Query_ID': domain_parts[1],
                             'Hit_type': domain_parts[2],
@@ -148,6 +149,7 @@ def parse_rpsbproc_output(
                 else:
                     no_domain_hit = {
                         'Species': file_name_without_ext,
+                        'Species_Name': defaults.SPECIES_DICT.get(file_name_without_ext, file_name_without_ext),
                         'Session_ordinal': current_session.get('Session_ordinal', ''),
                         'Program': current_session.get('Program', ''),
                         'Version': current_session.get('Version', ''),

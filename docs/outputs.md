@@ -53,7 +53,8 @@ Raw tBLASTn results for a single species. One row per alignment hit.
 | E-value | float | Expect value |
 | Bit Score | float | Bit score of the alignment |
 | Subject Sequence | str | Aligned subject nucleotide sequence |
-| Species | str | Species name (from config) |
+| Species | str | Species key (file-friendly, from config key) |
+| Species_Name | str | Species display name (from config value, e.g. `Desmodus rotundus`) |
 | Tag | str | 6-character random alphanumeric identifier for traceability |
 
 **Produced by:** `blast_species` rule (`blast.py`)
@@ -62,11 +63,11 @@ Raw tBLASTn results for a single species. One row per alignment hit.
 
 ### orf/{species}.parquet
 
-BLAST parquet enriched with ORF detection results. Contains all 15 BLAST columns plus 3 ORF columns. Only produced when `orf.enabled: true` in config.
+BLAST parquet enriched with ORF detection results. Contains all 16 BLAST columns plus 3 ORF columns. Only produced when `orf.enabled: true` in config.
 
 | Column | Type | Description |
 |--------|------|-------------|
-| *(all 15 BLAST columns)* | | See `blast/{species}.parquet` above |
+| *(all 16 BLAST columns)* | | See `blast/{species}.parquet` above |
 | ORF_Filtered | bool | `True` if the sequence contains an ORF passing the configured thresholds |
 | ORF_Length | int | Length of the detected ORF in nucleotides |
 | ORF_Sequence | str | Nucleotide sequence of the detected ORF |
@@ -183,7 +184,8 @@ RPSBLAST results from searching filtered sequences against the NCBI Conserved Do
 | E-value | float | Expect value |
 | Bit Score | float | Bit score |
 | Subject Title | str | CDD domain title/description |
-| Species | str | Species name |
+| Species | str | Species key (file-friendly) |
+| Species_Name | str | Species display name (e.g. `Desmodus rotundus`) |
 | Tag | str | 6-character tag extracted from the FASTA header |
 
 **Produced by:** `rpsblast_species` rule (`rpsblast.py`)
@@ -216,7 +218,8 @@ Parsed domain annotations from rpsbproc output. One row per domain annotation on
 
 | Column | Type | Description |
 |--------|------|-------------|
-| Species | str | Species name |
+| Species | str | Species key (file-friendly) |
+| Species_Name | str | Species display name (e.g. `Desmodus rotundus`) |
 | Session_ordinal | str | rpsbproc session index |
 | Program | str | Program used (e.g. `rpsblast`) |
 | Version | str | Program version |
@@ -260,7 +263,7 @@ Concatenation of all per-species parquets from the ENRICHED_BLAST_DIR (the last 
 
 ### tables/domains.parquet / domains.csv
 
-Concatenation of all `domains/{species}.parquet` files. Contains the full 25-column domain schema described above.
+Concatenation of all `domains/{species}.parquet` files. Contains the full 26-column domain schema described above.
 
 **Produced by:** `aggregate_domains` rule (`aggregate.py`)
 
@@ -268,22 +271,23 @@ Concatenation of all `domains/{species}.parquet` files. Contains the full 25-col
 
 ### tables/rpsblast.parquet / rpsblast.csv
 
-Concatenation of all `rpsblast/{species}.parquet` files. Contains the 15-column RPSBLAST schema described above.
+Concatenation of all `rpsblast/{species}.parquet` files. Contains the 16-column RPSBLAST schema described above.
 
 **Produced by:** `aggregate_domains` rule (`aggregate.py`)
 
 ---
 
-### tables/contingency_table.csv
+### tables/contingency_table.parquet / contingency_table.csv
 
-Cross-tabulation of domain annotations by species, domain name, and completeness status. Uses standard comma delimiters.
+Cross-tabulation of domain annotations by species, domain name, and completeness status. Written in dual format (Parquet + CSV).
 
 | Column | Type | Description |
 |--------|------|-------------|
-| Species | str | Species name |
+| Species | str | Species key (file-friendly, e.g. `Desmodus_rotundus`) |
+| Species_Name | str | Species display name (e.g. `Desmodus rotundus`) |
 | Domain | str | Domain short name |
-| Incomplete | str | Completeness category (empty, `N`, `C`, `NC`) |
-| n | int | Count of annotations matching this combination |
+| Incomplete | str | Completeness category (`Complete`, `N-Truncated`, `C-Truncated`, `Bitruncated`) |
+| Count | int | Count of annotations matching this combination |
 
 **Produced by:** `contingency_sorter` rule (`contingency_sorter.R`)
 
@@ -293,7 +297,7 @@ Cross-tabulation of domain annotations by species, domain name, and completeness
 
 ### plots/tile_plot.png
 
-Domain completeness heatmap rendered as a static PNG image. Species are arranged on the y-axis, domains on the x-axis, and tile fill color represents the completeness category (complete, N-terminal truncated, C-terminal truncated, or both).
+Domain completeness heatmap rendered as a static PNG image. Species display names are arranged on the x-axis (bold italic), domains on the y-axis, and tile fill color represents the completeness category (complete, N-terminal truncated, C-terminal truncated, or both).
 
 **Produced by:** `completeness_detector` rule (`completeness_detector.R`)
 

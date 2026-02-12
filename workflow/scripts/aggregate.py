@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pandas as pd
 
+import defaults
+
 
 def main():
     parser = argparse.ArgumentParser(description='Aggregate per-species parquet files.')
@@ -31,6 +33,13 @@ def main():
 
     if dfs:
         combined = pd.concat(dfs, ignore_index=True)
+
+        # Backfill Species_Name when upstream parquets lack the column
+        if 'Species' in combined.columns and 'Species_Name' not in combined.columns:
+            combined['Species_Name'] = combined['Species'].map(
+                lambda s: defaults.SPECIES_DICT.get(s, s)
+            )
+
         combined.to_parquet(output_path, index=False)
 
         csv_path = output_path.with_suffix('.csv')

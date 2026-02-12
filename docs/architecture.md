@@ -39,7 +39,7 @@ graph TD
     P1 --> R1["plots/tile_plot.png"]
     P2 --> R2["plots/scatter_3D_plot.html"]
     P2 --> R3["ranges/{species}.gff3"]
-    P2 --> R4["tables/contingency_table.csv"]
+    P2 --> R4["tables/contingency_table.csv/.parquet"]
 
     style C fill:#e1f5fe
     style E2 fill:#e1f5fe

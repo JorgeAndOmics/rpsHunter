@@ -6,6 +6,7 @@ suppressMessages({
   library(arrow)
   library(tidyverse)
   library(ggsci)
+  library(yaml)
 })
 
 # =============================================================================
@@ -15,6 +16,7 @@ args <- commandArgs(trailingOnly = TRUE)
 
 args.data <- args[1]
 args.output_plot_folder <- args[2]
+args.config_path <- args[3]
 
 # =============================================================================
 # MESSAGE
@@ -22,9 +24,27 @@ args.output_plot_folder <- args[2]
 print("Parsing domain data...")
 
 # =============================================================================
+# SPECIES DISPLAY NAME MAPPING
+# =============================================================================
+config <- yaml::read_yaml(args.config_path)
+species_raw <- config$species
+if (is.list(species_raw) && !is.null(names(species_raw))) {
+  species_map <- unlist(species_raw)
+} else {
+  species_map <- setNames(unlist(species_raw), unlist(species_raw))
+}
+
+# =============================================================================
 # DATA IMPORT
 # =============================================================================
 data <- arrow::read_parquet(args.data)
+
+# Remap Species to display names
+data$Species <- ifelse(
+  data$Species %in% names(species_map),
+  species_map[data$Species],
+  data$Species
+)
 
 # Extract species from data
 full.species <- unique(data$Species)

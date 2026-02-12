@@ -208,6 +208,7 @@ def process_species(species: str) -> Optional[pd.DataFrame]:
         return None
 
     blast_df['Species'] = species
+    blast_df['Species_Name'] = defaults.SPECIES_DICT.get(species, species)
 
     # Add a random string column for each row
     blast_df['Tag'] = [random_string_generator(defaults.RANDOM_ID_LENGTH) for _ in range(len(blast_df))]
@@ -249,7 +250,7 @@ def main() -> None:
         empty_columns = [
             'Query ID', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches',
             'Gap Openings', 'Q. Start', 'Q. End', 'S. Start', 'S. End', 'E-value',
-            'Bit Score', 'Subject Sequence', 'Species', 'Tag'
+            'Bit Score', 'Subject Sequence', 'Species', 'Species_Name', 'Tag'
         ]
         pd.DataFrame(columns=empty_columns).to_parquet(parquet_path, index=False)
         csv_path.touch()

@@ -18,7 +18,7 @@ Usage:
 """
 
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 
 import yaml
 
@@ -143,7 +143,14 @@ DISPLAY_REQUESTS_WARNING: bool = config['display'].get('display_requests_warning
 DISPLAY_OPERATION_INFO: bool = config['display'].get('display_operation_info', False)
 
 # Genomes
-SPECIES_DICT: Dict[str, Any] = config.get('species', {})
+_species_raw: Union[dict, list, None] = config.get('species', {})
+
+if isinstance(_species_raw, dict):
+    SPECIES_DICT: Dict[str, str] = _species_raw
+elif isinstance(_species_raw, list):
+    SPECIES_DICT: Dict[str, str] = {name: name for name in _species_raw}
+else:
+    SPECIES_DICT: Dict[str, str] = {}
 
 if not USE_SPECIES_DICT:
     SPECIES: List[str] = [f.stem for f in PATH_DICT['SPECIES_DB'].glob('*.fa')]

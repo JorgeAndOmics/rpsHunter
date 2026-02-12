@@ -526,12 +526,14 @@ rule completeness_detector:
     params:
         domain_data=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.parquet'),
         plot_output_folder=str(defaults.PATH_DICT['PLOT_DIR']),
-        table_output_folder=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'])
+        table_output_folder=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR']),
+        config_path=str(defaults.CONFIG_FILE)
     shell:
         '''
         Rscript scripts/completeness_detector.R \
         {params.domain_data:q} \
-        {params.plot_output_folder:q}
+        {params.plot_output_folder:q} \
+        {params.config_path:q}
         '''
 
 rule contingency_sorter:
@@ -542,17 +544,20 @@ rule contingency_sorter:
     output:
         domain_3d_plot=str(defaults.PATH_DICT['PLOT_DIR'] / 'scatter_3D_plot.html'),
         contingency_table=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'contingency_table.csv'),
+        contingency_parquet=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'contingency_table.parquet'),
     params:
         domain_data=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.parquet'),
         species_list=defaults.SPECIES,
         plot_output_folder=str(defaults.PATH_DICT['PLOT_DIR']),
         table_output_folder=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR']),
-        range_output_folder=str(defaults.PATH_DICT['RANGE_OUTPUT_DIR'])
+        range_output_folder=str(defaults.PATH_DICT['RANGE_OUTPUT_DIR']),
+        config_path=str(defaults.CONFIG_FILE)
     shell:
         '''
         Rscript scripts/contingency_sorter.R \
         {params.domain_data:q} \
         {params.plot_output_folder:q} \
         {params.table_output_folder:q} \
-        {params.range_output_folder:q}
+        {params.range_output_folder:q} \
+        {params.config_path:q}
         '''

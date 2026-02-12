@@ -192,6 +192,7 @@ def process_rps_species(species: str, fasta_input_dir: Path = None, asn_output_d
 
     blast_df = blast_df.dropna(subset=numeric_columns)
     blast_df['Species'] = species
+    blast_df['Species_Name'] = defaults.SPECIES_DICT.get(species, species)
 
     blast_df['Tag'] = blast_df['Query ID'].str.extract(rf'\|tag:(\w{{{defaults.RANDOM_ID_LENGTH}}})', expand=False)
     blast_df['Query ID'] = blast_df['Query ID'].str.replace(rf'\|tag:\w{{{defaults.RANDOM_ID_LENGTH}}}', '', regex=True)
@@ -234,7 +235,7 @@ def main() -> None:
         empty_columns = [
             'Query ID', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches',
             'Gap Openings', 'Q. Start', 'Q. End', 'S. Start', 'S. End', 'E-value',
-            'Bit Score', 'Subject Title', 'Species', 'Tag'
+            'Bit Score', 'Subject Title', 'Species', 'Species_Name', 'Tag'
         ]
         pd.DataFrame(columns=empty_columns).to_parquet(parquet_path, index=False)
         # Touch the ASN file so rpsbproc_species input is satisfied.
