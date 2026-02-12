@@ -518,7 +518,9 @@ rule rpsbproc_parser:
 
 rule completeness_detector:
     input:
-        domains=rules.aggregate_domains.output
+        domains=rules.aggregate_domains.output,
+        blast=rules.aggregate_blast.output,
+        rpsblast=rules.aggregate_rpsblast.output
     output:
         tile_plot=str(defaults.PATH_DICT['PLOT_DIR'] / 'tile_plot.png')
     params:
@@ -534,7 +536,9 @@ rule completeness_detector:
 
 rule contingency_sorter:
     input:
-        domains=rules.aggregate_domains.output
+        domains=rules.aggregate_domains.output,
+        blast=rules.aggregate_blast.output,
+        rpsblast=rules.aggregate_rpsblast.output
     output:
         domain_3d_plot=str(defaults.PATH_DICT['PLOT_DIR'] / 'scatter_3D_plot.html'),
         contingency_table=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'contingency_table.csv'),
