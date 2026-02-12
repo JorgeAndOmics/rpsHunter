@@ -224,4 +224,4 @@ htmlwidgets::saveWidget(
 )
 
 # Contingency table export
-write_csv2(data.full.contingency, file.path(args.output_table_folder, "contingency_table.csv"))
+write_csv(data.full.contingency, file.path(args.output_table_folder, "contingency_table.csv"))

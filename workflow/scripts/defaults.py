@@ -76,6 +76,7 @@ PATH_DICT['RPSBPROC_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'rpsbproc'
 PATH_DICT['XML_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'xml'
 PATH_DICT['RANGE_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'ranges'
 PATH_DICT['LOCI_TABLE_OUTPUT_DIR'] = PATH_DICT['TABLE_OUTPUT_DIR'] / 'loci_tables'
+PATH_DICT['SELECTED_OUTPUT_DIR'] = PATH_DICT['TABLE_OUTPUT_DIR'] / 'selected'
 
 # === Per-Species Intermediate Directories ===
 # Each step that produces per-species parquets before aggregation gets its own directory.

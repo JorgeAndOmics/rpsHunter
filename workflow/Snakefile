@@ -352,7 +352,7 @@ rule blast_parser_species:
     output:
         fasta        =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.fa'),
         audit        =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.parquet'),
-        selected     =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}_selected.parquet'),
+        selected     =str(defaults.PATH_DICT['SELECTED_OUTPUT_DIR'] / '{species}.parquet'),
     threads: 1
     shell:
         '''
@@ -426,14 +426,14 @@ rule rpsbproc_parser_species:
 
 rule aggregate_blast:
     """Aggregates the FINAL enriched blast parquets (after ORF/HMM if enabled).
-       tables/blast.parquet therefore always reflects the last enrichment step,
+       tables/aggregate.parquet therefore always reflects the last enrichment step,
        matching what blast_parser actually consumes."""
     input:
         expand(str(ENRICHED_BLAST_DIR / '{species}.parquet'),
                species=defaults.SPECIES)
     output:
-        parquet=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.parquet'),
-        csv=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast.csv')
+        parquet=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'aggregate.parquet'),
+        csv=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'aggregate.csv')
     shell:
         '''
         python scripts/aggregate.py blast {output.parquet:q} {input}
@@ -491,7 +491,8 @@ rule blast_parser:
     """Per-species FASTA export (reads from ENRICHED_BLAST_DIR)."""
     input:
         expand(str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.fa'),
-               species=defaults.SPECIES)
+               species=defaults.SPECIES),
+        rules.aggregate_blast.output
 
 rule rpsblaster:
     """Per-species RPSBLAST."""
