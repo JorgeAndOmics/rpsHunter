@@ -1,12 +1,21 @@
 blast:
   e_value: 0.01
-  perc_identity: 60
-  seq_length: 50
-  bitscore: 70
+  perc_identity: 35    # Relaxed from 60 to capture KRAB/SET/SSXRD
+  seq_length: 24       # Relaxed from 25 to capture SSXRD (24aa alignments)
+  bitscore: 45         # Relaxed from 70 to capture weak hits
+
+rpsblast:
+  e_value: 2           # Captures SET borderline hits (~1.03) while cutting noise
+  comp_based_stats: 0  # Disable composition-based statistics (more sensitive)
+  seg: 'no'            # Disable low-complexity filtering
+  window_size: 0       # 1-hit algorithm (default: 40) - more sensitive
+  target_domains: ['KRAB', 'SET', 'SSXRD', 'zf-C2H2', 'COG5048', 'zf-H2C2', 'ZnF_C2H2']
+                       # Uses CDD ShortNames from cddid.tbl. Prefix matching with '_'.
+                       # Example: ['KRAB', 'SET', 'SSXRD', 'zf-C2H2', 'COG5048', 'zf-H2C2', 'ZnF_C2H2']
 
 orf:
-  enabled: true            # Toggle ORF analysis on/off
-  min_orf_length: 200      # Minimum ORF length in nucleotides
+  enabled: false           # Toggle ORF analysis on/off (DISABLED to capture KRAB/SET/SSXRD)
+  min_orf_length: 50       # Minimum ORF length in nucleotides
   start_codon: ''          # Start codon filter (empty string = no filter)
   longest_orf: true        # If true, keep only longest ORF per reading frame
 
@@ -46,7 +55,7 @@ hmmer:
 
 query:
   format: 'fa'
-  accession: 'NP_001297143.1'  # Example accession number
+  accession: 'NP_064612.2'
 
 execution:
   num_cores: 16

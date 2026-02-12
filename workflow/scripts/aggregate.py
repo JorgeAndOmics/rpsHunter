@@ -41,7 +41,10 @@ def main():
 
         print(f'Aggregated {len(dfs)} {args.type} files -> {len(combined)} rows')
     else:
-        print(f'No input files found for {args.type} aggregation')
+        # Write empty outputs so Snakemake declared outputs are satisfied
+        pd.DataFrame().to_parquet(output_path)
+        output_path.with_suffix('.csv').touch()
+        print(f'No input files found for {args.type} aggregation — empty outputs written')
 
 
 if __name__ == '__main__':

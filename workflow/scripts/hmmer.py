@@ -254,12 +254,26 @@ def main():
     colored_logging(log_file_name='hmmer.txt')
 
     parser = argparse.ArgumentParser(description='Run HMMER domain filtering for a single species.')
-    parser.add_argument('--species', required=True, help='Species name.')
+    parser.add_argument('--species', required=False, help='Species name.')
     parser.add_argument('--threads', type=int, default=1, help='CPU threads for hmmsearch (set by Snakemake).')
-    parser.add_argument('input_parquet', help='Per-species blast parquet (input).')
+    parser.add_argument('--hmm-db', type=str, default=None,
+                        help='Path to pre-built subset HMM (skips per-species extraction).')
+    parser.add_argument('--extract-only', action='store_true',
+                        help='Extract profiles only (no hmmsearch). Requires pfam_hmm and output path.')
+    parser.add_argument('input_parquet', nargs='?', help='Per-species blast parquet (input).')
     parser.add_argument('pfam_hmm', help='Path to Pfam-A.hmm profile database.')
-    parser.add_argument('output_parquet', help='Per-species enriched parquet (output).')
+    parser.add_argument('output_parquet', help='Per-species enriched parquet (or subset HMM output).')
     args = parser.parse_args()
+
+    # Extract-only mode: build subset HMM and exit
+    if args.extract_only:
+        if not defaults.HMMER_PROFILES:
+            raise RuntimeError('--extract-only requires hmmer.profiles to be set in config.')
+        subset_path = Path(args.output_parquet)  # repurposed as subset HMM output
+        subset_path.parent.mkdir(parents=True, exist_ok=True)
+        extract_profiles(Path(args.pfam_hmm), defaults.HMMER_PROFILES, subset_path)
+        logging.info(f'Extracted {len(defaults.HMMER_PROFILES)} profiles → {subset_path}')
+        return
 
     blast_df = pd.read_parquet(args.input_parquet)
 
@@ -283,8 +297,12 @@ def main():
                 logging.warning(f'{args.species}: all sequences empty after gap/stop stripping — skipping hmmsearch')
                 hits = pd.DataFrame()
             else:
-                # If specific profiles requested, extract subset first (seconds vs minutes)
-                if defaults.HMMER_PROFILES:
+                # Determine which HMM to search against
+                if args.hmm_db:
+                    # Pre-built subset provided by Snakefile rule
+                    hmm_to_search = Path(args.hmm_db)
+                elif defaults.HMMER_PROFILES:
+                    # Legacy per-species extraction (fallback)
                     subset_hmm = Path(tmpdir) / 'subset.hmm'
                     extract_profiles(Path(args.pfam_hmm), defaults.HMMER_PROFILES, subset_hmm)
                     hmm_to_search = subset_hmm

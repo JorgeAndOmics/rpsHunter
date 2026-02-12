@@ -61,9 +61,14 @@ def rpsblaster(
             '-db', str(input_database_path),
             '-query', str(query_file_path),
             '-evalue', str(evalue),
+            '-comp_based_stats', str(defaults.RPSBLAST_COMP_BASED_STATS),
+            '-seg', defaults.RPSBLAST_SEG,
             '-outfmt', '11',
             '-out', str(asn_file_path)
         ]
+
+        if defaults.RPSBLAST_WINDOW_SIZE and defaults.RPSBLAST_WINDOW_SIZE > 0:
+            rpsblast_command[6:6] = ['-window_size', str(defaults.RPSBLAST_WINDOW_SIZE)]
 
         result = subprocess.run(rpsblast_command, capture_output=True, text=True)
 
@@ -130,7 +135,7 @@ def parse_blast_output(blast_output: str) -> pd.DataFrame:
 # Per-Species RPS-BLAST Processing
 # -----------------------------------------------------------------------------
 
-def process_rps_species(species: str, fasta_input_dir: Path = None, asn_output_dir: Path = None) -> Optional[pd.DataFrame]:
+def process_rps_species(species: str, fasta_input_dir: Path = None, asn_output_dir: Path = None, db_override: Path = None) -> Optional[pd.DataFrame]:
     """
     Processes a single species FASTA file with RPS-BLAST and returns filtered results.
 
@@ -160,12 +165,13 @@ def process_rps_species(species: str, fasta_input_dir: Path = None, asn_output_d
         logging.warning(f'FASTA file for species {species} does not exist at {fasta_file_path}.')
         return None
 
+    rps_db = db_override if db_override else defaults.PATH_DICT['RPS_DB']
     blast_output, asn_file_name = rpsblaster(
         command=defaults.RPSBLAST_CMD,
-        input_database_path=defaults.PATH_DICT['RPS_DB'],
+        input_database_path=rps_db,
         query_file_path=fasta_file_path,
         species=species,
-        evalue=defaults.E_VALUE_THRESHOLD,
+        evalue=defaults.RPSBLAST_E_VALUE,
         asn_output_dir=asn_output_dir
     )
 
@@ -206,11 +212,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Run RPS-BLAST for a single species.')
     parser.add_argument('--species', type=str, required=True,
                         help='Species name to process.')
+    parser.add_argument('--db', type=str, default=None,
+                        help='Path to RPS-BLAST database (default: full CDD).')
     args = parser.parse_args()
 
     defaults.PATH_DICT['ASN_RPSBLAST_DIR'].mkdir(parents=True, exist_ok=True)
 
-    result_df = process_rps_species(args.species)
+    db_path = Path(args.db) if args.db else None
+    result_df = process_rps_species(args.species, db_override=db_path)
 
     output_dir = defaults.PATH_DICT['RPSBLAST_SPECIES_DIR']
     output_dir.mkdir(parents=True, exist_ok=True)

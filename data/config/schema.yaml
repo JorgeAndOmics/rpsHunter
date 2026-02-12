@@ -1,4 +1,5 @@
 blast: include('blast_schema')
+rpsblast: include('rpsblast_schema')
 orf: include('orf_schema')
 hmmer: include('hmmer_schema')
 programs: include('programs_schema', required=False)
@@ -14,6 +15,13 @@ blast_schema:
   perc_identity: num(min=0, max=100)
   seq_length: int(min=1)
   bitscore: num(min=0)
+
+rpsblast_schema:
+  e_value: num(min=0)
+  comp_based_stats: int(min=0, max=4)
+  seg: str(matches='^(yes|no)$')
+  window_size: int(min=0, required=False)
+  target_domains: list(str(), required=False)
 
 orf_schema:
   enabled: bool()
@@ -93,3 +101,4 @@ programs_schema:
   blast_formatter: str(required=False)
   makeblastdb: str(required=False)
   rpsbproc: str(required=False)
+  makeprofiledb: str(required=False)

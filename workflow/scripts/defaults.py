@@ -28,15 +28,19 @@ CONFIG_FILE: Path = Path(__file__).parents[2] / 'data' / 'config' / 'config.yaml
 with open(CONFIG_FILE, 'r') as f:
     config: Dict[str, Any] = yaml.safe_load(f)
 
-# QUERY SEQUENCE
-QUERY_ACC: str = config['query'].get('accession')
-
 # BLAST
 E_VALUE_THRESHOLD: float = config['blast'].get('e_value', 0.01)
 PERC_IDENTITY_THRESHOLD: int = config['blast'].get('perc_identity', 60)
 SEQ_LENGTH_THRESHOLD: int = config['blast'].get('seq_length', 50)
 BITSCORE_THRESHOLD: int = config['blast'].get('bitscore', 70)
 ACCESSION_ID_REGEX: str = r'[A-Z]{2,}_?[0-9]+\.[0-9]{1,2}'
+
+# RPSBLAST - Maximum sensitivity settings for short domain detection
+RPSBLAST_E_VALUE: float = config.get('rpsblast', {}).get('e_value', 10)
+RPSBLAST_COMP_BASED_STATS: int = config.get('rpsblast', {}).get('comp_based_stats', 0)
+RPSBLAST_SEG: str = config.get('rpsblast', {}).get('seg', 'no')
+RPSBLAST_WINDOW_SIZE: int = config.get('rpsblast', {}).get('window_size', 40)
+RPSBLAST_TARGET_DOMAINS: list = config.get('rpsblast', {}).get('target_domains', [])
 
 # Directories - using pathlib.Path
 PATH_DICT: Dict[str, Path] = {
@@ -54,6 +58,8 @@ PATH_DICT['SPECIES_DB'] = PATH_DICT['ROOT']
 PATH_DICT['HMM_DB'] = PATH_DICT['ROOT'] / 'hmm_dbs'
 PATH_DICT['RPS_DB'] = PATH_DICT['ROOT'] / 'cdd_dbs' / 'Cdd'
 PATH_DICT['RPSBPROC_DB'] = PATH_DICT['ROOT'] / 'rpsbproc_dbs'
+PATH_DICT['SMP_DIR'] = PATH_DICT['ROOT'] / 'cdd_smp'
+PATH_DICT['CDD_SUBSET_DB'] = PATH_DICT['ROOT'] / 'cdd_subset'
 
 # === Data Subdirectories ===
 PATH_DICT['CONFIG_DIR'] = PATH_DICT['DATA_DIR'] / 'config'
@@ -98,7 +104,7 @@ QUERY_FILE: Path = PATH_DICT['FASTA_DIR'] / f'{QUERY_ACC}.{QUERY_FORMAT.lower()}
 # Execution and requests
 NUM_CORES: int = config['execution'].get('num_cores', 1)
 RANDOM_ID_LENGTH: int = config['execution'].get('random_id_length', 6)
-USE_SPECIES_DICT: bool = config['execution'].get('use_species_dict', True)
+USE_SPECIES_DICT: bool = config['execution'].get('use_species_list', True)
 RETRIEVAL_TIME_LAG: float = config['execution'].get('retrieval_time_lag', 0.3)
 MAX_RETRIEVAL_ATTEMPTS: int = config['execution'].get('max_retrieval_attempts', 3)
 ENTREZ_EMAIL: str = config['execution'].get('entrez_email', '')
@@ -128,6 +134,7 @@ RPSBLAST_CMD: str         = _programs.get('rpsblast', 'rpsblast')
 BLAST_FORMATTER_CMD: str  = _programs.get('blast_formatter', 'blast_formatter')
 MAKEBLASTDB_CMD: str      = _programs.get('makeblastdb', 'makeblastdb')
 RPSBPROC_CMD: str         = _programs.get('rpsbproc', 'rpsbproc')
+MAKEPROFILEDB_CMD: str    = _programs.get('makeprofiledb', 'makeprofiledb')
 
 # Display
 DISPLAY_SNAKEMAKE_INFO: bool = config['display'].get('display_snakemake_info', False)
@@ -141,3 +148,68 @@ if not USE_SPECIES_DICT:
     SPECIES: List[str] = [f.stem for f in PATH_DICT['SPECIES_DB'].glob('*.fa')]
 else:
     SPECIES: List[str] = list(SPECIES_DICT.keys())
+
+
+# =============================================================================
+# CDD Subset Resolution
+# =============================================================================
+
+def resolve_cdd_targets(target_domains: List[str], cddid_path: Path) -> List[str]:
+    """Resolve target domain names to CDD accessions via cddid.tbl.
+
+    Matching rules (mirror HMMER prefix convention):
+      - Exact match on ShortName column
+      - Prefix + underscore: 'KRAB' matches 'KRAB_A-box', 'zf-C2H2' matches 'zf-C2H2_2', etc.
+
+    Parameters
+    ----------
+    target_domains : list of str
+        Domain ShortNames from config (e.g. ['KRAB', 'SET', 'zf-C2H2']).
+    cddid_path : Path
+        Path to cddid.tbl (tab-delimited: PSSM_ID, Accession, ShortName, Description, Length).
+
+    Returns
+    -------
+    list of str
+        Matched CDD accessions (e.g. ['pfam01352', 'cd07765', ...]).
+
+    Raises
+    ------
+    RuntimeError
+        If any target domain has zero matches in cddid.tbl.
+    """
+    import re
+
+    # Build regex patterns: exact match OR prefix with '_'
+    patterns = []
+    for name in target_domains:
+        escaped = re.escape(name)
+        patterns.append(f'^{escaped}$|^{escaped}_')
+    combined = re.compile('|'.join(f'(?:{p})' for p in patterns))
+
+    matched_accessions = []
+    matched_names = set()
+
+    with open(cddid_path, 'r') as fh:
+        for line in fh:
+            parts = line.rstrip('\n').split('\t')
+            if len(parts) < 3:
+                continue
+            accession, short_name = parts[1], parts[2]
+            if combined.search(short_name):
+                matched_accessions.append(accession)
+                matched_names.add(short_name)
+
+    # Verify every requested domain had at least one match
+    unmatched = []
+    for name in target_domains:
+        escaped = re.escape(name)
+        pat = re.compile(f'^{escaped}$|^{escaped}_')
+        if not any(pat.search(n) for n in matched_names):
+            unmatched.append(name)
+    if unmatched:
+        raise RuntimeError(
+            f'CDD target domain(s) not found in {cddid_path}: {unmatched}'
+        )
+
+    return matched_accessions

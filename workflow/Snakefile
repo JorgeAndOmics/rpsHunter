@@ -23,6 +23,21 @@ PRE_HMMER_DIR: Path = (
     else defaults.PATH_DICT['BLAST_SPECIES_DIR']
 )
 
+# Resolved once at parse time.  When target_domains is set, RPSBLAST searches
+# a subset database instead of the full CDD.
+RPSBLAST_DB: Path = (
+    defaults.PATH_DICT['CDD_SUBSET_DB'] / 'target_domains_db'
+    if defaults.RPSBLAST_TARGET_DOMAINS
+    else defaults.PATH_DICT['RPS_DB']
+)
+
+# Pre-built HMMER subset HMM path (when profiles are configured).
+HMMER_SUBSET_HMM: Path = (
+    defaults.PATH_DICT['HMM_OUTPUT_DIR'] / 'subset.hmm'
+    if defaults.HMMER_PROFILES
+    else None
+)
+
 configfile: str(defaults.CONFIG_FILE)
 
 # =============================================================================
@@ -152,15 +167,80 @@ rule rpsbproc_data_downloader:
         echo "rpsbproc data download complete."
         """
 
+rule cdd_smp_downloader:
+    """Download and extract individual CDD SMP files for subset database building."""
+    output:
+        done=str(defaults.PATH_DICT['SMP_DIR'] / '.download_done')
+    params:
+        smp_dir=str(defaults.PATH_DICT['SMP_DIR']),
+        url='https://ftp.ncbi.nih.gov/pub/mmdb/cdd/cdd.tar.gz'
+    threads:
+        workflow.cores
+    shell:
+        """
+        mkdir -p {params.smp_dir:q} && \
+        cd {params.smp_dir:q} && \
+        echo "Downloading CDD SMP archive (~2.2 GB)..." && \
+        wget -q --show-progress -O cdd.tar.gz {params.url:q} && \
+        echo "Extracting SMP files..." && \
+        tar -xzf cdd.tar.gz && \
+        rm -f cdd.tar.gz && \
+        touch {output.done:q} && \
+        echo "CDD SMP extraction complete."
+        """
+
 rule setup_databases:
     """Master rule to download all required databases."""
     input:
         cdd_pal=rules.cdd_database_downloader.output.pal,
         rpsbproc_data=rules.rpsbproc_data_downloader.output,
+        cdd_smp=rules.cdd_smp_downloader.output.done,
     shell:
         """
         echo "All databases have been downloaded and configured."
         """
+
+# =============================================================================
+# CDD Subset Database (conditional: rpsblast.target_domains set)
+# =============================================================================
+
+if defaults.RPSBLAST_TARGET_DOMAINS:
+    rule cdd_subset_builder:
+        """Build a subset RPSBLAST database from target domain SMP files."""
+        input:
+            smp_done=rules.cdd_smp_downloader.output.done,
+            cddid=str(defaults.PATH_DICT['RPSBPROC_DB'] / 'cddid.tbl')
+        output:
+            db=str(RPSBLAST_DB) + '.rps'
+        params:
+            smp_dir=str(defaults.PATH_DICT['SMP_DIR']),
+            db_path=str(RPSBLAST_DB)
+        shell:
+            '''
+            python scripts/cdd_subset.py \
+                --cddid {input.cddid:q} \
+                --smp-dir {params.smp_dir:q} \
+                --output-db {params.db_path:q}
+            '''
+
+# =============================================================================
+# HMMER Profile Extraction (conditional: hmmer.profiles set)
+# =============================================================================
+
+if defaults.HMMER_ENABLED and defaults.HMMER_PROFILES:
+    rule hmmer_extract_profiles:
+        """Extract and press HMMER subset profiles once for all species."""
+        input:
+            pfam_hmm=str(defaults.PATH_DICT['HMM_DB'] / 'Pfam-A.hmm')
+        output:
+            subset_hmm=str(HMMER_SUBSET_HMM)
+        shell:
+            '''
+            python scripts/hmmer.py \
+                --extract-only \
+                {input.pfam_hmm:q} \
+                {output.subset_hmm:q}
+            '''
 
 # =============================================================================
 # BLAST DB Generation
@@ -239,9 +319,16 @@ if defaults.HMMER_ENABLED:
     rule hmmer_species:
         input:
             parquet=str(PRE_HMMER_DIR / '{species}.parquet'),
-            pfam_hmm=str(defaults.PATH_DICT['HMM_DB'] / 'Pfam-A.hmm')
+            pfam_hmm=str(defaults.PATH_DICT['HMM_DB'] / 'Pfam-A.hmm'),
+            subset_hmm=(str(HMMER_SUBSET_HMM)
+                        if defaults.HMMER_PROFILES
+                        else [])
         output:
             parquet=str(defaults.PATH_DICT['HMM_OUTPUT_DIR'] / '{species}.parquet')
+        params:
+            hmm_db_flag=('--hmm-db ' + str(HMMER_SUBSET_HMM)
+                         if defaults.HMMER_PROFILES
+                         else '')
         threads:
             workflow.cores
         shell:
@@ -249,6 +336,7 @@ if defaults.HMMER_ENABLED:
             python scripts/hmmer.py \
                 --species {wildcards.species} \
                 --threads {threads} \
+                {params.hmm_db_flag} \
                 {input.parquet:q} \
                 {input.pfam_hmm:q} \
                 {output.parquet:q}
@@ -265,7 +353,6 @@ rule blast_parser_species:
         fasta        =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.fa'),
         audit        =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.parquet'),
         selected     =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}_selected.parquet'),
-        selected_csv =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}_selected.csv')
     threads: 1
     shell:
         '''
@@ -284,14 +371,20 @@ rule blast_parser_species:
 rule rpsblast_species:
     input:
         fasta=str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.fa'),
-        cdd_pal=str(defaults.PATH_DICT['RPS_DB']) + '.pal'
+        cdd_db=(str(RPSBLAST_DB) + '.rps'
+                if defaults.RPSBLAST_TARGET_DOMAINS
+                else str(defaults.PATH_DICT['RPS_DB']) + '.pal')
     output:
         parquet=str(defaults.PATH_DICT['RPSBLAST_SPECIES_DIR'] / '{species}.parquet'),
         asn=str(defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / '{species}.asn')
+    params:
+        db_flag=('--db ' + str(RPSBLAST_DB)
+                 if defaults.RPSBLAST_TARGET_DOMAINS
+                 else '')
     threads: 1
     shell:
         '''
-        python scripts/rpsblast.py --species {wildcards.species}
+        python scripts/rpsblast.py --species {wildcards.species} {params.db_flag}
         '''
 
 # =============================================================================

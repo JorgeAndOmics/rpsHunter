@@ -192,7 +192,10 @@ if __name__ == '__main__':
     flag_cols = ['Quality_Pass', 'ORF_Pass', 'HMM_Pass']
     selected_df = blast_df.drop(columns=[c for c in flag_cols if c in blast_df.columns])
     selected_df.to_parquet(output_selected_path, index=False)
-    selected_df.to_csv(output_selected_path.with_suffix('.csv'), index=False)
+    try:
+        selected_df.to_csv(output_selected_path.with_suffix('.csv'), index=False)
+    except PermissionError:
+        logging.warning(f"Could not write CSV (file locked): {output_selected_path.with_suffix('.csv')}")
     logging.info(f"Selected parquet + CSV written: {len(selected_df)} rows → {output_selected_path}")
 
     # ── Write FASTA ─────────────────────────────────────────────────────────

@@ -26,7 +26,6 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
 import defaults
-import validator
 from colored_logging import colored_logging
 
 
@@ -166,6 +165,9 @@ def validate_programs() -> bool:
         'rpsbproc': check_version(defaults.RPSBPROC_CMD, '-version'),
         'Datasets': check_version('datasets', '--version')
     }
+
+    if defaults.RPSBLAST_TARGET_DOMAINS:
+        checks['makeprofiledb'] = check_version(defaults.MAKEPROFILEDB_CMD, '-version')
 
     if defaults.HMMER_ENABLED:
         checks.update({
