@@ -98,7 +98,9 @@ graph TD
 | `rpsbproc_parser_species` | `--rpsbproc-parser` | Parse rpsbproc text output into structured domain parquets |
 | `aggregate_domains` | `--rpsbproc-parser` | Concatenate per-species domain parquets into `tables/domains.parquet` |
 
-### Stage 7: Visualization
+### Stage 7: Visualization & Aggregation
+
+Both visualization rules also trigger all three aggregation rules (`aggregate_blast`, `aggregate_rpsblast`, `aggregate_domains`) as inputs, ensuring all aggregate tables are generated when running the terminal pipeline stages.
 
 | Rule | CLI Flag | Description |
 |------|----------|-------------|

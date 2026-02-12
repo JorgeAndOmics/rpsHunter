@@ -109,8 +109,8 @@ dependencies.
 | `rpsblaster` | `rpsblast_species` x N | `blast_parser_species` FASTAs, CDD database |
 | `rpsbproc` | `rpsbproc_species` x N | `rpsblast_species` ASN files, rpsbproc data |
 | `rpsbproc_parser` | `rpsbproc_parser_species` x N, `aggregate_domains` | `rpsbproc_species` text files |
-| `completeness_detector` | _(single rule)_ | `aggregate_domains` |
-| `contingency_sorter` | _(single rule)_ | `aggregate_domains` |
+| `completeness_detector` | _(single rule)_ | `aggregate_domains`, `aggregate_blast`, `aggregate_rpsblast` |
+| `contingency_sorter` | _(single rule)_ | `aggregate_domains`, `aggregate_blast`, `aggregate_rpsblast` |
 
 **ENRICHED_BLAST_DIR** is resolved once at Snakefile parse time:
 
