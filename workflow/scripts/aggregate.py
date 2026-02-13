@@ -24,9 +24,16 @@ def main():
     args = parser.parse_args()
 
     dfs = []
+    missing = []
     for input_path in args.inputs:
-        if Path(input_path).exists():
-            dfs.append(pd.read_parquet(input_path))
+        p = Path(input_path)
+        if p.exists():
+            dfs.append(pd.read_parquet(p))
+        else:
+            missing.append(p.stem)
+
+    if missing:
+        print(f'WARNING: {args.type} aggregation — missing per-species files for: {", ".join(missing)}')
 
     output_path = Path(args.output_parquet)
     output_path.parent.mkdir(parents=True, exist_ok=True)

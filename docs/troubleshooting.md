@@ -173,11 +173,11 @@ conda run -n rpsHunter ./rpsHunter --rpsblast --skip-validation
 
 ## 9. Chromosome Name Mismatches in contingency_sorter
 
-**Symptom:** Warning messages about NA chromosome values, or rows being silently dropped from the GFF3 output.
+**Symptom:** Entire species missing from the contingency table and 3D scatter plot, despite having data in `domains.parquet`.
 
-**Cause:** The `str_extract(Chromosome, chr.pattern)` call uses the pattern `[A-Za-z]+_?[0-9]+[._]?[0-9]*` to normalize chromosome names. Scaffolds or contigs with non-standard naming (e.g., `scaffold_unknown`, `chrUn`) produce NA values that would cause GenomicRanges to fail.
+**Cause (fixed):** A restrictive regex (`[A-Za-z]+_?[0-9]+[._]?[0-9]*`) was applied to `Chromosome` values via `str_extract`, which silently dropped identifiers with multiple underscores (e.g., `manual_scaffold_10`), mixed letter-digit-letter patterns (e.g., `HAP1_SUPER_5`), or other non-standard scaffold names. If all rows for a species were rejected, the species vanished from downstream outputs.
 
-**Solution:** No action is needed. A defensive filter (`filter(!is.na(Chromosome) & nzchar(Chromosome))`) automatically removes rows with NA or empty chromosome values before creating GRanges objects. This is normal behavior for assemblies that include scaffolds with non-standard naming conventions. The affected rows are excluded from the GFF3 output and 3D scatter plot but do not cause pipeline failure.
+**Fix:** The regex extraction was removed. Chromosome identifiers are already parsed upstream by `rpsbproc_parser.py`, so the R script now only filters out rows with empty or NA chromosome values.
 
 ---
 
@@ -234,6 +234,6 @@ The `--skip-validation` flag is the sole exception: it is consumed by the Python
 
 **Cause:** When rpsbproc produces empty `.txt` output (a touched 0-byte file from the empty-species path), the parser writes a 0-row, 0-column Parquet because there is no data to infer a schema from.
 
-**This is benign.** The `pd.concat` call in `aggregate.py` pulls the column schema from non-empty Parquet files contributed by other species. The 0-column files are silently ignored during aggregation.
+**This is benign.** The `pd.concat` call in `aggregate.py` pulls the column schema from non-empty Parquet files contributed by other species. The 0-column files are silently ignored during aggregation. If any per-species files are missing entirely, `aggregate.py` now prints a warning listing the affected species.
 
 **No action is needed** unless all species produce empty results, in which case the aggregate table will also be empty (which is correct behavior for a dataset with no domain annotations).
