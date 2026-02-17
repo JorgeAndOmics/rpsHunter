@@ -43,6 +43,7 @@ conda run -n rpsHunter ./rpsHunter --hmmer --blast --skip-validation
 | `--completeness-detector` | | `completeness_detector` | Generate tile plot (domain completeness heatmap). |
 | `--contingency-parser` | | `contingency_sorter` | Generate 3D scatter plot, contingency table (CSV), and GFF3 genomic coordinate files. |
 | `--concordance` | | `concordance` | Run multi-method concordance analysis (HMMER vs CDD agreement). Produces per-query and merged concordance tables. |
+| `--extended-plots` | | `extended_plots` | Generate extended visualization suite: 7 static PNG plots covering concordance validation, evidence quality, completeness distribution, sequence complexity, chromosomal density, cross-query comparison, and hit-type composition. Requires merged domain, contingency, and concordance outputs. |
 | `--skip-validation` | `-skp` | _(none)_ | Skip the pre-run validation suite. Does not dispatch any Snakemake rule. |
 
 ---
@@ -85,6 +86,9 @@ conda run -n rpsHunter ./rpsHunter --contingency-parser
 
 # 9. Concordance analysis (optional, requires --blast and --rpsbproc-parser)
 conda run -n rpsHunter ./rpsHunter --concordance
+
+# 10. Extended visualization suite (optional, requires --contingency-parser and --concordance)
+conda run -n rpsHunter ./rpsHunter --extended-plots
 ```
 
 If both ORF and HMMER are disabled, skip steps 4 and 5. The `--blast` step will
@@ -116,6 +120,7 @@ dependencies.
 | `completeness_detector` | `pq_completeness_detector` x Q, `merged_completeness_detector` | Per-query + merged `aggregate_domains`, `aggregate_blast`, `aggregate_rpsblast` |
 | `contingency_sorter` | `pq_contingency_sorter` x Q, `merged_contingency_sorter` | Per-query + merged `aggregate_domains`, `aggregate_blast`, `aggregate_rpsblast` |
 | `concordance` | `pq_concordance` x Q, `merge_concordance` | Per-query `aggregate_blast`, `aggregate_domains` |
+| `extended_plots` | _(single rule, no wildcards)_ | `tables/domains.parquet`, `tables/contingency_table.parquet`, `concordance/merged_concordance_domains.parquet`, `concordance/merged_concordance_sequences.parquet` |
 
 **Q** denotes the number of configured queries (1 for single query, N for multi-query).
 
@@ -300,5 +305,6 @@ All per-species outputs now include a `{query_label}` subdirectory for multi-que
 | Contingency | | `results/tables/{ql}/contingency_table.csv` | `results/tables/contingency_table.csv` |
 | GFF3 | | `results/ranges/{ql}/{species}.gff3` | `results/ranges/{species}.gff3` |
 | Concordance | | `results/concordance/{ql}/` | `results/concordance/` |
+| Extended plots | | _(none — reads merged outputs only)_ | `results/plots/concordance_heatmap.png`, `evidence_quality.png`, `completeness_bars.png`, `sequence_complexity.png`, `chromosomal_density.png`, `cross_query_comparison.png`, `hit_type_distribution.png` |
 
 `{ql}` = query label (e.g., `human_PRDM9`, `mouse_PRDM9`)

@@ -172,6 +172,20 @@ for _ql in QUERY_LABEL_LIST:
 # Top-level concordance directory
 (PATH_DICT['RESULTS_DIR'] / 'concordance').mkdir(parents=True, exist_ok=True)
 
+# =============================================================================
+# Extended Visualization Suite — Output File Paths
+# =============================================================================
+# All 7 extended plots write into results/plots/ (already created above).
+# Defining the full paths here keeps defaults.py as the single source of truth
+# for all path definitions, consistent with PATH_DICT.
+EXT_CONC_HEATMAP_PATH: Path = PATH_DICT['PLOT_DIR'] / 'concordance_heatmap.png'
+EXT_EVID_QUALITY_PATH: Path = PATH_DICT['PLOT_DIR'] / 'evidence_quality.png'
+EXT_COMP_BARS_PATH:    Path = PATH_DICT['PLOT_DIR'] / 'completeness_bars.png'
+EXT_SEQ_COMPLEX_PATH:  Path = PATH_DICT['PLOT_DIR'] / 'sequence_complexity.png'
+EXT_CHR_DENSITY_PATH:  Path = PATH_DICT['PLOT_DIR'] / 'chromosomal_density.png'
+EXT_CROSS_QUERY_PATH:  Path = PATH_DICT['PLOT_DIR'] / 'cross_query_comparison.png'
+EXT_HIT_TYPE_PATH:     Path = PATH_DICT['PLOT_DIR'] / 'hit_type_distribution.png'
+
 
 def query_file_path(accession: str) -> Path:
     """Return the FASTA file path for a given query accession."""

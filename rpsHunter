@@ -103,6 +103,12 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
+        '--extended-plots',
+        action='store_true',
+        help="Generates extended visualization suite (7 analytical plots) from merged outputs."
+    )
+
+    parser.add_argument(
         '--skip-validation', '-skp',
         action='store_true',
         help='Skip input validation.'
@@ -161,6 +167,9 @@ if __name__ == '__main__':
 
     if args.concordance:
         main_cmd.append('--concordance')
+
+    if args.extended_plots:
+        main_cmd.append('--extended-plots')
 
     if unknown:
         main_cmd.extend(unknown)

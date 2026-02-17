@@ -338,6 +338,66 @@ Interactive Plotly 3D scatter plot saved as a self-contained HTML file. Axes: x 
 
 ---
 
+## Extended Visualization Suite
+
+Seven additional static PNG plots produced by the `extended_plots` rule (`extended_plots.R`). All plots read from the merged (cross-query deduplicated) output files and require that `--rpsbproc-parser`, `--contingency-parser`, and `--concordance` have been run first.
+
+### plots/concordance_heatmap.png
+
+Tile heatmap showing the fraction of CDD domain annotations that are confirmed by HMMER for each HMMER-checkable domain family × species combination. Fill colour encodes Concordance_Rate (0–1, viridis scale); tiles are annotated with `Confirmed/Total` counts. Faceted by Query_Accession.
+
+**Source:** `results/concordance/merged_concordance_domains.parquet`
+
+---
+
+### plots/evidence_quality.png
+
+Scatter plot of CDD bitscore (y) vs. BLAST bitscore (x, log10 scale) for all HMMER-checkable domain annotations, coloured by concordance label (`confirmed` = teal, `hmmer_unmatched` = orange). Linear regression lines are overlaid per concordance group. Faceted by domain family (free scales).
+
+**Source:** `results/concordance/merged_concordance_domains.parquet`
+
+---
+
+### plots/completeness_bars.png
+
+Stacked proportional bar chart (one bar per domain per species row facet) showing the breakdown of Complete / N-Truncated / C-Truncated / Bitruncated annotations. Bar segments labelled with raw counts where the segment exceeds 5 % of the bar. Domains ordered by total count descending.
+
+**Source:** `results/tables/contingency_table.parquet`
+
+---
+
+### plots/sequence_complexity.png
+
+Violin + boxplot showing the distribution of `N_CDD_Domains` (number of CDD annotations per BLAST hit sequence) per species, stratified by concordance rate quartile (Q1–Q4). Faceted by Query_Accession.
+
+**Source:** `results/concordance/merged_concordance_sequences.parquet`
+
+---
+
+### plots/chromosomal_density.png
+
+Tile heatmap of log10(domain count + 1) per Species_Name × Chromosome cell. Scaffolds and unplaced contigs are excluded. Cells with more than 50 domains are labelled with the first 4 characters of the dominant domain name. Sequential blue colour scale.
+
+**Source:** `results/tables/domains.parquet`
+
+---
+
+### plots/cross_query_comparison.png
+
+Grouped bar chart showing how many domain annotations per species were detected exclusively by the first query, exclusively by the second query, or by both queries. Requires at least 2 configured queries; a placeholder image is produced for single-query runs. Faceted by domain family.
+
+**Source:** `results/tables/domains.parquet`
+
+---
+
+### plots/hit_type_distribution.png
+
+Stacked bar chart of CDD hit type counts (Specific / Non-specific / Superfamily) per domain per species. Domains ordered by total Specific-hit count descending. Faceted by species (free y-scale, shared x-axis).
+
+**Source:** `results/tables/domains.parquet`
+
+---
+
 ## Genomic Ranges
 
 ### ranges/{species}.gff3

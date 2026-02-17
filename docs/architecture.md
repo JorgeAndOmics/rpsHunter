@@ -246,6 +246,7 @@ rpsHunter is built on four core principles:
 | `cdd_subset.py` | Database Prep | Builds CDD subset database from target domain SMP files |
 | `completeness_detector.R` | Visualization | Generates domain completeness tile plot |
 | `contingency_sorter.R` | Visualization | Generates 3D scatter plot, contingency table, GFF3 files |
+| `extended_plots.R` | Visualization | Generates extended visualization suite (7 analytical plots) from merged outputs |
 | `defaults.py` | Configuration | Loads config.yaml, defines all path constants and thresholds |
 | `validator.py` | Validation | Pre-run validation of dependencies, files, and config |
 | `colored_logging.py` | Utility | Configurable colored console + file logging |

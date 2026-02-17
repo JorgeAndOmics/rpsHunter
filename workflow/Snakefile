@@ -73,6 +73,15 @@ MERGED_3D        = _R + '/plots/scatter_3D_plot.html'
 MERGED_CONT_CSV  = _R + '/tables/contingency_table.csv'
 MERGED_CONT_PQ   = _R + '/tables/contingency_table.parquet'
 
+# Extended visualization suite outputs — paths owned by defaults.py
+EXT_CONC_HEATMAP = str(defaults.EXT_CONC_HEATMAP_PATH)
+EXT_EVID_QUALITY = str(defaults.EXT_EVID_QUALITY_PATH)
+EXT_COMP_BARS    = str(defaults.EXT_COMP_BARS_PATH)
+EXT_SEQ_COMPLEX  = str(defaults.EXT_SEQ_COMPLEX_PATH)
+EXT_CHR_DENSITY  = str(defaults.EXT_CHR_DENSITY_PATH)
+EXT_CROSS_QUERY  = str(defaults.EXT_CROSS_QUERY_PATH)
+EXT_HIT_TYPE     = str(defaults.EXT_HIT_TYPE_PATH)
+
 # Enriched blast pattern — determines which per-query per-species directory
 # holds the "final" blast parquet after all enabled enrichment steps.
 ENRICHED_PATTERN = (
@@ -802,3 +811,22 @@ rule concordance:
         MERGED_CONC_SEQ_CSV,
         MERGED_CONC_SUM,
         MERGED_CONC_SUM_CSV
+
+rule extended_plots:
+    """Extended visualization suite: 7 analytical plots from merged domain and concordance data."""
+    input:
+        domains        = MERGED_DOM_PQ,
+        conc_domains   = MERGED_CONC_DOM,
+        conc_sequences = MERGED_CONC_SEQ,
+        contingency    = MERGED_CONT_PQ,
+        config_path    = str(defaults.CONFIG_FILE),
+    output:
+        concordance_heatmap = EXT_CONC_HEATMAP,
+        evidence_quality    = EXT_EVID_QUALITY,
+        completeness_bars   = EXT_COMP_BARS,
+        sequence_complexity = EXT_SEQ_COMPLEX,
+        chromosomal_density = EXT_CHR_DENSITY,
+        cross_query         = EXT_CROSS_QUERY,
+        hit_type            = EXT_HIT_TYPE,
+    script:
+        'scripts/extended_plots.R'
