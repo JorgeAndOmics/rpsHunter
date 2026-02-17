@@ -68,25 +68,31 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--species',
+        '--input-asn',
         type=str,
         required=True,
-        help='Species name to process.'
+        help='Path to the input ASN.1 file.'
+    )
+
+    parser.add_argument(
+        '--output-txt',
+        type=str,
+        required=True,
+        help='Path to the output text file.'
     )
 
     args = parser.parse_args()
 
-    input_file  = defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / f'{args.species}.asn'
-    output_dir  = defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR']
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_file = output_dir / f'{args.species}.txt'
+    input_file = Path(args.input_asn)
+    output_file = Path(args.output_txt)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Empty ASN (species had 0 sequences after gating) — rpsbproc would crash on it.
     # Touch the output so the Snakemake rule is satisfied; rpsbproc_parser already
     # handles empty .txt files and produces a 0-row parquet.
     if input_file.stat().st_size == 0:
         output_file.touch()
-        print(f'Empty ASN for {args.species} — skipping rpsbproc, touched {output_file}')
+        print(f'Empty ASN — skipping rpsbproc, touched {output_file}')
     else:
         cmd: List[str] = [
             defaults.RPSBPROC_CMD,

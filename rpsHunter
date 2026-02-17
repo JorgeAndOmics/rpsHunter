@@ -97,6 +97,12 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
+        '--concordance',
+        action='store_true',
+        help="Runs multi-method concordance analysis (HMMER vs CDD agreement)."
+    )
+
+    parser.add_argument(
         '--skip-validation', '-skp',
         action='store_true',
         help='Skip input validation.'
@@ -152,6 +158,9 @@ if __name__ == '__main__':
 
     if args.contingency_parser:
         main_cmd.append('--contingency-parser')
+
+    if args.concordance:
+        main_cmd.append('--concordance')
 
     if unknown:
         main_cmd.extend(unknown)

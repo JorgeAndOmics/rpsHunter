@@ -47,6 +47,10 @@ def main():
                 lambda s: defaults.SPECIES_DICT.get(s, s)
             )
 
+        # Backfill Query_Accession when upstream parquets lack the column
+        if 'Query_Accession' not in combined.columns:
+            combined['Query_Accession'] = ''
+
         combined.to_parquet(output_path, index=False)
 
         csv_path = output_path.with_suffix('.csv')

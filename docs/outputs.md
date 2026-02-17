@@ -4,31 +4,49 @@ This document describes every output file produced by the rpsHunter pipeline, in
 
 ## Directory Structure
 
-All outputs are written under the `results/` directory:
+All outputs are written under the `results/` directory. When using multi-query mode, per-query files are nested under `{query_label}/` subdirectories. Merged (cross-query deduplicated) outputs are written to the top-level directories.
 
 ```
 results/
-├── blast/              Per-species BLAST parquets
-├── orf/                Per-species ORF-enriched parquets (if orf.enabled)
-├── hmmer/              Per-species HMMER-enriched parquets (if hmmer.enabled)
-├── fastas/             Per-species filtered FASTAs + audit parquets
-├── rpsblast/           Per-species RPSBLAST parquets
-├── rpsbproc/           Per-species rpsbproc text output
-├── domains/            Per-species domain parquets
+├── blast/{query_label}/              Per-query per-species BLAST parquets
+├── orf/{query_label}/                Per-query ORF-enriched parquets (if orf.enabled)
+├── hmmer/{query_label}/              Per-query HMMER-enriched parquets (if hmmer.enabled)
+├── fastas/{query_label}/             Per-query filtered FASTAs + audit parquets
+├── rpsblast/{query_label}/           Per-query RPSBLAST parquets
+├── rpsbproc/{query_label}/           Per-query rpsbproc text output
+├── domains/{query_label}/            Per-query domain parquets
 ├── tables/
-│   ├── selected/       Per-species selected (filtered) parquets
-│   ├── aggregate.*     Combined enriched BLAST data (parquet + CSV)
-│   ├── domains.*       Combined domain annotations (parquet + CSV)
-│   ├── rpsblast.*      Combined RPSBLAST results (parquet + CSV)
-│   └── contingency_table.csv
+│   ├── {query_label}/
+│   │   ├── selected/                 Per-query selected parquets
+│   │   ├── aggregate.*               Per-query enriched BLAST aggregate
+│   │   ├── domains.*                 Per-query domain aggregate
+│   │   ├── rpsblast.*                Per-query RPSBLAST aggregate
+│   │   └── contingency_table.*       Per-query contingency table
+│   ├── aggregate.*                   Merged enriched BLAST data
+│   ├── domains.*                     Merged domain annotations (deduplicated)
+│   ├── rpsblast.*                    Merged RPSBLAST results
+│   └── contingency_table.*           Merged contingency table
 ├── plots/
-│   ├── tile_plot.png
-│   └── scatter_3D_plot.html
-├── ranges/             Per-species GFF3 files
+│   ├── {query_label}/
+│   │   ├── tile_plot.png             Per-query tile plot
+│   │   └── scatter_3D_plot.html      Per-query 3D scatter plot
+│   ├── tile_plot.png                 Merged tile plot
+│   └── scatter_3D_plot.html          Merged 3D scatter plot
+├── ranges/
+│   ├── {query_label}/                Per-query GFF3 files
+│   └── {species}.gff3                Merged GFF3 files
+├── concordance/
+│   ├── {query_label}/                Per-query concordance tables
+│   │   ├── concordance_domains.*
+│   │   ├── concordance_sequences.*
+│   │   └── concordance_summary.*
+│   └── merged_concordance_*.*        Merged concordance tables
 └── asn/
-    ├── tblastn/        tBLASTn ASN binary archives
-    └── rpsblast/       RPSBLAST ASN binary archives
+    ├── tblastn/{query_label}/        tBLASTn ASN binary archives
+    └── rpsblast/{query_label}/       RPSBLAST ASN binary archives
 ```
+
+`{query_label}` is the filesystem-safe version of the query display label (e.g., `human_PRDM9` for `'human PRDM9'`).
 
 ---
 
@@ -55,6 +73,7 @@ Raw tBLASTn results for a single species. One row per alignment hit.
 | Subject Sequence | str | Aligned subject nucleotide sequence |
 | Species | str | Species key (file-friendly, from config key) |
 | Species_Name | str | Species display name (from config value, e.g. `Desmodus rotundus`) |
+| Query_Accession | str | Query protein accession used for this tBLASTn search |
 | Tag | str | 6-character random alphanumeric identifier for traceability |
 
 **Produced by:** `blast_species` rule (`blast.py`)
@@ -186,6 +205,7 @@ RPSBLAST results from searching filtered sequences against the NCBI Conserved Do
 | Subject Title | str | CDD domain title/description |
 | Species | str | Species key (file-friendly) |
 | Species_Name | str | Species display name (e.g. `Desmodus rotundus`) |
+| Query_Accession | str | Query protein accession |
 | Tag | str | 6-character tag extracted from the FASTA header |
 
 **Produced by:** `rpsblast_species` rule (`rpsblast.py`)
@@ -220,6 +240,7 @@ Parsed domain annotations from rpsbproc output. One row per domain annotation on
 |--------|------|-------------|
 | Species | str | Species key (file-friendly) |
 | Species_Name | str | Species display name (e.g. `Desmodus rotundus`) |
+| Query_Accession | str | Query protein accession(s). In merged outputs, comma-separated if multiple queries contributed. |
 | Session_ordinal | str | rpsbproc session index |
 | Program | str | Program used (e.g. `rpsblast`) |
 | Version | str | Program version |
@@ -261,11 +282,17 @@ Concatenation of all per-species parquets from the ENRICHED_BLAST_DIR (the last 
 
 ---
 
-### tables/domains.parquet / domains.csv
+### tables/{query_label}/domains.parquet / domains.csv
 
-Concatenation of all `domains/{species}.parquet` files. Contains the full 26-column domain schema described above.
+Per-query concatenation of all `domains/{query_label}/{species}.parquet` files. Contains the full domain schema described above.
 
 **Produced by:** `aggregate_domains` rule (`aggregate.py`)
+
+### tables/domains.parquet / domains.csv
+
+Cross-query merged and deduplicated domain annotations. Overlapping annotations from different queries on the same Species x Chromosome x Domain are merged using GenomicRanges `reduce()`. The `Query_Accession` column lists all contributing accessions (comma-separated).
+
+**Produced by:** `merge_domains` rule (`merge_queries.R`)
 
 ---
 
@@ -342,6 +369,49 @@ BLAST Archive (ASN.1) binary output from tBLASTn. Retained for potential re-form
 ### asn/rpsblast/{species}.asn
 
 BLAST Archive (ASN.1) binary output from RPSBLAST. Required as input for rpsbproc post-processing.
+
+---
+
+## Concordance Tables
+
+### concordance/{query_label}/concordance_domains.parquet
+
+Per-domain concordance labels joining CDD domain annotations to HMMER domain calls via the Tag system.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| *(all domain columns)* | | From `tables/{query_label}/domains.parquet` |
+| Domain_Family | str | CDD domain name normalized to config target via prefix matching |
+| HMMER_Checkable | bool | Whether this domain family has a corresponding HMMER profile |
+| Blast_Evalue | float | Source BLAST hit E-value (joined via Tag) |
+| Blast_Bitscore | float | Source BLAST hit bit score (joined via Tag) |
+| Blast_Identity | float | Source BLAST hit percent identity (joined via Tag) |
+| Concordance | str | `confirmed` / `hmmer_unmatched` / `hmmer_not_searched` |
+| HMM_Best_Evalue | float | Best HMMER E-value for this domain family on this Tag (if confirmed) |
+
+### concordance/{query_label}/concordance_sequences.parquet
+
+Per-sequence (Tag) concordance summary.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| Tag | str | 6-character sequence identifier |
+| Species | str | Species key |
+| Species_Name | str | Species display name |
+| Query_Accession | str | Query protein accession |
+| N_CDD_Domains | int | Total CDD domain annotations on this sequence |
+| N_CDD_Families | int | Number of distinct CDD domain families |
+| N_HMM_Families | int | Number of distinct HMMER domain families |
+| N_Confirmed | int | CDD domains confirmed by HMMER |
+| N_Unmatched | int | CDD domains with HMMER profile but no HMMER hit |
+| N_Not_Searched | int | CDD domains with no HMMER profile |
+| Concordance_Rate | float | N_Confirmed / (N_Confirmed + N_Unmatched), or null |
+
+### concordance/{query_label}/concordance_summary.parquet
+
+Per-domain-family concordance summary with aggregate statistics.
+
+**Produced by:** `pq_concordance` rule (`concordance.py`)
 
 ---
 

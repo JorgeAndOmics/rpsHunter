@@ -31,6 +31,7 @@ def blaster(
     query_file_path: Path,
     subject: str,
     evalue: float,
+    asn_output_path: Path = None,
 ) -> Tuple[Optional[str], Optional[Path]]:
     """
     Runs a BLAST search for a given subject species against its genome database.
@@ -55,7 +56,11 @@ def blaster(
     """
     input_path = input_database_path / subject / subject
     try:
-        asn_file_path = defaults.PATH_DICT['ASN_TBLASTN_DIR'] / f'{subject}.asn'
+        if asn_output_path is None:
+            asn_file_path = defaults.PATH_DICT['ASN_TBLASTN_DIR'] / f'{subject}.asn'
+        else:
+            asn_file_path = asn_output_path
+            asn_file_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Construct the BLAST command
         blast_command = [
@@ -158,13 +163,17 @@ def parse_blast_output(blast_output: str) -> pd.DataFrame:
 # Per-Species BLAST Processing
 # -----------------------------------------------------------------------------
 
-def process_species(species: str) -> Optional[pd.DataFrame]:
+def process_species(species: str, query_file: Path = None, query_accession: str = '',
+                    asn_output_path: Path = None) -> Optional[pd.DataFrame]:
     """
     Executes and parses BLAST for a single species.
 
         Parameters
         ----------
             :param species: Species name to process.
+            :param query_file: Path to the query FASTA file.
+            :param query_accession: Query accession ID for provenance tracking.
+            :param asn_output_path: Explicit path for ASN output (overrides default).
 
         Returns
         -------
@@ -174,12 +183,16 @@ def process_species(species: str) -> Optional[pd.DataFrame]:
         ------
             :raises Exception: Propagates exceptions from BLAST or parsing steps.
     """
+    if query_file is None:
+        query_file = defaults.QUERY_FILE
+
     blast_output, asn_file_name = blaster(
         command=defaults.TBLASTN_CMD,
         input_database_path=defaults.PATH_DICT['SPECIES_DB'],
-        query_file_path=defaults.QUERY_FILE,
+        query_file_path=query_file,
         subject=species,
-        evalue=defaults.E_VALUE_THRESHOLD
+        evalue=defaults.E_VALUE_THRESHOLD,
+        asn_output_path=asn_output_path,
     )
 
     if not blast_output:
@@ -209,6 +222,7 @@ def process_species(species: str) -> Optional[pd.DataFrame]:
 
     blast_df['Species'] = species
     blast_df['Species_Name'] = defaults.SPECIES_DICT.get(species, species)
+    blast_df['Query_Accession'] = query_accession
 
     # Add a random string column for each row
     blast_df['Tag'] = [random_string_generator(defaults.RANDOM_ID_LENGTH) for _ in range(len(blast_df))]
@@ -231,15 +245,43 @@ def main() -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--species', required=True, help='Single species to process')
+    parser.add_argument('--query-file', type=str, default=None,
+                        help='Path to query FASTA file (default: from config).')
+    parser.add_argument('--query-accession', type=str, default='',
+                        help='Query accession ID for provenance tracking.')
+    parser.add_argument('--output-parquet', type=str, default=None,
+                        help='Output parquet path.')
+    parser.add_argument('--output-csv', type=str, default=None,
+                        help='Output CSV path.')
+    parser.add_argument('--output-asn', type=str, default=None,
+                        help='Output ASN path.')
     args = parser.parse_args()
 
-    blast_df = process_species(args.species)
+    query_file = Path(args.query_file) if args.query_file else defaults.QUERY_FILE
+    asn_out = Path(args.output_asn) if args.output_asn else None
+    blast_df = process_species(args.species, query_file=query_file,
+                               query_accession=args.query_accession,
+                               asn_output_path=asn_out)
 
-    output_dir = defaults.PATH_DICT['BLAST_SPECIES_DIR']
-    output_dir.mkdir(parents=True, exist_ok=True)
-    parquet_path = output_dir / f'{args.species}.parquet'
-    csv_path     = output_dir / f'{args.species}.csv'
-    asn_path     = defaults.PATH_DICT['ASN_TBLASTN_DIR'] / f'{args.species}.asn'
+    # Resolve output paths (explicit CLI args or legacy defaults)
+    if args.output_parquet:
+        parquet_path = Path(args.output_parquet)
+    else:
+        parquet_path = defaults.PATH_DICT['BLAST_SPECIES_DIR'] / f'{args.species}.parquet'
+
+    if args.output_csv:
+        csv_path = Path(args.output_csv)
+    else:
+        csv_path = defaults.PATH_DICT['BLAST_SPECIES_DIR'] / f'{args.species}.csv'
+
+    if args.output_asn:
+        asn_path = Path(args.output_asn)
+    else:
+        asn_path = defaults.PATH_DICT['ASN_TBLASTN_DIR'] / f'{args.species}.asn'
+
+    parquet_path.parent.mkdir(parents=True, exist_ok=True)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    asn_path.parent.mkdir(parents=True, exist_ok=True)
 
     if blast_df is not None and not blast_df.empty:
         blast_df.to_parquet(parquet_path, index=False)
@@ -250,7 +292,7 @@ def main() -> None:
         empty_columns = [
             'Query ID', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches',
             'Gap Openings', 'Q. Start', 'Q. End', 'S. Start', 'S. End', 'E-value',
-            'Bit Score', 'Subject Sequence', 'Species', 'Species_Name', 'Tag'
+            'Bit Score', 'Subject Sequence', 'Species', 'Species_Name', 'Query_Accession', 'Tag'
         ]
         pd.DataFrame(columns=empty_columns).to_parquet(parquet_path, index=False)
         csv_path.touch()

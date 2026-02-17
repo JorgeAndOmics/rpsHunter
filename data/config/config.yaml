@@ -1,17 +1,15 @@
 blast:
-  e_value: 0.01
-  perc_identity: 35    # Relaxed from 60 to capture KRAB/SET/SSXRD
-  seq_length: 24       # Relaxed from 25 to capture SSXRD (24aa alignments)
-  bitscore: 45         # Relaxed from 70 to capture weak hits
+  e_value: 10          # Very relaxed
+  perc_identity: 20    # Very relaxed
+  seq_length: 15       # Very relaxed
+  bitscore: 20         # Very relaxed
 
 rpsblast:
-  e_value: 2           # Captures SET borderline hits (~1.03) while cutting noise
+  e_value: 1000        # Raised to capture mouse SSXRD (rpsbproc re-scores raw hits)
   comp_based_stats: 0  # Disable composition-based statistics (more sensitive)
   seg: 'no'            # Disable low-complexity filtering
   window_size: 0       # 1-hit algorithm (default: 40) - more sensitive
   target_domains: ['KRAB', 'SET', 'SSXRD', 'zf-C2H2', 'COG5048', 'zf-H2C2', 'ZnF_C2H2']
-                       # Uses CDD ShortNames from cddid.tbl. Prefix matching with '_'.
-                       # Example: ['KRAB', 'SET', 'SSXRD', 'zf-C2H2', 'COG5048', 'zf-H2C2', 'ZnF_C2H2']
 
 orf:
   enabled: false           # Toggle ORF analysis on/off (DISABLED to capture KRAB/SET/SSXRD)
@@ -29,13 +27,13 @@ hmmer:
   use_gathering_threshold: false  # Use Pfam's curated --cut_ga
 
   # Manual thresholds (ignored if use_gathering_threshold: true)
-  evalue: 1e-5             # E-value threshold for hmmsearch
-  dom_evalue: 1e-3         # Domain E-value threshold
+  evalue: 10               # Very relaxed
+  dom_evalue: 10           # Very relaxed
   min_score: null          # null = disabled
 
   # Quality filters
-  min_coverage: 0.5        # Minimum query coverage (0-1)
-  min_alignment_length: 20 # Minimum alignment length in amino acids
+  min_coverage: 0.1        # Very relaxed
+  min_alignment_length: 10 # Very relaxed
 
   # Sensitivity
   max_sensitivity: false   # --max flag (slow)
@@ -53,9 +51,9 @@ hmmer:
 #  makeblastdb: 'makeblastdb'
 #  rpsbproc: 'rpsbproc'
 
-query:
-  format: 'fa'
-  accession: 'NP_064612.2'
+queries:
+  'NP_659058.3': 'Mouse PRDM9'
+  'NP_064612.2': 'Human PRDM9'
 
 execution:
   num_cores: 16
@@ -92,3 +90,5 @@ species:
   'Desmodus_rotundus': 'Desmodus rotundus'
   'Antrozous_pallidus': 'Antrozous pallidus'
   'Molossus_molossus': 'Molossus molossus'
+  'Homo_sapiens': 'Homo sapiens'
+  'Mus_musculus': 'Mus musculus'

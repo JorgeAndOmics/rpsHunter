@@ -213,19 +213,54 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Run RPS-BLAST for a single species.')
     parser.add_argument('--species', type=str, required=True,
                         help='Species name to process.')
+    parser.add_argument('--query-accession', type=str, default='',
+                        help='Query accession ID for provenance tracking.')
+    parser.add_argument('--fasta-input', type=str, default=None,
+                        help='Path to input FASTA file (default: from config).')
+    parser.add_argument('--output-parquet', type=str, default=None,
+                        help='Output parquet path.')
+    parser.add_argument('--output-asn', type=str, default=None,
+                        help='Output ASN path.')
     parser.add_argument('--db', type=str, default=None,
                         help='Path to RPS-BLAST database (default: full CDD).')
     args = parser.parse_args()
 
-    defaults.PATH_DICT['ASN_RPSBLAST_DIR'].mkdir(parents=True, exist_ok=True)
-
     db_path = Path(args.db) if args.db else None
-    result_df = process_rps_species(args.species, db_override=db_path)
 
-    output_dir = defaults.PATH_DICT['RPSBLAST_SPECIES_DIR']
-    output_dir.mkdir(parents=True, exist_ok=True)
-    parquet_path = output_dir / f'{args.species}.parquet'
-    asn_path = defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / f'{args.species}.asn'
+    # Resolve input/output paths
+    if args.fasta_input:
+        fasta_dir = Path(args.fasta_input).parent
+        # Override the fasta filename to match what process_rps_species expects
+        fasta_input_dir = fasta_dir
+    else:
+        fasta_input_dir = None
+
+    if args.output_asn:
+        asn_dir = Path(args.output_asn).parent
+        asn_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        asn_dir = None
+        defaults.PATH_DICT['ASN_RPSBLAST_DIR'].mkdir(parents=True, exist_ok=True)
+
+    result_df = process_rps_species(args.species, fasta_input_dir=fasta_input_dir,
+                                    asn_output_dir=asn_dir, db_override=db_path)
+
+    # Add Query_Accession if provided
+    if result_df is not None and not result_df.empty:
+        result_df['Query_Accession'] = args.query_accession
+
+    # Resolve output paths
+    if args.output_parquet:
+        parquet_path = Path(args.output_parquet)
+    else:
+        parquet_path = defaults.PATH_DICT['RPSBLAST_SPECIES_DIR'] / f'{args.species}.parquet'
+
+    if args.output_asn:
+        asn_path = Path(args.output_asn)
+    else:
+        asn_path = defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / f'{args.species}.asn'
+
+    parquet_path.parent.mkdir(parents=True, exist_ok=True)
 
     if result_df is not None and not result_df.empty:
         result_df.to_parquet(parquet_path, index=False)
@@ -235,7 +270,7 @@ def main() -> None:
         empty_columns = [
             'Query ID', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches',
             'Gap Openings', 'Q. Start', 'Q. End', 'S. Start', 'S. End', 'E-value',
-            'Bit Score', 'Subject Title', 'Species', 'Species_Name', 'Tag'
+            'Bit Score', 'Subject Title', 'Species', 'Species_Name', 'Query_Accession', 'Tag'
         ]
         pd.DataFrame(columns=empty_columns).to_parquet(parquet_path, index=False)
         # Touch the ASN file so rpsbproc_species input is satisfied.

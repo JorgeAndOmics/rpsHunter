@@ -142,6 +142,8 @@ if __name__ == '__main__':
                         help='Path to the per-species audit Parquet file.')
     parser.add_argument('--output-selected', type=str, required=True,
                         help='Path to the per-species selected-only Parquet file (rows that passed all gates).')
+    parser.add_argument('--query-accession', type=str, default='',
+                        help='Query accession ID for provenance tracking.')
 
     args = parser.parse_args()
 

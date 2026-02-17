@@ -7,38 +7,114 @@ from scripts import defaults
 
 BLAST_DB_EXT = ['ndb', 'nhr', 'nin', 'not', 'nsq', 'ntf', 'nto']
 SPECIES = defaults.SPECIES
+QUERY_LABELS = defaults.QUERY_LABEL_LIST
 
-# Resolved once at parse time.  Determines which per-species directory holds
-# the "final" blast parquet after all enabled enrichment steps.
-ENRICHED_BLAST_DIR: Path = (
-    defaults.PATH_DICT['HMM_OUTPUT_DIR']      if defaults.HMMER_ENABLED
-    else defaults.PATH_DICT['ORF_OUTPUT_DIR']  if defaults.ORF_ENABLED
-    else defaults.PATH_DICT['BLAST_SPECIES_DIR']
+# Results base (string for pattern construction)
+_R = str(defaults.PATH_DICT['RESULTS_DIR'])
+
+# =============================================================================
+# Per-query path patterns (with {query_label} and {species} wildcards)
+# =============================================================================
+
+BLAST_PQ     = _R + '/blast/{query_label}/{species}.parquet'
+BLAST_CSV    = _R + '/blast/{query_label}/{species}.csv'
+ASN_TBLASTN  = _R + '/asn/tblastn/{query_label}/{species}.asn'
+ORF_PQ       = _R + '/orf/{query_label}/{species}.parquet'
+HMM_PQ       = _R + '/hmmer/{query_label}/{species}.parquet'
+FASTA_OUT    = _R + '/fastas/{query_label}/{species}.fa'
+FASTA_AUDIT  = _R + '/fastas/{query_label}/{species}.parquet'
+SELECTED_PQ  = _R + '/tables/{query_label}/selected/{species}.parquet'
+RPSBLAST_PQ  = _R + '/rpsblast/{query_label}/{species}.parquet'
+ASN_RPSBLAST = _R + '/asn/rpsblast/{query_label}/{species}.asn'
+RPSBPROC_TXT = _R + '/rpsbproc/{query_label}/{species}.txt'
+DOMAINS_PQ   = _R + '/domains/{query_label}/{species}.parquet'
+
+# Per-query aggregate tables
+AGG_BLAST_PQ  = _R + '/tables/{query_label}/aggregate.parquet'
+AGG_BLAST_CSV = _R + '/tables/{query_label}/aggregate.csv'
+AGG_RPS_PQ    = _R + '/tables/{query_label}/rpsblast.parquet'
+AGG_RPS_CSV   = _R + '/tables/{query_label}/rpsblast.csv'
+AGG_DOM_PQ    = _R + '/tables/{query_label}/domains.parquet'
+AGG_DOM_CSV   = _R + '/tables/{query_label}/domains.csv'
+
+# Per-query visualization outputs
+PQ_TILE      = _R + '/plots/{query_label}/tile_plot.png'
+PQ_3D        = _R + '/plots/{query_label}/scatter_3D_plot.html'
+PQ_CONT_CSV  = _R + '/tables/{query_label}/contingency_table.csv'
+PQ_CONT_PQ   = _R + '/tables/{query_label}/contingency_table.parquet'
+
+# Per-query concordance outputs
+PQ_CONC_DIR      = _R + '/concordance/{query_label}'
+PQ_CONC_DOM      = _R + '/concordance/{query_label}/concordance_domains.parquet'
+PQ_CONC_DOM_CSV  = _R + '/concordance/{query_label}/concordance_domains.csv'
+PQ_CONC_SEQ      = _R + '/concordance/{query_label}/concordance_sequences.parquet'
+PQ_CONC_SEQ_CSV  = _R + '/concordance/{query_label}/concordance_sequences.csv'
+PQ_CONC_SUM      = _R + '/concordance/{query_label}/concordance_summary.parquet'
+PQ_CONC_SUM_CSV  = _R + '/concordance/{query_label}/concordance_summary.csv'
+
+# Merged concordance outputs
+MERGED_CONC_DIR     = _R + '/concordance'
+MERGED_CONC_DOM     = _R + '/concordance/merged_concordance_domains.parquet'
+MERGED_CONC_DOM_CSV = _R + '/concordance/merged_concordance_domains.csv'
+MERGED_CONC_SEQ     = _R + '/concordance/merged_concordance_sequences.parquet'
+MERGED_CONC_SEQ_CSV = _R + '/concordance/merged_concordance_sequences.csv'
+MERGED_CONC_SUM     = _R + '/concordance/merged_concordance_summary.parquet'
+MERGED_CONC_SUM_CSV = _R + '/concordance/merged_concordance_summary.csv'
+
+# Merged outputs (top-level, post-deduplication)
+MERGED_DOM_PQ    = _R + '/tables/domains.parquet'
+MERGED_DOM_CSV   = _R + '/tables/domains.csv'
+MERGED_BLAST_PQ  = _R + '/tables/aggregate.parquet'
+MERGED_BLAST_CSV = _R + '/tables/aggregate.csv'
+MERGED_RPS_PQ    = _R + '/tables/rpsblast.parquet'
+MERGED_RPS_CSV   = _R + '/tables/rpsblast.csv'
+MERGED_TILE      = _R + '/plots/tile_plot.png'
+MERGED_3D        = _R + '/plots/scatter_3D_plot.html'
+MERGED_CONT_CSV  = _R + '/tables/contingency_table.csv'
+MERGED_CONT_PQ   = _R + '/tables/contingency_table.parquet'
+
+# Enriched blast pattern — determines which per-query per-species directory
+# holds the "final" blast parquet after all enabled enrichment steps.
+ENRICHED_PATTERN = (
+    HMM_PQ if defaults.HMMER_ENABLED
+    else ORF_PQ if defaults.ORF_ENABLED
+    else BLAST_PQ
 )
 
-# Input directory for HMMER (one step back from ENRICHED_BLAST_DIR).
-# Only referenced inside the conditional hmmer_species block.
-PRE_HMMER_DIR: Path = (
-    defaults.PATH_DICT['ORF_OUTPUT_DIR']     if defaults.ORF_ENABLED
-    else defaults.PATH_DICT['BLAST_SPECIES_DIR']
+# Input pattern for HMMER (one step back from ENRICHED_PATTERN).
+PRE_HMMER_PATTERN = (
+    ORF_PQ if defaults.ORF_ENABLED
+    else BLAST_PQ
 )
 
-# Resolved once at parse time.  When target_domains is set, RPSBLAST searches
-# a subset database instead of the full CDD.
-RPSBLAST_DB: Path = (
+# RPSBLAST database path
+RPSBLAST_DB = (
     defaults.PATH_DICT['CDD_SUBSET_DB'] / 'target_domains_db'
     if defaults.RPSBLAST_TARGET_DOMAINS
     else defaults.PATH_DICT['RPS_DB']
 )
 
-# Pre-built HMMER subset HMM path (when profiles are configured).
-HMMER_SUBSET_HMM: Path = (
+# Pre-built HMMER subset HMM path
+HMMER_SUBSET_HMM = (
     defaults.PATH_DICT['HMM_OUTPUT_DIR'] / 'subset.hmm'
     if defaults.HMMER_PROFILES
     else None
 )
 
 configfile: str(defaults.CONFIG_FILE)
+
+# =============================================================================
+# Helper functions
+# =============================================================================
+
+def query_fasta_for_label(wildcards):
+    """Resolve the query FASTA path from a {query_label} wildcard."""
+    acc = defaults.LABEL_TO_ACC[wildcards.query_label]
+    return str(defaults.query_file_path(acc))
+
+def query_acc_for_label(wildcards):
+    """Resolve the query accession from a {query_label} wildcard."""
+    return defaults.LABEL_TO_ACC[wildcards.query_label]
 
 # =============================================================================
 # Genome & Query Download Rules
@@ -61,36 +137,31 @@ rule genome_downloader_setup:
 
 rule genome_downloader:
     input:
-        species=expand(str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}.fa'), genome=defaults.SPECIES)
+        species=expand(str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}.fa'), genome=SPECIES)
     priority: 100
     shell:
-        """
-        echo "Genome download completed for selected species"
-        """
+        'echo "Genome download completed for selected species"'
 
 rule query_downloader_setup:
     output:
-        species=str(defaults.QUERY_FILE)
+        fasta=str(defaults.PATH_DICT['FASTA_DIR'] / '{query_acc}.fa')
     params:
-        query_acc=defaults.QUERY_ACC,
         query_dir=str(defaults.PATH_DICT['FASTA_DIR']),
         download_log=str(defaults.PATH_DICT['CONFIG_DIR'] / 'download.txt'),
         entrez_email=defaults.ENTREZ_EMAIL
     shell:
         '''
         export ENTREZ_EMAIL={params.entrez_email:q} && \
-        rm -f {params.query_dir:q}/* && \
-        bash scripts/query_downloader.sh {params.query_acc:q} {params.query_dir:q} {params.download_log:q}
+        bash scripts/query_downloader.sh {wildcards.query_acc:q} {params.query_dir:q} {params.download_log:q}
         '''
 
 rule query_downloader:
     input:
-        query_file=str(defaults.QUERY_FILE)
+        expand(str(defaults.PATH_DICT['FASTA_DIR'] / '{query_acc}.fa'),
+               query_acc=defaults.QUERIES)
     priority: 100
     shell:
-        """
-        echo "Query protein download completed"
-        """
+        'echo "Query protein download completed"'
 
 # =============================================================================
 # Database Download Rules
@@ -196,9 +267,7 @@ rule setup_databases:
         rpsbproc_data=rules.rpsbproc_data_downloader.output,
         cdd_smp=rules.cdd_smp_downloader.output.done,
     shell:
-        """
-        echo "All databases have been downloaded and configured."
-        """
+        'echo "All databases have been downloaded and configured."'
 
 # =============================================================================
 # CDD Subset Database (conditional: rpsblast.target_domains set)
@@ -269,38 +338,46 @@ rule blast_db_generator_setup:
 rule blast_db_generator:
     input:
         blast_db = expand(str(defaults.PATH_DICT['SPECIES_DB'] / '{genome}' / '{genome}.{ext}'),
-                          genome=defaults.SPECIES,
+                          genome=SPECIES,
                           ext=BLAST_DB_EXT)
 
 # =============================================================================
-# Per-Species BLAST
+# Per-Query Per-Species BLAST
 # =============================================================================
 
 rule blast_species:
     input:
         db=str(defaults.PATH_DICT['SPECIES_DB'] / '{species}' / '{species}.ndb'),
-        query=str(defaults.QUERY_FILE)
+        query=query_fasta_for_label
     output:
-        parquet=str(defaults.PATH_DICT['BLAST_SPECIES_DIR'] / '{species}.parquet'),
-        csv=str(defaults.PATH_DICT['BLAST_SPECIES_DIR'] / '{species}.csv'),
-        asn=str(defaults.PATH_DICT['ASN_TBLASTN_DIR'] / '{species}.asn')
+        parquet=BLAST_PQ,
+        csv=BLAST_CSV,
+        asn=ASN_TBLASTN
+    params:
+        query_acc=query_acc_for_label
     threads: 1
     shell:
         '''
-        python scripts/blast.py --species {wildcards.species}
+        python scripts/blast.py \
+            --species {wildcards.species} \
+            --query-file {input.query:q} \
+            --query-accession {params.query_acc} \
+            --output-parquet {output.parquet:q} \
+            --output-csv {output.csv:q} \
+            --output-asn {output.asn:q}
         '''
 
 # =============================================================================
-# Per-Species ORF Analysis (conditional)
+# Per-Query Per-Species ORF Analysis (conditional)
 # =============================================================================
 
 if defaults.ORF_ENABLED:
     rule orf_species:
         input:
-            parquet=str(defaults.PATH_DICT['BLAST_SPECIES_DIR'] / '{species}.parquet'),
+            parquet=BLAST_PQ,
             genome=str(defaults.PATH_DICT['SPECIES_DB'] / '{species}.fa')
         output:
-            parquet=str(defaults.PATH_DICT['ORF_OUTPUT_DIR'] / '{species}.parquet')
+            parquet=ORF_PQ
         threads: 1
         shell:
             '''
@@ -312,19 +389,19 @@ if defaults.ORF_ENABLED:
             '''
 
 # =============================================================================
-# Per-Species HMMER (conditional)
+# Per-Query Per-Species HMMER (conditional)
 # =============================================================================
 
 if defaults.HMMER_ENABLED:
     rule hmmer_species:
         input:
-            parquet=str(PRE_HMMER_DIR / '{species}.parquet'),
+            parquet=PRE_HMMER_PATTERN,
             pfam_hmm=str(defaults.PATH_DICT['HMM_DB'] / 'Pfam-A.hmm'),
             subset_hmm=(str(HMMER_SUBSET_HMM)
                         if defaults.HMMER_PROFILES
                         else [])
         output:
-            parquet=str(defaults.PATH_DICT['HMM_OUTPUT_DIR'] / '{species}.parquet')
+            parquet=HMM_PQ
         params:
             hmm_db_flag=('--hmm-db ' + str(HMMER_SUBSET_HMM)
                          if defaults.HMMER_PROFILES
@@ -343,21 +420,24 @@ if defaults.HMMER_ENABLED:
             '''
 
 # =============================================================================
-# Per-Species BLAST Parser
+# Per-Query Per-Species BLAST Parser
 # =============================================================================
 
 rule blast_parser_species:
     input:
-        parquet=str(ENRICHED_BLAST_DIR / '{species}.parquet')
+        parquet=ENRICHED_PATTERN
     output:
-        fasta        =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.fa'),
-        audit        =str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.parquet'),
-        selected     =str(defaults.PATH_DICT['SELECTED_OUTPUT_DIR'] / '{species}.parquet'),
+        fasta=FASTA_OUT,
+        audit=FASTA_AUDIT,
+        selected=SELECTED_PQ
+    params:
+        query_acc=query_acc_for_label
     threads: 1
     shell:
         '''
         python scripts/blast_parser.py \
             --species {wildcards.species} \
+            --query-accession {params.query_acc} \
             --input-parquet {input.parquet:q} \
             --output-fasta {output.fasta:q} \
             --output-audit {output.audit:q} \
@@ -365,102 +445,286 @@ rule blast_parser_species:
         '''
 
 # =============================================================================
-# Per-Species RPSBLAST
+# Per-Query Per-Species RPSBLAST
 # =============================================================================
 
 rule rpsblast_species:
     input:
-        fasta=str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.fa'),
+        fasta=FASTA_OUT,
         cdd_db=(str(RPSBLAST_DB) + '.rps'
                 if defaults.RPSBLAST_TARGET_DOMAINS
                 else str(defaults.PATH_DICT['RPS_DB']) + '.pal')
     output:
-        parquet=str(defaults.PATH_DICT['RPSBLAST_SPECIES_DIR'] / '{species}.parquet'),
-        asn=str(defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / '{species}.asn')
+        parquet=RPSBLAST_PQ,
+        asn=ASN_RPSBLAST
     params:
         db_flag=('--db ' + str(RPSBLAST_DB)
                  if defaults.RPSBLAST_TARGET_DOMAINS
-                 else '')
+                 else ''),
+        query_acc=query_acc_for_label
     threads: 1
     shell:
         '''
-        python scripts/rpsblast.py --species {wildcards.species} {params.db_flag}
+        python scripts/rpsblast.py \
+            --species {wildcards.species} \
+            --query-accession {params.query_acc} \
+            --fasta-input {input.fasta:q} \
+            --output-parquet {output.parquet:q} \
+            --output-asn {output.asn:q} \
+            {params.db_flag}
         '''
 
 # =============================================================================
-# Per-Species rpsbproc
+# Per-Query Per-Species rpsbproc
 # =============================================================================
 
 rule rpsbproc_species:
     input:
-        asn=str(defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / '{species}.asn'),
+        asn=ASN_RPSBLAST,
         rpsbproc_data=rules.rpsbproc_data_downloader.output
     output:
-        txt=str(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'] / '{species}.txt')
+        txt=RPSBPROC_TXT
     threads: 1
     shell:
         '''
-        python scripts/rpsbproc.py --species {wildcards.species}
+        python scripts/rpsbproc.py \
+            --input-asn {input.asn:q} \
+            --output-txt {output.txt:q}
         '''
 
 # =============================================================================
-# Per-Species rpsbproc Parser
+# Per-Query Per-Species rpsbproc Parser
 # =============================================================================
 
 rule rpsbproc_parser_species:
     input:
-        txt=str(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'] / '{species}.txt')
+        txt=RPSBPROC_TXT
     output:
-        parquet=str(defaults.PATH_DICT['DOMAINS_SPECIES_DIR'] / '{species}.parquet')
+        parquet=DOMAINS_PQ
+    params:
+        query_acc=query_acc_for_label
     threads: 1
     shell:
         '''
         python scripts/rpsbproc_parser.py \
             --input-txt {input.txt:q} \
-            --output-parquet {output.parquet:q}
+            --output-parquet {output.parquet:q} \
+            --query-accession {params.query_acc}
         '''
 
 # =============================================================================
-# Aggregation Rules
+# Per-Query Aggregation Rules
 # =============================================================================
 
 rule aggregate_blast:
-    """Aggregates the FINAL enriched blast parquets (after ORF/HMM if enabled).
-       tables/aggregate.parquet therefore always reflects the last enrichment step,
-       matching what blast_parser actually consumes."""
+    """Per-query: aggregates the FINAL enriched blast parquets across species."""
     input:
-        expand(str(ENRICHED_BLAST_DIR / '{species}.parquet'),
-               species=defaults.SPECIES)
+        lambda wc: expand(ENRICHED_PATTERN, query_label=wc.query_label, species=SPECIES)
     output:
-        parquet=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'aggregate.parquet'),
-        csv=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'aggregate.csv')
+        parquet=AGG_BLAST_PQ,
+        csv=AGG_BLAST_CSV
     shell:
-        '''
-        python scripts/aggregate.py blast {output.parquet:q} {input}
-        '''
+        'python scripts/aggregate.py blast {output.parquet:q} {input}'
 
 rule aggregate_rpsblast:
     input:
-        expand(str(defaults.PATH_DICT['RPSBLAST_SPECIES_DIR'] / '{species}.parquet'),
-               species=defaults.SPECIES)
+        lambda wc: expand(RPSBLAST_PQ, query_label=wc.query_label, species=SPECIES)
     output:
-        parquet=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.parquet'),
-        csv=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast.csv')
+        parquet=AGG_RPS_PQ,
+        csv=AGG_RPS_CSV
     shell:
-        '''
-        python scripts/aggregate.py rpsblast {output.parquet:q} {input}
-        '''
+        'python scripts/aggregate.py rpsblast {output.parquet:q} {input}'
 
 rule aggregate_domains:
     input:
-        expand(str(defaults.PATH_DICT['DOMAINS_SPECIES_DIR'] / '{species}.parquet'),
-               species=defaults.SPECIES)
+        lambda wc: expand(DOMAINS_PQ, query_label=wc.query_label, species=SPECIES)
     output:
-        parquet=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.parquet'),
-        csv=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.csv')
+        parquet=AGG_DOM_PQ,
+        csv=AGG_DOM_CSV
+    shell:
+        'python scripts/aggregate.py domains {output.parquet:q} {input}'
+
+# =============================================================================
+# Cross-Query Merge Rules
+# =============================================================================
+
+rule merge_blast:
+    """Concatenate per-query blast aggregates into a single merged table."""
+    input:
+        expand(AGG_BLAST_PQ, query_label=QUERY_LABELS)
+    output:
+        parquet=MERGED_BLAST_PQ,
+        csv=MERGED_BLAST_CSV
+    shell:
+        'python scripts/aggregate.py blast {output.parquet:q} {input}'
+
+rule merge_rpsblast:
+    """Concatenate per-query rpsblast aggregates."""
+    input:
+        expand(AGG_RPS_PQ, query_label=QUERY_LABELS)
+    output:
+        parquet=MERGED_RPS_PQ,
+        csv=MERGED_RPS_CSV
+    shell:
+        'python scripts/aggregate.py rpsblast {output.parquet:q} {input}'
+
+rule merge_domains:
+    """Merge per-query domain tables with cross-query deduplication."""
+    input:
+        expand(AGG_DOM_PQ, query_label=QUERY_LABELS)
+    output:
+        parquet=MERGED_DOM_PQ,
+        csv=MERGED_DOM_CSV
+    params:
+        config_path=str(defaults.CONFIG_FILE)
     shell:
         '''
-        python scripts/aggregate.py domains {output.parquet:q} {input}
+        Rscript scripts/merge_queries.R \
+            {output.parquet:q} \
+            {params.config_path:q} \
+            {input}
+        '''
+
+# =============================================================================
+# Per-Query Visualization Rules
+# =============================================================================
+
+rule pq_completeness_detector:
+    input:
+        domains=AGG_DOM_PQ,
+        blast=AGG_BLAST_PQ,
+        rpsblast=AGG_RPS_PQ
+    output:
+        tile_plot=PQ_TILE
+    params:
+        config_path=str(defaults.CONFIG_FILE)
+    shell:
+        '''
+        Rscript scripts/completeness_detector.R \
+            {input.domains:q} \
+            $(dirname {output.tile_plot:q}) \
+            {params.config_path:q}
+        '''
+
+rule pq_contingency_sorter:
+    input:
+        domains=AGG_DOM_PQ,
+        blast=AGG_BLAST_PQ,
+        rpsblast=AGG_RPS_PQ
+    output:
+        domain_3d_plot=PQ_3D,
+        contingency_table=PQ_CONT_CSV,
+        contingency_parquet=PQ_CONT_PQ
+    params:
+        range_dir=lambda wc: _R + '/ranges/' + wc.query_label,
+        config_path=str(defaults.CONFIG_FILE)
+    shell:
+        '''
+        Rscript scripts/contingency_sorter.R \
+            {input.domains:q} \
+            $(dirname {output.domain_3d_plot:q}) \
+            $(dirname {output.contingency_table:q}) \
+            {params.range_dir:q} \
+            {params.config_path:q}
+        '''
+
+rule pq_concordance:
+    """Per-query concordance analysis (HMMER vs CDD agreement)."""
+    input:
+        aggregate=AGG_BLAST_PQ,
+        domains=AGG_DOM_PQ
+    output:
+        conc_dom=PQ_CONC_DOM,
+        conc_dom_csv=PQ_CONC_DOM_CSV,
+        conc_seq=PQ_CONC_SEQ,
+        conc_seq_csv=PQ_CONC_SEQ_CSV,
+        conc_sum=PQ_CONC_SUM,
+        conc_sum_csv=PQ_CONC_SUM_CSV
+    params:
+        config_path=str(defaults.CONFIG_FILE),
+        outdir=PQ_CONC_DIR
+    shell:
+        '''
+        python scripts/concordance.py \
+            --aggregate {input.aggregate:q} \
+            --domains {input.domains:q} \
+            --config {params.config_path:q} \
+            --outdir {params.outdir:q}
+        '''
+
+# =============================================================================
+# Merged Visualization Rules
+# =============================================================================
+
+rule merged_completeness_detector:
+    input:
+        domains=MERGED_DOM_PQ,
+        blast=MERGED_BLAST_PQ,
+        rpsblast=MERGED_RPS_PQ
+    output:
+        tile_plot=MERGED_TILE
+    params:
+        config_path=str(defaults.CONFIG_FILE)
+    shell:
+        '''
+        Rscript scripts/completeness_detector.R \
+            {input.domains:q} \
+            $(dirname {output.tile_plot:q}) \
+            {params.config_path:q}
+        '''
+
+rule merged_contingency_sorter:
+    input:
+        domains=MERGED_DOM_PQ,
+        blast=MERGED_BLAST_PQ,
+        rpsblast=MERGED_RPS_PQ
+    output:
+        domain_3d_plot=MERGED_3D,
+        contingency_table=MERGED_CONT_CSV,
+        contingency_parquet=MERGED_CONT_PQ
+    params:
+        range_dir=str(defaults.PATH_DICT['RANGE_OUTPUT_DIR']),
+        config_path=str(defaults.CONFIG_FILE)
+    shell:
+        '''
+        Rscript scripts/contingency_sorter.R \
+            {input.domains:q} \
+            $(dirname {output.domain_3d_plot:q}) \
+            $(dirname {output.contingency_table:q}) \
+            {params.range_dir:q} \
+            {params.config_path:q}
+        '''
+
+rule merge_concordance:
+    """Merge per-query concordance tables (Parquet + CSV)."""
+    input:
+        conc_dom=expand(PQ_CONC_DOM, query_label=QUERY_LABELS),
+        conc_seq=expand(PQ_CONC_SEQ, query_label=QUERY_LABELS),
+        conc_sum=expand(PQ_CONC_SUM, query_label=QUERY_LABELS)
+    output:
+        conc_dom=MERGED_CONC_DOM,
+        conc_dom_csv=MERGED_CONC_DOM_CSV,
+        conc_seq=MERGED_CONC_SEQ,
+        conc_seq_csv=MERGED_CONC_SEQ_CSV,
+        conc_sum=MERGED_CONC_SUM,
+        conc_sum_csv=MERGED_CONC_SUM_CSV
+    shell:
+        '''
+        python -c "
+import pandas as pd
+from pathlib import Path
+
+for inputs, out_pq, out_csv in [
+    ('{input.conc_dom}'.split(), '{output.conc_dom}', '{output.conc_dom_csv}'),
+    ('{input.conc_seq}'.split(), '{output.conc_seq}', '{output.conc_seq_csv}'),
+    ('{input.conc_sum}'.split(), '{output.conc_sum}', '{output.conc_sum_csv}'),
+]:
+    dfs = [pd.read_parquet(f) for f in inputs if Path(f).exists()]
+    merged = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+    merged.to_parquet(out_pq, index=False)
+    merged.to_csv(out_csv, index=False)
+    print(f'Merged {{len(dfs)}} files -> {{len(merged)}} rows -> {{out_pq}}')
+"
         '''
 
 # =============================================================================
@@ -470,94 +734,71 @@ rule aggregate_domains:
 # =============================================================================
 
 rule blaster:
-    """Per-species BLAST."""
+    """Per-query per-species BLAST."""
     input:
-        expand(str(defaults.PATH_DICT['BLAST_SPECIES_DIR'] / '{species}.parquet'),
-               species=defaults.SPECIES)
+        expand(BLAST_PQ, query_label=QUERY_LABELS, species=SPECIES)
 
 rule orf_analyser:
-    """Per-species ORF analysis (no-op if orf.enabled: false)."""
+    """Per-query ORF analysis (no-op if orf.enabled: false)."""
     input:
-        expand(str(defaults.PATH_DICT['ORF_OUTPUT_DIR'] / '{species}.parquet'),
-               species=defaults.SPECIES) if defaults.ORF_ENABLED else []
+        expand(ORF_PQ, query_label=QUERY_LABELS, species=SPECIES) if defaults.ORF_ENABLED else []
 
 rule hmmer:
-    """Per-species HMMER filtering (no-op if hmmer.enabled: false)."""
+    """Per-query HMMER filtering (no-op if hmmer.enabled: false)."""
     input:
-        expand(str(defaults.PATH_DICT['HMM_OUTPUT_DIR'] / '{species}.parquet'),
-               species=defaults.SPECIES) if defaults.HMMER_ENABLED else []
+        expand(HMM_PQ, query_label=QUERY_LABELS, species=SPECIES) if defaults.HMMER_ENABLED else []
 
 rule blast_parser:
-    """Per-species FASTA export (reads from ENRICHED_BLAST_DIR)."""
+    """Per-query FASTA export, aggregation, and cross-query merge."""
     input:
-        expand(str(defaults.PATH_DICT['FASTA_OUTPUT_DIR'] / '{species}.fa'),
-               species=defaults.SPECIES),
-        rules.aggregate_blast.output
+        expand(FASTA_OUT, query_label=QUERY_LABELS, species=SPECIES),
+        expand(AGG_BLAST_PQ, query_label=QUERY_LABELS),
+        MERGED_BLAST_PQ
 
 rule rpsblaster:
-    """Per-species RPSBLAST."""
+    """Per-query RPSBLAST."""
     input:
-        expand(str(defaults.PATH_DICT['RPSBLAST_SPECIES_DIR'] / '{species}.parquet'),
-               species=defaults.SPECIES)
+        expand(RPSBLAST_PQ, query_label=QUERY_LABELS, species=SPECIES)
 
 rule rpsbproc:
-    """Per-species rpsbproc annotation."""
+    """Per-query rpsbproc annotation."""
     input:
-        expand(str(defaults.PATH_DICT['RPSBPROC_OUTPUT_DIR'] / '{species}.txt'),
-               species=defaults.SPECIES)
+        expand(RPSBPROC_TXT, query_label=QUERY_LABELS, species=SPECIES)
 
 rule rpsbproc_parser:
-    """Per-species parsing + aggregate → tables/domains.parquet.
-       This is the only target that includes aggregation, because the
-       visualization rules (completeness_detector, contingency_sorter) need it."""
-    input: rules.aggregate_domains.output
-
-# =============================================================================
-# Visualization Rules
-# =============================================================================
+    """Per-query parsing + per-query aggregation + cross-query merge."""
+    input:
+        expand(AGG_DOM_PQ, query_label=QUERY_LABELS),
+        MERGED_DOM_PQ
 
 rule completeness_detector:
+    """Per-query + merged tile plots."""
     input:
-        domains=rules.aggregate_domains.output,
-        blast=rules.aggregate_blast.output,
-        rpsblast=rules.aggregate_rpsblast.output
-    output:
-        tile_plot=str(defaults.PATH_DICT['PLOT_DIR'] / 'tile_plot.png')
-    params:
-        domain_data=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.parquet'),
-        plot_output_folder=str(defaults.PATH_DICT['PLOT_DIR']),
-        table_output_folder=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR']),
-        config_path=str(defaults.CONFIG_FILE)
-    shell:
-        '''
-        Rscript scripts/completeness_detector.R \
-        {params.domain_data:q} \
-        {params.plot_output_folder:q} \
-        {params.config_path:q}
-        '''
+        expand(PQ_TILE, query_label=QUERY_LABELS),
+        MERGED_TILE
 
 rule contingency_sorter:
+    """Per-query + merged contingency/scatter plots."""
     input:
-        domains=rules.aggregate_domains.output,
-        blast=rules.aggregate_blast.output,
-        rpsblast=rules.aggregate_rpsblast.output
-    output:
-        domain_3d_plot=str(defaults.PATH_DICT['PLOT_DIR'] / 'scatter_3D_plot.html'),
-        contingency_table=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'contingency_table.csv'),
-        contingency_parquet=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'contingency_table.parquet'),
-    params:
-        domain_data=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains.parquet'),
-        species_list=defaults.SPECIES,
-        plot_output_folder=str(defaults.PATH_DICT['PLOT_DIR']),
-        table_output_folder=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR']),
-        range_output_folder=str(defaults.PATH_DICT['RANGE_OUTPUT_DIR']),
-        config_path=str(defaults.CONFIG_FILE)
-    shell:
-        '''
-        Rscript scripts/contingency_sorter.R \
-        {params.domain_data:q} \
-        {params.plot_output_folder:q} \
-        {params.table_output_folder:q} \
-        {params.range_output_folder:q} \
-        {params.config_path:q}
-        '''
+        expand(PQ_3D, query_label=QUERY_LABELS),
+        expand(PQ_CONT_CSV, query_label=QUERY_LABELS),
+        expand(PQ_CONT_PQ, query_label=QUERY_LABELS),
+        MERGED_3D,
+        MERGED_CONT_CSV,
+        MERGED_CONT_PQ
+
+rule concordance:
+    """Per-query + merged concordance analysis."""
+    input:
+        expand(PQ_CONC_DOM, query_label=QUERY_LABELS),
+        expand(PQ_CONC_DOM_CSV, query_label=QUERY_LABELS),
+        expand(PQ_CONC_SEQ, query_label=QUERY_LABELS),
+        expand(PQ_CONC_SEQ_CSV, query_label=QUERY_LABELS),
+        expand(PQ_CONC_SUM, query_label=QUERY_LABELS),
+        expand(PQ_CONC_SUM_CSV, query_label=QUERY_LABELS),
+        MERGED_CONC_DOM,
+        MERGED_CONC_DOM_CSV,
+        MERGED_CONC_SEQ,
+        MERGED_CONC_SEQ_CSV,
+        MERGED_CONC_SUM,
+        MERGED_CONC_SUM_CSV

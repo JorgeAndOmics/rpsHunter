@@ -42,6 +42,7 @@ conda run -n rpsHunter ./rpsHunter --hmmer --blast --skip-validation
 | `--rpsbproc-parser` | | `rpsbproc_parser` | Parse rpsbproc text output into structured parquets and aggregate into `tables/domains.parquet`. |
 | `--completeness-detector` | | `completeness_detector` | Generate tile plot (domain completeness heatmap). |
 | `--contingency-parser` | | `contingency_sorter` | Generate 3D scatter plot, contingency table (CSV), and GFF3 genomic coordinate files. |
+| `--concordance` | | `concordance` | Run multi-method concordance analysis (HMMER vs CDD agreement). Produces per-query and merged concordance tables. |
 | `--skip-validation` | `-skp` | _(none)_ | Skip the pre-run validation suite. Does not dispatch any Snakemake rule. |
 
 ---
@@ -81,6 +82,9 @@ conda run -n rpsHunter ./rpsHunter --rpsbproc-parser
 # 8. Visualisation and export
 conda run -n rpsHunter ./rpsHunter --completeness-detector
 conda run -n rpsHunter ./rpsHunter --contingency-parser
+
+# 9. Concordance analysis (optional, requires --blast and --rpsbproc-parser)
+conda run -n rpsHunter ./rpsHunter --concordance
 ```
 
 If both ORF and HMMER are disabled, skip steps 4 and 5. The `--blast` step will
@@ -109,14 +113,17 @@ dependencies.
 | `rpsblaster` | `rpsblast_species` x N | `blast_parser_species` FASTAs, CDD database |
 | `rpsbproc` | `rpsbproc_species` x N | `rpsblast_species` ASN files, rpsbproc data |
 | `rpsbproc_parser` | `rpsbproc_parser_species` x N, `aggregate_domains` | `rpsbproc_species` text files |
-| `completeness_detector` | _(single rule)_ | `aggregate_domains`, `aggregate_blast`, `aggregate_rpsblast` |
-| `contingency_sorter` | _(single rule)_ | `aggregate_domains`, `aggregate_blast`, `aggregate_rpsblast` |
+| `completeness_detector` | `pq_completeness_detector` x Q, `merged_completeness_detector` | Per-query + merged `aggregate_domains`, `aggregate_blast`, `aggregate_rpsblast` |
+| `contingency_sorter` | `pq_contingency_sorter` x Q, `merged_contingency_sorter` | Per-query + merged `aggregate_domains`, `aggregate_blast`, `aggregate_rpsblast` |
+| `concordance` | `pq_concordance` x Q, `merge_concordance` | Per-query `aggregate_blast`, `aggregate_domains` |
 
-**ENRICHED_BLAST_DIR** is resolved once at Snakefile parse time:
+**Q** denotes the number of configured queries (1 for single query, N for multi-query).
 
-- `results/hmmer/` when `hmmer.enabled: true`
-- `results/orf/` when only `orf.enabled: true`
-- `results/blast/` when both are disabled
+**ENRICHED_PATTERN** is resolved once at Snakefile parse time:
+
+- `results/hmmer/{query_label}/{species}.parquet` when `hmmer.enabled: true`
+- `results/orf/{query_label}/{species}.parquet` when only `orf.enabled: true`
+- `results/blast/{query_label}/{species}.parquet` when both are disabled
 
 ---
 
@@ -277,16 +284,21 @@ since `hmmsearch` is internally parallelised.
 
 ## Output Locations
 
-| Stage | Per-Species Output | Aggregated Output |
-|-------|--------------------|-------------------|
-| tBLASTn | `results/blast/{species}.parquet` | `results/tables/aggregate.parquet` |
-| ORF | `results/orf/{species}.parquet` | _(enriches blast parquet in place)_ |
-| HMMER | `results/hmmer/{species}.parquet` | _(enriches blast parquet in place)_ |
-| BLAST parser | `results/fastas/{species}.fa`, `results/tables/selected/{species}.parquet` | `results/tables/aggregate.parquet` |
-| RPSBLAST | `results/rpsblast/{species}.parquet` | `results/tables/rpsblast.parquet` |
-| rpsbproc | `results/rpsbproc/{species}.txt` | _(text, not aggregated)_ |
-| Domain parser | `results/domains/{species}.parquet` | `results/tables/domains.parquet` |
-| Tile plot | | `results/plots/tile_plot.png` |
-| 3D plot | | `results/plots/scatter_3D_plot.html` |
-| Contingency | | `results/tables/contingency_table.csv` |
-| GFF3 | | `results/ranges/{species}.gff3` |
+All per-species outputs now include a `{query_label}` subdirectory for multi-query isolation. When using a single `query:` config, there is one query label directory.
+
+| Stage | Per-Query Per-Species Output | Per-Query Aggregate | Merged Output |
+|-------|------------------------------|---------------------|---------------|
+| tBLASTn | `results/blast/{ql}/{species}.parquet` | `results/tables/{ql}/aggregate.parquet` | `results/tables/aggregate.parquet` |
+| ORF | `results/orf/{ql}/{species}.parquet` | _(enriches blast)_ | |
+| HMMER | `results/hmmer/{ql}/{species}.parquet` | _(enriches blast)_ | |
+| BLAST parser | `results/fastas/{ql}/{species}.fa` | `results/tables/{ql}/aggregate.parquet` | `results/tables/aggregate.parquet` |
+| RPSBLAST | `results/rpsblast/{ql}/{species}.parquet` | `results/tables/{ql}/rpsblast.parquet` | `results/tables/rpsblast.parquet` |
+| rpsbproc | `results/rpsbproc/{ql}/{species}.txt` | _(text)_ | |
+| Domain parser | `results/domains/{ql}/{species}.parquet` | `results/tables/{ql}/domains.parquet` | `results/tables/domains.parquet` (deduplicated) |
+| Tile plot | | `results/plots/{ql}/tile_plot.png` | `results/plots/tile_plot.png` |
+| 3D plot | | `results/plots/{ql}/scatter_3D_plot.html` | `results/plots/scatter_3D_plot.html` |
+| Contingency | | `results/tables/{ql}/contingency_table.csv` | `results/tables/contingency_table.csv` |
+| GFF3 | | `results/ranges/{ql}/{species}.gff3` | `results/ranges/{species}.gff3` |
+| Concordance | | `results/concordance/{ql}/` | `results/concordance/` |
+
+`{ql}` = query label (e.g., `human_PRDM9`, `mouse_PRDM9`)

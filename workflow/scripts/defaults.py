@@ -97,10 +97,86 @@ for path in PATH_DICT.values():
     if isinstance(path, Path):
         path.mkdir(parents=True, exist_ok=True)
 
-# Query configuration
-QUERY_FORMAT: str = config['query'].get('format', 'fa')
-QUERY_ACC: str = config['query'].get('accession')
-QUERY_FILE: Path = PATH_DICT['FASTA_DIR'] / f'{QUERY_ACC}.{QUERY_FORMAT.lower()}'
+# =============================================================================
+# Query Configuration (multi-query support)
+# =============================================================================
+
+def _make_label_safe(label: str) -> str:
+    """Convert a display label to a filesystem-safe directory name."""
+    return label.strip().replace(' ', '_').replace('/', '_').replace('\\', '_')
+
+
+# Normalize both config formats to QUERY_DICT: Dict[str, str]  {accession: display_label}
+_queries_raw: Union[dict, None] = config.get('queries', None)
+_query_raw: Union[dict, None] = config.get('query', None)
+
+if _queries_raw and isinstance(_queries_raw, dict):
+    # New multi-query format: queries: {'NP_064612.2': 'human PRDM9', ...}
+    QUERY_DICT: Dict[str, str] = _queries_raw
+    MULTI_QUERY: bool = len(QUERY_DICT) > 1
+elif _query_raw and isinstance(_query_raw, dict):
+    # Legacy single-query format: query: {format: 'fa', accession: 'NP_659058.3'}
+    _acc = _query_raw.get('accession', '')
+    QUERY_DICT: Dict[str, str] = {_acc: _acc}
+    MULTI_QUERY: bool = False
+else:
+    QUERY_DICT: Dict[str, str] = {}
+    MULTI_QUERY: bool = False
+
+# Ordered lists derived from QUERY_DICT
+QUERIES: List[str] = list(QUERY_DICT.keys())                           # accessions
+QUERY_LABELS: Dict[str, str] = {acc: _make_label_safe(label) for acc, label in QUERY_DICT.items()}  # acc → safe label
+QUERY_LABEL_LIST: List[str] = list(QUERY_LABELS.values())              # safe labels in order
+
+# Reverse lookup: safe label → accession
+LABEL_TO_ACC: Dict[str, str] = {v: k for k, v in QUERY_LABELS.items()}
+
+# Legacy singletons (backward-compatible — used by validator.py and any code not yet multi-query)
+QUERY_FORMAT: str = config.get('query', {}).get('format', 'fa')
+QUERY_ACC: str = QUERIES[0] if QUERIES else ''
+QUERY_FILE: Path = PATH_DICT['FASTA_DIR'] / f'{QUERY_ACC}.{QUERY_FORMAT.lower()}' if QUERY_ACC else PATH_DICT['FASTA_DIR']
+
+# =============================================================================
+# Per-Query Directory Generation
+# =============================================================================
+# Directories that hold per-query outputs need {query_label} subdirectories.
+# These must be created after QUERY_LABEL_LIST is available.
+
+_PER_QUERY_PARENTS = [
+    PATH_DICT['BLAST_SPECIES_DIR'],       # results/blast/{ql}/
+    PATH_DICT['ORF_OUTPUT_DIR'],          # results/orf/{ql}/
+    PATH_DICT['HMM_OUTPUT_DIR'],          # results/hmmer/{ql}/
+    PATH_DICT['FASTA_OUTPUT_DIR'],        # results/fastas/{ql}/
+    PATH_DICT['RPSBLAST_SPECIES_DIR'],    # results/rpsblast/{ql}/
+    PATH_DICT['RPSBPROC_OUTPUT_DIR'],     # results/rpsbproc/{ql}/
+    PATH_DICT['DOMAINS_SPECIES_DIR'],     # results/domains/{ql}/
+    PATH_DICT['ASN_TBLASTN_DIR'],         # results/asn/tblastn/{ql}/
+    PATH_DICT['ASN_RPSBLAST_DIR'],        # results/asn/rpsblast/{ql}/
+    PATH_DICT['TABLE_OUTPUT_DIR'],        # results/tables/{ql}/ (aggregates + contingency)
+    PATH_DICT['PLOT_DIR'],                # results/plots/{ql}/ (tile + 3D plots)
+    PATH_DICT['RANGE_OUTPUT_DIR'],        # results/ranges/{ql}/ (GFF3)
+]
+
+# Also: results/tables/{ql}/selected/ and results/concordance/{ql}/
+_PER_QUERY_NESTED = [
+    PATH_DICT['TABLE_OUTPUT_DIR'] / '{ql}' / 'selected',
+    PATH_DICT['RESULTS_DIR'] / 'concordance' / '{ql}',
+]
+
+for _ql in QUERY_LABEL_LIST:
+    for _parent in _PER_QUERY_PARENTS:
+        (_parent / _ql).mkdir(parents=True, exist_ok=True)
+    for _nested_tmpl in _PER_QUERY_NESTED:
+        Path(str(_nested_tmpl).replace('{ql}', _ql)).mkdir(parents=True, exist_ok=True)
+
+# Top-level concordance directory
+(PATH_DICT['RESULTS_DIR'] / 'concordance').mkdir(parents=True, exist_ok=True)
+
+
+def query_file_path(accession: str) -> Path:
+    """Return the FASTA file path for a given query accession."""
+    fmt = config.get('query', {}).get('format', 'fa').lower()
+    return PATH_DICT['FASTA_DIR'] / f'{accession}.{fmt}'
 
 # Execution and requests
 NUM_CORES: int = config['execution'].get('num_cores', 1)

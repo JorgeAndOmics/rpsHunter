@@ -27,7 +27,8 @@ import colored_logging
 
 def parse_rpsbproc_output(
     files: List[Path],
-    output_parquet: Path
+    output_parquet: Path,
+    query_accession: str = ''
 ) -> None:
     """
     Parses RPSBPROC output file(s) and writes tabular results to disk.
@@ -47,7 +48,8 @@ def parse_rpsbproc_output(
     """
     domain_hits: List[Dict[str, Any]] = []
     fieldnames: List[str] = [
-        'Species', 'Species_Name', 'Session_ordinal', 'Program', 'Version', 'Database', 'Score_matrix', 'Evalue_threshold',
+        'Species', 'Species_Name', 'Query_Accession',
+        'Session_ordinal', 'Program', 'Version', 'Database', 'Score_matrix', 'Evalue_threshold',
         'Query_ID', 'Seq_type', 'Seq_length', 'Definition', 'Chromosome', 'Start', 'End',
         'Hit_type', 'PSSM_ID', 'From', 'To', 'Evalue', 'Bitscore',
         'Accession', 'Domain', 'Incomplete', 'Superfamily_PSSM_ID'
@@ -116,6 +118,7 @@ def parse_rpsbproc_output(
                         domain_hit = {
                             'Species': file_name_without_ext,
                             'Species_Name': defaults.SPECIES_DICT.get(file_name_without_ext, file_name_without_ext),
+                            'Query_Accession': query_accession,
                             'Session_ordinal': domain_parts[0],
                             'Query_ID': domain_parts[1],
                             'Hit_type': domain_parts[2],
@@ -150,6 +153,7 @@ def parse_rpsbproc_output(
                     no_domain_hit = {
                         'Species': file_name_without_ext,
                         'Species_Name': defaults.SPECIES_DICT.get(file_name_without_ext, file_name_without_ext),
+                        'Query_Accession': query_accession,
                         'Session_ordinal': current_session.get('Session_ordinal', ''),
                         'Program': current_session.get('Program', ''),
                         'Version': current_session.get('Version', ''),
@@ -220,10 +224,18 @@ if __name__ == '__main__':
         help='Output parquet path (e.g. results/domains/{species}.parquet).'
     )
 
+    parser.add_argument(
+        '--query-accession',
+        type=str,
+        default='',
+        help='Query accession ID for provenance tracking.'
+    )
+
     args = parser.parse_args()
 
     colored_logging.colored_logging(log_file_name='rpsbproc_parser.txt')
     parse_rpsbproc_output(
         files=[Path(args.input_txt)],
-        output_parquet=Path(args.output_parquet)
+        output_parquet=Path(args.output_parquet),
+        query_accession=args.query_accession
     )

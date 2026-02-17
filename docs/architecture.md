@@ -9,13 +9,15 @@ rpsHunter is a multi-stage bioinformatics pipeline that detects, quantifies, and
 
 Between these two searches, optional enrichment stages (ORF detection, HMMER filtering) refine the hit set. The pipeline processes multiple species in parallel using Snakemake's wildcard system.
 
+The pipeline supports **multi-query mode**: multiple query proteins can be searched independently (each running the full pipeline), with domain-level deduplication of the merged results via GenomicRanges. This is controlled by the `queries:` config key.
+
 ## Pipeline Data Flow
 
 ```mermaid
 graph TD
     A["Genome FASTA<br/>(per species)"] --> B["tBLASTn<br/>blast_species"]
-    Q["Query Protein<br/>(single accession)"] --> B
-    B --> C["blast/{species}.parquet"]
+    Q["Query Protein(s)<br/>(per query_label)"] --> B
+    B --> C["blast/{ql}/{species}.parquet"]
     C --> D{ORF enabled?}
     D -->|yes| E["ORF Analyser<br/>orf_species"]
     D -->|no| F{HMMER enabled?}
@@ -32,10 +34,12 @@ graph TD
     J --> K["rpsbproc<br/>rpsbproc_species"]
     K --> L["rpsbproc_parser<br/>rpsbproc_parser_species"]
     L --> M["domains/{species}.parquet"]
-    M --> N["aggregate_domains"]
-    N --> O["tables/domains.parquet"]
-    O --> P1["Tile Plot<br/>completeness_detector"]
-    O --> P2["3D Plot + GFF3<br/>contingency_sorter"]
+    M --> N["aggregate_domains<br/>(per query)"]
+    N --> O["tables/{ql}/domains.parquet"]
+    O --> MM["merge_domains<br/>(cross-query dedup)"]
+    MM --> MO["tables/domains.parquet"]
+    MO --> P1["Tile Plot<br/>completeness_detector"]
+    MO --> P2["3D Plot + GFF3<br/>contingency_sorter"]
     P1 --> R1["plots/tile_plot.png"]
     P2 --> R2["plots/scatter_3D_plot.html"]
     P2 --> R3["ranges/{species}.gff3"]
@@ -144,7 +148,7 @@ PRE_HMMER_DIR =
 
 ## Parallelism Model
 
-rpsHunter uses Snakemake's wildcard system for parallelism. Every per-species rule uses a `{species}` wildcard, allowing Snakemake to schedule them as independent jobs.
+rpsHunter uses Snakemake's wildcard system for parallelism. Every per-species rule uses dual `{query_label}` x `{species}` wildcards, allowing Snakemake to schedule them as independent jobs. With Q queries and N species, most rules produce Q x N jobs.
 
 ```mermaid
 graph TD
@@ -237,6 +241,8 @@ rpsHunter is built on four core principles:
 | `rpsbproc.py` | Domain Detection | Runs rpsbproc on RPSBLAST ASN output |
 | `rpsbproc_parser.py` | Domain Detection | Parses rpsbproc text output into structured domain parquet |
 | `aggregate.py` | Aggregation | Concatenates per-species parquets into combined tables |
+| `merge_queries.R` | Merge | Cross-query domain deduplication via GenomicRanges range reduction |
+| `concordance.py` | Analysis | Multi-method concordance analysis (HMMER vs CDD domain agreement) |
 | `cdd_subset.py` | Database Prep | Builds CDD subset database from target domain SMP files |
 | `completeness_detector.R` | Visualization | Generates domain completeness tile plot |
 | `contingency_sorter.R` | Visualization | Generates 3D scatter plot, contingency table, GFF3 files |

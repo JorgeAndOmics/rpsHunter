@@ -349,3 +349,19 @@ Removing the ORF gate increases selected sequences by 61x (250 to 15,316) and do
 | SSXRD domains found | 0 | 1 | -- |
 
 The ORF filter was the sole barrier preventing KRAB, SET, and SSXRD detection. These domains passed BLAST quality thresholds and HMMER identification but lacked ORFs of sufficient length to pass the ORF gate.
+
+---
+
+## Cross-Query Domain Deduplication
+
+When using multi-query mode (`queries:` config key with multiple accessions), each query runs the full filtering pipeline independently. After all per-query pipelines complete, the `merge_domains` rule deduplicates overlapping domain annotations using GenomicRanges:
+
+1. **Group** domain annotations by Species x Chromosome x Domain
+2. **Reduce** overlapping `[Start, End]` intervals using `GenomicRanges::reduce(with.revmap=TRUE)`
+3. **Collapse** metadata from contributing rows:
+   - Bitscore: `max()`, Evalue: `min()` (best evidence)
+   - Hit_type: priority order Specific > Non-specific > Superfamily
+   - Incomplete: priority order `-` > `C`/`N` > `NC` (if any hit was complete, merged region is complete)
+   - Query_Accession, Tag: comma-separated unique values (provenance tracking)
+
+This ensures that the same genomic region annotated by different queries produces a single merged domain annotation with the best available evidence. The `Query_Accession` column in the merged output records all contributing queries.

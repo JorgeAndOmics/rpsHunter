@@ -233,7 +233,10 @@ def main_validator(fasta_files: Optional[List[Path]]) -> bool:
         yaml_file=defaults.CONFIG_FILE
     )
 
-    query_ok = query_validator(query_accession=defaults.config['query']['accession'])
+    query_ok = all(
+        query_validator(query_accession=acc)
+        for acc in defaults.QUERIES
+    ) if defaults.QUERIES else False
 
     if not defaults.USE_SPECIES_DICT and fasta_files:
         fasta_results = [fasta_validator(f) for f in fasta_files]
