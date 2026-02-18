@@ -52,7 +52,8 @@ if (is.list(queries_raw) && !is.null(names(queries_raw))) {
   query_accessions <- single_acc
   query_labels     <- single_acc
 }
-n_queries <- length(query_accessions)
+n_queries   <- length(query_accessions)
+acc_to_label <- setNames(query_labels, query_accessions)   # accession → display label
 
 # =============================================================================
 # DATA LOADING (once, shared across all plots)
@@ -110,7 +111,14 @@ cat("Plot 1: Concordance Validation Heatmap\n")
 
 p1_data <- df_conc_dom %>%
   filter(HMMER_Checkable == TRUE) %>%
-  group_by(Species_Name, Domain_Family, Query_Accession) %>%
+  mutate(
+    Query_Label = ifelse(
+      Query_Accession %in% names(acc_to_label),
+      acc_to_label[Query_Accession],
+      Query_Accession
+    )
+  ) %>%
+  group_by(Species_Name, Domain_Family, Query_Label) %>%
   summarise(
     Confirmed = sum(Concordance == "confirmed", na.rm = TRUE),
     Total     = n(),
@@ -129,7 +137,7 @@ p1 <- ggplot(p1_data, aes(x = Species_Name, y = Domain_Family, fill = Rate)) +
     limits = c(0, 1),
     option = "viridis"
   ) +
-  facet_wrap(~ Query_Accession, ncol = max(1L, as.integer(n_queries))) +
+  facet_wrap(~ Query_Label, ncol = max(1L, as.integer(n_queries))) +
   labs(
     title    = "Concordance Validation Heatmap",
     subtitle = "Fraction of CDD annotations confirmed by HMMER (HMMER-checkable families only)",
@@ -275,38 +283,49 @@ p4_data <- df_conc_seq %>%
       labels         = c("Q1 (0-25%)", "Q2 (25-50%)", "Q3 (50-75%)", "Q4 (75-100%)"),
       right          = TRUE,
       include.lowest = TRUE
+    ),
+    Query_Label = ifelse(
+      Query_Accession %in% names(acc_to_label),
+      acc_to_label[Query_Accession],
+      Query_Accession
     )
   ) %>%
   filter(!is.na(Concordance_Quartile))
 
+# Design: x = quartile (4 clearly-labelled categories), facet_grid rows=species / cols=query.
+# This gives one violin per quartile per panel — every x-axis tick maps to exactly one violin.
 p4 <- ggplot(
   p4_data,
-  aes(x = Species_Name, y = N_CDD_Domains, fill = Concordance_Quartile)
+  aes(x = Concordance_Quartile, y = N_CDD_Domains, fill = Concordance_Quartile)
 ) +
-  geom_violin(
-    position = position_dodge(width = 0.9),
-    scale    = "count",
-    alpha    = 0.75
-  ) +
+  geom_violin(scale = "count", alpha = 0.75, trim = TRUE) +
   geom_boxplot(
-    aes(group = interaction(Species_Name, Concordance_Quartile)),
-    position     = position_dodge(width = 0.9),
-    width        = 0.08,
+    width        = 0.10,
     colour       = "black",
-    outlier.size = 0.3
+    fill         = "white",
+    outlier.size = 0.3,
+    outlier.alpha = 0.4
   ) +
-  scale_fill_manual(values = p4_quartile_cols, name = "Concordance\nQuartile") +
-  facet_wrap(~ Query_Accession, ncol = max(1L, as.integer(n_queries))) +
+  scale_fill_manual(values = p4_quartile_cols, name = "Concordance\nQuartile", guide = "none") +
+  facet_grid(rows = vars(Species_Name), cols = vars(Query_Label)) +
   labs(
-    title    = "Per-Sequence Domain Complexity",
-    subtitle = "Number of CDD domains per BLAST hit, stratified by concordance rate quartile",
-    x = NULL,
-    y = "N CDD Domains"
+    title    = "Per-Sequence Domain Complexity by Concordance Quartile",
+    subtitle = paste0(
+      "Each panel = one species \u00d7 one query. ",
+      "x-axis = concordance rate quartile of the BLAST hit sequence. ",
+      "y-axis = number of CDD domains annotated on that sequence."
+    ),
+    x = "Concordance Rate Quartile",
+    y = "N CDD Domains per Sequence"
   ) +
   theme_rpsHunter() +
-  theme(axis.text.x = element_text(angle = 30, hjust = 1, face = "bold.italic"))
+  theme(
+    axis.text.x  = element_text(angle = 30, hjust = 1),
+    strip.text.y = element_text(face = "bold.italic", angle = 0, hjust = 0),
+    strip.text.x = element_text(face = "bold")
+  )
 
-ggsave(out_sequence_complexity, p4, width = 14, height = 7, dpi = 300)
+ggsave(out_sequence_complexity, p4, width = 10, height = 3 * length(unique(p4_data$Species_Name)), dpi = 300)
 cat("  Saved:", out_sequence_complexity, "\n")
 
 # =============================================================================
@@ -330,60 +349,93 @@ df_domains_chr <- df_domains %>%
   filter(!is.na(Chromosome) & nzchar(Chromosome)) %>%
   filter(grepl("[0-9]", Chromosome)) %>%
   mutate(
-    # Extract first run of digits from chromosome name (e.g. "CM040296.1" → 40296,
-    # "NC_000001.11" → 1). Using regmatches+regexpr avoids the perl=TRUE requirement
-    # of gsub backreferences.
+    # Extract the first long run of digits for within-species ordering.
+    # For CM accessions (e.g. "CM040296.1") this gives the assembly-sequential
+    # integer; for NC accessions (e.g. "NC_000001.11") it gives 1.
     Chr_num = suppressWarnings(
       as.integer(regmatches(Chromosome, regexpr("[0-9]+", Chromosome)))
+    ),
+    # Group domains into families using the same logic as group_domain_family()
+    Domain_Family = dplyr::case_when(
+      grepl("^KRAB",     Domain) ~ "KRAB",
+      grepl("^SET",      Domain) ~ "SET",
+      grepl("^SSXRD",    Domain) ~ "SSXRD",
+      grepl("^zf-C2H2",  Domain) ~ "zf-C2H2",
+      grepl("^zf-H2C2",  Domain) ~ "zf-H2C2",
+      grepl("^ZnF_C2H2", Domain) ~ "ZnF_C2H2",
+      grepl("^COG5048",  Domain) ~ "COG5048",
+      grepl("^DUF4371",  Domain) ~ "DUF4371",
+      TRUE ~ "Other"
     )
   ) %>%
   filter(!is.na(Chr_num))
 
-p5_tile_data <- df_domains_chr %>%
-  group_by(Species_Name, Chromosome, Chr_num) %>%
-  summarise(
-    n_domains       = n(),
-    Dominant_Domain = {
-      tbl <- table(Domain)
-      names(tbl)[which.max(tbl)]
-    },
-    .groups = "drop"
+# Count per species × chromosome × domain family
+p5_stacked_data <- df_domains_chr %>%
+  group_by(Species_Name, Chromosome, Chr_num, Domain_Family) %>%
+  summarise(Count = n(), .groups = "drop")
+
+# Per-species chromosome ordering by Chr_num (assembly position)
+p5_stacked_data <- p5_stacked_data %>%
+  group_by(Species_Name) %>%
+  mutate(
+    Chromosome = factor(Chromosome, levels = unique(Chromosome[order(Chr_num)]))
   ) %>%
-  mutate(log_density = log10(n_domains + 1))
+  ungroup()
 
-# Build a globally sorted chromosome factor for a clean x-axis
-chr_order <- p5_tile_data %>%
-  distinct(Chromosome, Chr_num) %>%
-  arrange(Chr_num, Chromosome) %>%
-  pull(Chromosome)
-p5_tile_data <- p5_tile_data %>%
-  mutate(Chromosome = factor(Chromosome, levels = unique(chr_order)))
+# Consistent domain family factor order (by total abundance, most frequent first)
+family_order_p5 <- p5_stacked_data %>%
+  group_by(Domain_Family) %>%
+  summarise(Total = sum(Count), .groups = "drop") %>%
+  arrange(desc(Total)) %>%
+  pull(Domain_Family)
+p5_stacked_data <- p5_stacked_data %>%
+  mutate(Domain_Family = factor(Domain_Family, levels = family_order_p5))
 
-p5 <- ggplot(p5_tile_data, aes(x = Chromosome, y = Species_Name, fill = log_density)) +
-  geom_tile(colour = "white", linewidth = 0.3) +
-  geom_text(
-    data = filter(p5_tile_data, n_domains > 50),
-    aes(label = substr(Dominant_Domain, 1, 4)),
-    size = 2.2, colour = "white"
+domain_family_cols <- c(
+  "zf-C2H2"   = "#984EA3",
+  "COG5048"   = "#377EB8",
+  "SET"       = "#4DAF4A",
+  "zf-H2C2"   = "#FF7F00",
+  "ZnF_C2H2"  = "#A65628",
+  "KRAB"      = "#E41A1C",
+  "SSXRD"     = "#F781BF",
+  "DUF4371"   = "#999999",
+  "Other"     = "#DDDDDD"
+)
+
+n_species_p5 <- length(unique(p5_stacked_data$Species_Name))
+
+p5 <- ggplot(p5_stacked_data, aes(x = Chromosome, y = Count, fill = Domain_Family)) +
+  geom_col(position = "stack", width = 0.9) +
+  scale_fill_manual(
+    values = domain_family_cols,
+    name   = "Domain Family",
+    drop   = FALSE
   ) +
-  scale_fill_gradient(
-    low  = "#EFF3FF",
-    high = "#08306B",
-    name = "log10(n+1)"
-  ) +
+  facet_wrap(~ Species_Name, ncol = 1, scales = "free_x") +
   labs(
-    title    = "Chromosomal Domain Density Heatmap",
-    subtitle = "log10(domain count + 1) per chromosome; dominant domain labelled where count > 50; scaffolds excluded",
-    x = "Chromosome",
-    y = NULL
+    title    = "Chromosomal Domain Distribution",
+    subtitle = paste0(
+      "Stacked count of all domain families per chromosome per species. ",
+      "Chromosomes ordered by assembly position (accession order). Scaffolds excluded."
+    ),
+    x = "Chromosome (assembly accession)",
+    y = "Domain Count"
   ) +
   theme_rpsHunter() +
   theme(
     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 6),
-    axis.text.y = element_text(face = "bold.italic")
+    strip.text  = element_text(face = "bold.italic", size = 10)
   )
 
-ggsave(out_chromosomal_density, p5, width = 20, height = 6, dpi = 300)
+ggsave(
+  out_chromosomal_density, p5,
+  width     = 20,
+  height    = 4 * n_species_p5,
+  dpi       = 300,
+  limitsize = FALSE
+)
 cat("  Saved:", out_chromosomal_density, "\n")
 
 # =============================================================================
