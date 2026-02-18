@@ -332,7 +332,9 @@ p4 <- ggplot(
     strip.text.x = element_text(face = "bold")
   )
 
-ggsave(out_sequence_complexity, p4, width = 10, height = 3 * length(unique(p4_data$Species_Name)), dpi = 300)
+p4_height_in <- 3 * length(unique(p4_data$Species_Name))
+p4_dpi       <- max(72L, min(300L, as.integer(MAX_PNG_PX / p4_height_in)))
+ggsave(out_sequence_complexity, p4, width = 10, height = p4_height_in, dpi = p4_dpi, limitsize = FALSE)
 cat("  Saved:", out_sequence_complexity, "\n")
 
 # =============================================================================
