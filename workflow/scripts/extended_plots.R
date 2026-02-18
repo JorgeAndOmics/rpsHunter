@@ -455,31 +455,44 @@ cat("  Saved:", out_chromosomal_density, "\n")
 cat("Plot 6: Cross-Query Domain Comparison\n")
 
 if (n_queries >= 2) {
-  acc1 <- query_accessions[1]
-  acc2 <- query_accessions[2]
-  lab1 <- query_labels[1]
-  lab2 <- query_labels[2]
-
+  # For each domain row, detect which of the N configured query accessions appear
+  # in the (possibly comma-separated) Query_Accession field, map to labels, then
+  # classify as exclusive (one query) or shared (>1 queries).
   p6_data <- df_domains %>%
+    mutate(Domain_Family = group_domain_family(Domain)) %>%
+    rowwise() %>%
     mutate(
-      Domain_Family = group_domain_family(Domain),
+      present_labels = list(
+        query_labels[vapply(query_accessions,
+                            function(acc) grepl(acc, Query_Accession, fixed = TRUE),
+                            logical(1))]
+      ),
+      N_Queries_Hit = length(present_labels),
       Query_Origin  = dplyr::case_when(
-        !grepl(acc1, Query_Accession, fixed = TRUE) &
-          grepl(acc2, Query_Accession, fixed = TRUE) ~ paste0(lab2, " only"),
-        grepl(acc1, Query_Accession, fixed = TRUE) &
-          !grepl(acc2, Query_Accession, fixed = TRUE) ~ paste0(lab1, " only"),
-        grepl(acc1, Query_Accession, fixed = TRUE) &
-          grepl(acc2, Query_Accession, fixed = TRUE) ~ "Both",
-        TRUE ~ NA_character_
+        N_Queries_Hit == 0 ~ NA_character_,
+        N_Queries_Hit == 1 ~ present_labels[[1]],
+        TRUE               ~ paste0("Shared (", N_Queries_Hit, " queries)")
       )
     ) %>%
+    ungroup() %>%
     filter(!is.na(Query_Origin)) %>%
     group_by(Species_Name, Domain_Family, Query_Origin) %>%
     summarise(Count = n(), .groups = "drop")
 
-  origin_levels <- c(paste0(lab1, " only"), "Both", paste0(lab2, " only"))
-  p6_cols       <- c("#C0392B", "#8E44AD", "#2980B9")
-  names(p6_cols) <- origin_levels
+  # Colour palette: one colour per query label + grey scale for shared categories
+  query_palette <- c("#C0392B", "#2980B9", "#27AE60", "#8E44AD",
+                     "#E67E22", "#16A085", "#2C3E50", "#8E44AD")
+  exclusive_cols <- setNames(query_palette[seq_len(n_queries)], query_labels)
+
+  shared_levels <- sort(unique(grep("^Shared", p6_data$Query_Origin, value = TRUE)))
+  n_shared      <- length(shared_levels)
+  shared_cols   <- setNames(
+    grey.colors(max(1L, n_shared), start = 0.55, end = 0.80),
+    shared_levels
+  )
+
+  p6_cols       <- c(exclusive_cols, shared_cols)
+  origin_levels <- c(query_labels, shared_levels)
 
   p6_data <- p6_data %>%
     mutate(Query_Origin = factor(Query_Origin, levels = origin_levels))
@@ -490,14 +503,17 @@ if (n_queries >= 2) {
     facet_wrap(~ Domain_Family, scales = "free_y", ncol = 3) +
     labs(
       title    = "Cross-Query Domain Comparison",
-      subtitle = "Domain annotations per species classified by query origin (exclusive vs shared)",
+      subtitle = paste0(
+        "Domain annotations per species classified by query origin. ",
+        "Solid colours = exclusive to one query; grey = detected by multiple queries."
+      ),
       x = NULL,
       y = "Count"
     ) +
     theme_rpsHunter() +
     theme(axis.text.x = element_text(angle = 35, hjust = 1, face = "bold.italic"))
 
-  ggsave(out_cross_query, p6, width = 16, height = 12, dpi = 300)
+  ggsave(out_cross_query, p6, width = 16, height = 12, dpi = 300, limitsize = FALSE)
   cat("  Saved:", out_cross_query, "\n")
 
 } else {
