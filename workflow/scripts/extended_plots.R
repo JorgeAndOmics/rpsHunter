@@ -229,6 +229,11 @@ p3_data <- df_contingency %>%
     Bar_Label = ifelse(Proportion > 0.05, as.character(as.integer(Count)), "")
   )
 
+# PNG devices hard-cap at 50,000 px per dimension regardless of limitsize = FALSE.
+# For plots that scale height with species count we compute DPI dynamically so
+# height_in * dpi stays within 49,000 px, with a floor of 72 DPI.
+MAX_PNG_PX  <- 49000L
+
 n_species_p3 <- length(unique(p3_data$Species_Name))
 
 p3 <- ggplot(p3_data, aes(x = Domain, y = Count, fill = Incomplete)) +
@@ -253,11 +258,13 @@ p3 <- ggplot(p3_data, aes(x = Domain, y = Count, fill = Incomplete)) +
     strip.text  = element_text(face = "bold.italic", size = 9)
   )
 
+p3_height_in <- 4 * n_species_p3
+p3_dpi       <- max(72L, min(300L, as.integer(MAX_PNG_PX / p3_height_in)))
 ggsave(
   out_completeness_bars, p3,
   width     = max(12, length(domain_order_p3) * 0.55),
-  height    = 4 * n_species_p3,
-  dpi       = 300,
+  height    = p3_height_in,
+  dpi       = p3_dpi,
   limitsize = FALSE
 )
 cat("  Saved:", out_completeness_bars, "\n")
@@ -429,11 +436,13 @@ p5 <- ggplot(p5_stacked_data, aes(x = Chromosome, y = Count, fill = Domain_Famil
     strip.text  = element_text(face = "bold.italic", size = 10)
   )
 
+p5_height_in <- 4 * n_species_p5
+p5_dpi       <- max(72L, min(300L, as.integer(MAX_PNG_PX / p5_height_in)))
 ggsave(
   out_chromosomal_density, p5,
   width     = 20,
-  height    = 4 * n_species_p5,
-  dpi       = 300,
+  height    = p5_height_in,
+  dpi       = p5_dpi,
   limitsize = FALSE
 )
 cat("  Saved:", out_chromosomal_density, "\n")
@@ -558,11 +567,13 @@ p7 <- ggplot(p7_data, aes(x = Domain, y = Count, fill = Hit_type)) +
     strip.text  = element_text(face = "bold.italic", size = 9)
   )
 
+p7_height_in <- 4 * n_species_p7
+p7_dpi       <- max(72L, min(300L, as.integer(MAX_PNG_PX / p7_height_in)))
 ggsave(
   out_hit_type, p7,
   width     = max(12, length(domain_order_p7) * 0.55),
-  height    = 4 * n_species_p7,
-  dpi       = 300,
+  height    = p7_height_in,
+  dpi       = p7_dpi,
   limitsize = FALSE
 )
 cat("  Saved:", out_hit_type, "\n")
