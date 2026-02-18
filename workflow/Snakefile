@@ -158,6 +158,8 @@ rule query_downloader_setup:
         query_dir=str(defaults.PATH_DICT['FASTA_DIR']),
         download_log=str(defaults.PATH_DICT['CONFIG_DIR'] / 'download.txt'),
         entrez_email=defaults.ENTREZ_EMAIL
+    resources:
+        ncbi_api=1   # serialise all query downloads — prevents HTTP 429 from simultaneous efetch calls
     shell:
         '''
         export ENTREZ_EMAIL={params.entrez_email:q} && \

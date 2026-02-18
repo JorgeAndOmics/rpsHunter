@@ -226,7 +226,9 @@ def cli_entry() -> None:
             rule='query_downloader',
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
-            snakemake_flags=unknown
+            # Cap concurrent NCBI API calls to 1 to avoid HTTP 429 (Too Many Requests).
+            # The rule declares resources: ncbi_api=1; this sets the global pool size.
+            snakemake_flags=['--resources', 'ncbi_api=1'] + (unknown or [])
         )
 
     if args.blast_dbs:
