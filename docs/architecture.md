@@ -102,7 +102,14 @@ graph TD
 | `rpsbproc_parser_species` | `--rpsbproc-parser` | Parse rpsbproc text output into structured domain parquets |
 | `aggregate_domains` | `--rpsbproc-parser` | Concatenate per-species domain parquets into `tables/domains.parquet` |
 
-### Stage 7: Visualization & Aggregation
+### Stage 7: Hit–Domain Inventory
+
+| Rule | CLI Flag | Description |
+|------|----------|-------------|
+| `pq_hit_domain_inventory` | `--hit-domain-inventory` | Join BLAST hits with CDD domains via Tag; flag completeness against `hmmer.profiles` |
+| `merge_hit_domain_inventory` | `--hit-domain-inventory` | Concatenate per-query inventories into merged table |
+
+### Stage 8: Visualization & Aggregation
 
 Both visualization rules also trigger all three aggregation rules (`aggregate_blast`, `aggregate_rpsblast`, `aggregate_domains`) as inputs, ensuring all aggregate tables are generated when running the terminal pipeline stages.
 
@@ -242,6 +249,7 @@ rpsHunter is built on four core principles:
 | `rpsbproc_parser.py` | Domain Detection | Parses rpsbproc text output into structured domain parquet |
 | `aggregate.py` | Aggregation | Concatenates per-species parquets into combined tables |
 | `merge_queries.R` | Merge | Cross-query domain deduplication via GenomicRanges range reduction |
+| `hit_domain_inventory.py` | Analysis | Join BLAST hits with CDD domains via Tag; completeness flagging |
 | `concordance.py` | Analysis | Multi-method concordance analysis (HMMER vs CDD domain agreement) |
 | `cdd_subset.py` | Database Prep | Builds CDD subset database from target domain SMP files |
 | `completeness_detector.R` | Visualization | Generates domain completeness tile plot |

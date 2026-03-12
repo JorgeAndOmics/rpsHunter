@@ -97,6 +97,12 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
+        '--hit-domain-inventory',
+        action='store_true',
+        help="Generates hit–domain inventory table (BLAST hits joined with CDD domains)."
+    )
+
+    parser.add_argument(
         '--concordance',
         action='store_true',
         help="Runs multi-method concordance analysis (HMMER vs CDD agreement)."
@@ -164,6 +170,9 @@ if __name__ == '__main__':
 
     if args.contingency_parser:
         main_cmd.append('--contingency-parser')
+
+    if args.hit_domain_inventory:
+        main_cmd.append('--hit-domain-inventory')
 
     if args.concordance:
         main_cmd.append('--concordance')

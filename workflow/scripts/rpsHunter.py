@@ -169,6 +169,9 @@ def cli_entry() -> None:
     parser.add_argument('--contingency-parser', action='store_true',
                         help='Generate contingency tables and visual plots.')
 
+    parser.add_argument('--hit-domain-inventory', action='store_true',
+                        help='Generate hit–domain inventory table (BLAST hits joined with CDD domains).')
+
     parser.add_argument('--concordance', action='store_true',
                         help='Run multi-method concordance analysis (HMMER vs CDD agreement).')
 
@@ -298,6 +301,14 @@ def cli_entry() -> None:
     if args.contingency_parser:
         run_snakemake_rule(
             rule='contingency_sorter',
+            num_cores=defaults.NUM_CORES,
+            display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
+            snakemake_flags=unknown
+        )
+
+    if args.hit_domain_inventory:
+        run_snakemake_rule(
+            rule='hit_domain_inventory',
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown

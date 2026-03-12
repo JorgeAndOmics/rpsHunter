@@ -42,6 +42,7 @@ conda run -n rpsHunter ./rpsHunter --hmmer --blast --skip-validation
 | `--rpsbproc-parser` | | `rpsbproc_parser` | Parse rpsbproc text output into structured parquets and aggregate into `tables/domains.parquet`. |
 | `--completeness-detector` | | `completeness_detector` | Generate tile plot (domain completeness heatmap). |
 | `--contingency-parser` | | `contingency_sorter` | Generate 3D scatter plot, contingency table (CSV), and GFF3 genomic coordinate files. |
+| `--hit-domain-inventory` | | `hit_domain_inventory` | Generate hit–domain inventory table: joins BLAST hits with their CDD domain annotations via Tag, flags completeness against `hmmer.profiles`. Per-query and merged outputs. |
 | `--concordance` | | `concordance` | Run multi-method concordance analysis (HMMER vs CDD agreement). Produces per-query and merged concordance tables. |
 | `--extended-plots` | | `extended_plots` | Generate extended visualization suite: 7 static PNG plots covering concordance validation, evidence quality, completeness distribution, sequence complexity, chromosomal density, cross-query comparison, and hit-type composition. Requires merged domain, contingency, and concordance outputs. |
 | `--skip-validation` | `-skp` | _(none)_ | Skip the pre-run validation suite. Does not dispatch any Snakemake rule. |
@@ -84,10 +85,13 @@ conda run -n rpsHunter ./rpsHunter --rpsbproc-parser
 conda run -n rpsHunter ./rpsHunter --completeness-detector
 conda run -n rpsHunter ./rpsHunter --contingency-parser
 
-# 9. Concordance analysis (optional, requires --blast and --rpsbproc-parser)
+# 9. Hit–domain inventory (optional, requires --blast and --rpsbproc-parser)
+conda run -n rpsHunter ./rpsHunter --hit-domain-inventory
+
+# 10. Concordance analysis (optional, requires --blast and --rpsbproc-parser)
 conda run -n rpsHunter ./rpsHunter --concordance
 
-# 10. Extended visualization suite (optional, requires --contingency-parser and --concordance)
+# 11. Extended visualization suite (optional, requires --contingency-parser and --concordance)
 conda run -n rpsHunter ./rpsHunter --extended-plots
 ```
 
@@ -119,8 +123,9 @@ dependencies.
 | `rpsbproc_parser` | `rpsbproc_parser_species` x N, `aggregate_domains` | `rpsbproc_species` text files |
 | `completeness_detector` | `pq_completeness_detector` x Q, `merged_completeness_detector` | Per-query + merged `aggregate_domains`, `aggregate_blast`, `aggregate_rpsblast` |
 | `contingency_sorter` | `pq_contingency_sorter` x Q, `merged_contingency_sorter` | Per-query + merged `aggregate_domains`, `aggregate_blast`, `aggregate_rpsblast` |
+| `hit_domain_inventory` | `pq_hit_domain_inventory` x Q, `merge_hit_domain_inventory` | Per-query `aggregate_blast`, `aggregate_domains` |
 | `concordance` | `pq_concordance` x Q, `merge_concordance` | Per-query `aggregate_blast`, `aggregate_domains` |
-| `extended_plots` | _(single rule, no wildcards)_ | `tables/domains.parquet`, `tables/contingency_table.parquet`, `concordance/merged_concordance_domains.parquet`, `concordance/merged_concordance_sequences.parquet` |
+| `extended_plots` | _(single rule, no wildcards)_ | `tables/domains.parquet`, `tables/contingency_table.parquet`, `tables/merged_concordance_domains.parquet`, `tables/merged_concordance_sequences.parquet` |
 
 **Q** denotes the number of configured queries (1 for single query, N for multi-query).
 
@@ -304,7 +309,8 @@ All per-species outputs now include a `{query_label}` subdirectory for multi-que
 | 3D plot | | `results/plots/{ql}/scatter_3D_plot.html` | `results/plots/scatter_3D_plot.html` |
 | Contingency | | `results/tables/{ql}/contingency_table.csv` | `results/tables/contingency_table.csv` |
 | GFF3 | | `results/ranges/{ql}/{species}.gff3` | `results/ranges/{species}.gff3` |
-| Concordance | | `results/concordance/{ql}/` | `results/concordance/` |
+| Hit–domain inventory | | `results/tables/{ql}/hit_domain_inventory.*`, `locus_domain_inventory.*` | `results/tables/hit_domain_inventory.*`, `locus_domain_inventory.*` |
+| Concordance | | `results/tables/{ql}/concordance_*.*` | `results/tables/merged_concordance_*.*` |
 | Extended plots | | _(none — reads merged outputs only)_ | `results/plots/concordance_heatmap.png`, `evidence_quality.png`, `completeness_bars.png`, `sequence_complexity.png`, `chromosomal_density.png`, `cross_query_comparison.png`, `hit_type_distribution.png` |
 
 `{ql}` = query label (e.g., `human_PRDM9`, `mouse_PRDM9`)

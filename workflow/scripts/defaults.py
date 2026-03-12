@@ -157,10 +157,9 @@ _PER_QUERY_PARENTS = [
     PATH_DICT['RANGE_OUTPUT_DIR'],        # results/ranges/{ql}/ (GFF3)
 ]
 
-# Also: results/tables/{ql}/selected/ and results/concordance/{ql}/
+# Also: results/tables/{ql}/selected/
 _PER_QUERY_NESTED = [
     PATH_DICT['TABLE_OUTPUT_DIR'] / '{ql}' / 'selected',
-    PATH_DICT['RESULTS_DIR'] / 'concordance' / '{ql}',
 ]
 
 for _ql in QUERY_LABEL_LIST:
@@ -168,9 +167,6 @@ for _ql in QUERY_LABEL_LIST:
         (_parent / _ql).mkdir(parents=True, exist_ok=True)
     for _nested_tmpl in _PER_QUERY_NESTED:
         Path(str(_nested_tmpl).replace('{ql}', _ql)).mkdir(parents=True, exist_ok=True)
-
-# Top-level concordance directory
-(PATH_DICT['RESULTS_DIR'] / 'concordance').mkdir(parents=True, exist_ok=True)
 
 # =============================================================================
 # Extended Visualization Suite — Output File Paths
