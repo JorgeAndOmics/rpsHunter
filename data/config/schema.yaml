@@ -9,6 +9,7 @@ execution: include('execution_schema')
 display: include('display_schema')
 root: include('root_schema')
 logging: include('logging_schema')
+hit_domain_inventory: include('hit_domain_inventory_schema', required=False)
 species: include('species_schema')
 ---
 blast_schema:
@@ -93,6 +94,9 @@ color_bold_bg_schema:
   color: str()
   bold: str(matches='^(yes|no)$')
   background: str()
+
+hit_domain_inventory_schema:
+  locus_gap: int(min=0, required=False)
 
 species_schema: map(str(), key=str())
 

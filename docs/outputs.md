@@ -16,26 +16,34 @@ results/
 ├── rpsbproc/{query_label}/           Per-query rpsbproc text output
 ├── domains/{query_label}/            Per-query domain parquets
 ├── tables/
-│   ├── {query_label}/
-│   │   ├── selected/                 Per-query selected parquets
-│   │   ├── aggregate.*               Per-query enriched BLAST aggregate
-│   │   ├── domains.*                 Per-query domain aggregate
-│   │   ├── rpsblast.*                Per-query RPSBLAST aggregate
-│   │   ├── contingency_table.*       Per-query contingency table
-│   │   ├── hit_domain_inventory.*    Per-query hit–domain inventory
-│   │   ├── locus_domain_inventory.*  Per-query locus–domain inventory
-│   │   ├── concordance_domains.*     Per-query concordance domain labels
-│   │   ├── concordance_sequences.*   Per-query concordance sequence summary
-│   │   └── concordance_summary.*     Per-query concordance family summary
-│   ├── aggregate.*                   Merged enriched BLAST data
-│   ├── domains.*                     Merged domain annotations (deduplicated)
-│   ├── rpsblast.*                    Merged RPSBLAST results
-│   ├── contingency_table.*           Merged contingency table
-│   ├── hit_domain_inventory.*        Merged hit–domain inventory
-│   ├── locus_domain_inventory.*      Merged locus–domain inventory (cross-query)
-│   ├── merged_concordance_domains.*  Merged concordance domain labels
-│   ├── merged_concordance_sequences.* Merged concordance sequence summary
-│   └── merged_concordance_summary.*  Merged concordance family summary
+│   ├── blast/
+│   │   ├── aggregate.*               Merged enriched BLAST data
+│   │   └── {query_label}/
+│   │       ├── aggregate.*           Per-query enriched BLAST aggregate
+│   │       └── selected/{species}.parquet  Per-query selected parquets
+│   ├── rpsblast/
+│   │   ├── rpsblast.*                Merged RPSBLAST results
+│   │   └── {query_label}/rpsblast.*  Per-query RPSBLAST aggregate
+│   ├── domains/
+│   │   ├── domains.*                 Merged domain annotations (deduplicated)
+│   │   └── {query_label}/domains.*   Per-query domain aggregate
+│   ├── contingency/
+│   │   ├── contingency_table.*       Merged contingency table
+│   │   └── {query_label}/contingency_table.*  Per-query contingency table
+│   ├── concordance/
+│   │   ├── merged_concordance_domains.*      Merged concordance domain labels
+│   │   ├── merged_concordance_sequences.*    Merged concordance sequence summary
+│   │   ├── merged_concordance_summary.*      Merged concordance family summary
+│   │   └── {query_label}/
+│   │       ├── concordance_domains.*         Per-query concordance domain labels
+│   │       ├── concordance_sequences.*       Per-query concordance sequence summary
+│   │       └── concordance_summary.*         Per-query concordance family summary
+│   └── inventory/
+│       ├── hit_domain_inventory.*    Merged hit–domain inventory
+│       ├── locus_domain_inventory.*  Merged locus–domain inventory (cross-query)
+│       └── {query_label}/
+│           ├── hit_domain_inventory.*    Per-query hit–domain inventory
+│           └── locus_domain_inventory.*  Per-query locus–domain inventory
 ├── plots/
 │   ├── {query_label}/
 │   │   ├── tile_plot.png             Per-query tile plot
@@ -180,7 +188,7 @@ Audit trail parquet containing ALL rows from the enriched BLAST input (not just 
 
 ---
 
-### tables/selected/{species}.parquet
+### tables/blast/selected/{species}.parquet
 
 Rows that passed all active filter gates, with the flag columns (Quality_Pass, ORF_Pass, HMM_Pass, Selected) dropped. Schema matches the enriched BLAST parquet from the last enabled enrichment step.
 
@@ -278,7 +286,7 @@ Parsed domain annotations from rpsbproc output. One row per domain annotation on
 
 All aggregated tables are written in dual format (Parquet + CSV) for both programmatic and human-readable access.
 
-### tables/aggregate.parquet / aggregate.csv
+### tables/blast/aggregate.parquet / aggregate.csv
 
 Concatenation of all per-species parquets from the ENRICHED_BLAST_DIR (the last enabled enrichment step). Schema matches the source parquets --- either `blast/`, `orf/`, or `hmmer/` depending on which enrichment steps are enabled.
 
@@ -286,13 +294,13 @@ Concatenation of all per-species parquets from the ENRICHED_BLAST_DIR (the last 
 
 ---
 
-### tables/{query_label}/domains.parquet / domains.csv
+### tables/domains/{query_label}/domains.parquet / domains.csv
 
 Per-query concatenation of all `domains/{query_label}/{species}.parquet` files. Contains the full domain schema described above.
 
 **Produced by:** `aggregate_domains` rule (`aggregate.py`)
 
-### tables/domains.parquet / domains.csv
+### tables/domains/domains.parquet / domains.csv
 
 Cross-query merged and deduplicated domain annotations. Overlapping annotations from different queries on the same Species x Chromosome x Domain are merged using GenomicRanges `reduce()`. The `Query_Accession` column lists all contributing accessions (comma-separated).
 
@@ -300,7 +308,7 @@ Cross-query merged and deduplicated domain annotations. Overlapping annotations 
 
 ---
 
-### tables/rpsblast.parquet / rpsblast.csv
+### tables/rpsblast/rpsblast.parquet / rpsblast.csv
 
 Concatenation of all `rpsblast/{species}.parquet` files. Contains the 16-column RPSBLAST schema described above.
 
@@ -308,7 +316,7 @@ Concatenation of all `rpsblast/{species}.parquet` files. Contains the 16-column 
 
 ---
 
-### tables/contingency_table.parquet / contingency_table.csv
+### tables/contingency/contingency_table.parquet / contingency_table.csv
 
 Cross-tabulation of domain annotations by species, domain name, and completeness status. Written in dual format (Parquet + CSV).
 
@@ -350,7 +358,7 @@ Seven additional static PNG plots produced by the `extended_plots` rule (`extend
 
 Tile heatmap showing the fraction of CDD domain annotations that are confirmed by HMMER for each HMMER-checkable domain family × species combination. Fill colour encodes Concordance_Rate (0–1, viridis scale); tiles are annotated with `Confirmed/Total` counts. Faceted by Query_Accession.
 
-**Source:** `results/tables/merged_concordance_domains.parquet`
+**Source:** `results/tables/concordance/merged_concordance_domains.parquet`
 
 ---
 
@@ -358,7 +366,7 @@ Tile heatmap showing the fraction of CDD domain annotations that are confirmed b
 
 Scatter plot of CDD bitscore (y) vs. BLAST bitscore (x, log10 scale) for all HMMER-checkable domain annotations, coloured by concordance label (`confirmed` = teal, `hmmer_unmatched` = orange). Linear regression lines are overlaid per concordance group. Faceted by domain family (free scales).
 
-**Source:** `results/tables/merged_concordance_domains.parquet`
+**Source:** `results/tables/concordance/merged_concordance_domains.parquet`
 
 ---
 
@@ -366,7 +374,7 @@ Scatter plot of CDD bitscore (y) vs. BLAST bitscore (x, log10 scale) for all HMM
 
 Stacked proportional bar chart (one bar per domain per species row facet) showing the breakdown of Complete / N-Truncated / C-Truncated / Bitruncated annotations. Bar segments labelled with raw counts where the segment exceeds 5 % of the bar. Domains ordered by total count descending.
 
-**Source:** `results/tables/contingency_table.parquet`
+**Source:** `results/tables/contingency/contingency_table.parquet`
 
 ---
 
@@ -374,7 +382,7 @@ Stacked proportional bar chart (one bar per domain per species row facet) showin
 
 Violin + boxplot showing the distribution of `N_CDD_Domains` (number of CDD annotations per BLAST hit sequence) per species, stratified by concordance rate quartile (Q1–Q4). Faceted by Query_Accession.
 
-**Source:** `results/tables/merged_concordance_sequences.parquet`
+**Source:** `results/tables/concordance/merged_concordance_sequences.parquet`
 
 ---
 
@@ -382,7 +390,7 @@ Violin + boxplot showing the distribution of `N_CDD_Domains` (number of CDD anno
 
 Tile heatmap of log10(domain count + 1) per Species_Name × Chromosome cell. Scaffolds and unplaced contigs are excluded. Cells with more than 50 domains are labelled with the first 4 characters of the dominant domain name. Sequential blue colour scale.
 
-**Source:** `results/tables/domains.parquet`
+**Source:** `results/tables/domains/domains.parquet`
 
 ---
 
@@ -390,7 +398,7 @@ Tile heatmap of log10(domain count + 1) per Species_Name × Chromosome cell. Sca
 
 Grouped bar chart showing how many domain annotations per species were detected exclusively by the first query, exclusively by the second query, or by both queries. Requires at least 2 configured queries; a placeholder image is produced for single-query runs. Faceted by domain family.
 
-**Source:** `results/tables/domains.parquet`
+**Source:** `results/tables/domains/domains.parquet`
 
 ---
 
@@ -398,7 +406,7 @@ Grouped bar chart showing how many domain annotations per species were detected 
 
 Stacked bar chart of CDD hit type counts (Specific / Non-specific / Superfamily) per domain per species. Domains ordered by total Specific-hit count descending. Faceted by species (free y-scale, shared x-axis).
 
-**Source:** `results/tables/domains.parquet`
+**Source:** `results/tables/domains/domains.parquet`
 
 ---
 
@@ -438,13 +446,13 @@ BLAST Archive (ASN.1) binary output from RPSBLAST. Required as input for rpsbpro
 
 ## Concordance Tables
 
-### tables/{query_label}/concordance_domains.parquet
+### tables/concordance/{query_label}/concordance_domains.parquet
 
 Per-domain concordance labels joining CDD domain annotations to HMMER domain calls via the Tag system.
 
 | Column | Type | Description |
 |--------|------|-------------|
-| *(all domain columns)* | | From `tables/{query_label}/domains.parquet` |
+| *(all domain columns)* | | From `tables/domains/{query_label}/domains.parquet` |
 | Domain_Family | str | CDD domain name normalized to config target via prefix matching |
 | HMMER_Checkable | bool | Whether this domain family has a corresponding HMMER profile |
 | Blast_Evalue | float | Source BLAST hit E-value (joined via Tag) |
@@ -453,7 +461,7 @@ Per-domain concordance labels joining CDD domain annotations to HMMER domain cal
 | Concordance | str | `confirmed` / `hmmer_unmatched` / `hmmer_not_searched` |
 | HMM_Best_Evalue | float | Best HMMER E-value for this domain family on this Tag (if confirmed) |
 
-### tables/{query_label}/concordance_sequences.parquet
+### tables/concordance/{query_label}/concordance_sequences.parquet
 
 Per-sequence (Tag) concordance summary.
 
@@ -471,7 +479,7 @@ Per-sequence (Tag) concordance summary.
 | N_Not_Searched | int | CDD domains with no HMMER profile |
 | Concordance_Rate | float | N_Confirmed / (N_Confirmed + N_Unmatched), or null |
 
-### tables/{query_label}/concordance_summary.parquet
+### tables/concordance/{query_label}/concordance_summary.parquet
 
 Per-domain-family concordance summary with aggregate statistics.
 
@@ -481,7 +489,7 @@ Per-domain-family concordance summary with aggregate statistics.
 
 ## Hit–Domain Inventory
 
-### tables/{query_label}/hit_domain_inventory.parquet / hit_domain_inventory.csv
+### tables/inventory/{query_label}/hit_domain_inventory.parquet / hit_domain_inventory.csv
 
 One row per BLAST hit (Tag), enriched with all CDD domains found within that hit, HMMER domains from the enrichment step, and completeness flags against the expected domain set.
 
@@ -512,15 +520,15 @@ One row per BLAST hit (Tag), enriched with all CDD domains found within that hit
 
 **Produced by:** `pq_hit_domain_inventory` rule (`hit_domain_inventory.py`)
 
-### tables/hit_domain_inventory.parquet / hit_domain_inventory.csv
+### tables/inventory/hit_domain_inventory.parquet / hit_domain_inventory.csv
 
 Concatenation of all per-query hit–domain inventory tables. Same schema as the per-query version.
 
 **Produced by:** `merge_hit_domain_inventory` rule
 
-### tables/{query_label}/locus_domain_inventory.parquet / locus_domain_inventory.csv
+### tables/inventory/{query_label}/locus_domain_inventory.parquet / locus_domain_inventory.csv
 
-Locus-level aggregation of BLAST hits. Overlapping hits on the same Species x Chromosome are clustered into genomic loci (default gap: 50 kb). One row per locus, with the union of all CDD and HMMER domains across all contributing hits.
+Locus-level aggregation of BLAST hits. Overlapping hits on the same Species x Chromosome are clustered into genomic loci (configurable via `hit_domain_inventory.locus_gap`, default: 50 kb). One row per locus, with the union of all CDD and HMMER domains across all contributing hits.
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -551,7 +559,7 @@ Locus-level aggregation of BLAST hits. Overlapping hits on the same Species x Ch
 
 **Produced by:** `pq_hit_domain_inventory` rule (`hit_domain_inventory.py`)
 
-### tables/locus_domain_inventory.parquet / locus_domain_inventory.csv
+### tables/inventory/locus_domain_inventory.parquet / locus_domain_inventory.csv
 
 Cross-query locus–domain inventory. All per-query aggregate tables are concatenated before clustering, so loci are formed from BLAST hits across all queries. This is the most informative table for identifying genomic loci with complete expected domain sets.
 

@@ -39,7 +39,7 @@ conda run -n rpsHunter ./rpsHunter --hmmer --blast --skip-validation
 | `--hmmer` | | `hmmer` | Run HMMER domain filtering on BLAST hits. No-op when `hmmer.enabled: false` in config. Serialised execution (one species at a time, all configured cores per job). |
 | `--rpsblast` | | `rpsblaster` | Search filtered FASTAs against NCBI CDD (or a subset database when `rpsblast.target_domains` is set). |
 | `--rpsbproc` | | `rpsbproc` | Post-process RPSBLAST ASN output with rpsbproc to produce domain annotations. |
-| `--rpsbproc-parser` | | `rpsbproc_parser` | Parse rpsbproc text output into structured parquets and aggregate into `tables/domains.parquet`. |
+| `--rpsbproc-parser` | | `rpsbproc_parser` | Parse rpsbproc text output into structured parquets and aggregate into `tables/domains/domains.parquet`. |
 | `--completeness-detector` | | `completeness_detector` | Generate tile plot (domain completeness heatmap). |
 | `--contingency-parser` | | `contingency_sorter` | Generate 3D scatter plot, contingency table (CSV), and GFF3 genomic coordinate files. |
 | `--hit-domain-inventory` | | `hit_domain_inventory` | Generate hit–domain inventory table: joins BLAST hits with their CDD domain annotations via Tag, flags completeness against `hmmer.profiles`. Per-query and merged outputs. |
@@ -125,7 +125,7 @@ dependencies.
 | `contingency_sorter` | `pq_contingency_sorter` x Q, `merged_contingency_sorter` | Per-query + merged `aggregate_domains`, `aggregate_blast`, `aggregate_rpsblast` |
 | `hit_domain_inventory` | `pq_hit_domain_inventory` x Q, `merge_hit_domain_inventory` | Per-query `aggregate_blast`, `aggregate_domains` |
 | `concordance` | `pq_concordance` x Q, `merge_concordance` | Per-query `aggregate_blast`, `aggregate_domains` |
-| `extended_plots` | _(single rule, no wildcards)_ | `tables/domains.parquet`, `tables/contingency_table.parquet`, `tables/merged_concordance_domains.parquet`, `tables/merged_concordance_sequences.parquet` |
+| `extended_plots` | _(single rule, no wildcards)_ | `tables/domains/domains.parquet`, `tables/contingency/contingency_table.parquet`, `tables/concordance/merged_concordance_domains.parquet`, `tables/concordance/merged_concordance_sequences.parquet` |
 
 **Q** denotes the number of configured queries (1 for single query, N for multi-query).
 
@@ -182,17 +182,13 @@ Use this after changing HMMER parameters in `config.yaml` or modifying
 `hmmer.py`.
 
 ```bash
-rm -rf results/hmmer/*.parquet \
-       results/fastas/*.fa results/fastas/*.parquet \
-       results/tables/selected/ \
-       results/tables/aggregate.* \
-       results/rpsblast/*.parquet results/asn/rpsblast/*.asn \
-       results/rpsbproc/*.txt \
-       results/domains/*.parquet \
-       results/tables/domains.* results/tables/rpsblast.* \
-       results/tables/contingency_table.csv \
-       results/plots/tile_plot.png results/plots/scatter_3D_plot.html \
-       results/ranges/*.gff3
+rm -rf results/hmmer/ \
+       results/fastas/ \
+       results/tables/ \
+       results/rpsblast/ results/asn/rpsblast/ \
+       results/rpsbproc/ \
+       results/domains/ \
+       results/plots/ results/ranges/
 
 conda run -n rpsHunter ./rpsHunter --hmmer --skip-validation
 conda run -n rpsHunter ./rpsHunter --blast --skip-validation
@@ -201,6 +197,9 @@ conda run -n rpsHunter ./rpsHunter --rpsbproc --skip-validation
 conda run -n rpsHunter ./rpsHunter --rpsbproc-parser --skip-validation
 conda run -n rpsHunter ./rpsHunter --completeness-detector --skip-validation
 conda run -n rpsHunter ./rpsHunter --contingency-parser --skip-validation
+conda run -n rpsHunter ./rpsHunter --hit-domain-inventory --skip-validation
+conda run -n rpsHunter ./rpsHunter --concordance --skip-validation
+conda run -n rpsHunter ./rpsHunter --extended-plots --skip-validation
 ```
 
 ### Rerun from BLAST parsing onward
@@ -209,16 +208,12 @@ Use this after changing BLAST filtering thresholds (`blast.e_value`,
 `blast.perc_identity`, etc.) or toggling ORF/HMMER enrichment flags.
 
 ```bash
-rm -rf results/fastas/*.fa results/fastas/*.parquet \
-       results/tables/selected/ \
-       results/tables/aggregate.* \
-       results/rpsblast/*.parquet results/asn/rpsblast/*.asn \
-       results/rpsbproc/*.txt \
-       results/domains/*.parquet \
-       results/tables/domains.* results/tables/rpsblast.* \
-       results/tables/contingency_table.csv \
-       results/plots/tile_plot.png results/plots/scatter_3D_plot.html \
-       results/ranges/*.gff3
+rm -rf results/fastas/ \
+       results/tables/ \
+       results/rpsblast/ results/asn/rpsblast/ \
+       results/rpsbproc/ \
+       results/domains/ \
+       results/plots/ results/ranges/
 
 conda run -n rpsHunter ./rpsHunter --blast --skip-validation
 conda run -n rpsHunter ./rpsHunter --rpsblast --skip-validation
@@ -226,6 +221,9 @@ conda run -n rpsHunter ./rpsHunter --rpsbproc --skip-validation
 conda run -n rpsHunter ./rpsHunter --rpsbproc-parser --skip-validation
 conda run -n rpsHunter ./rpsHunter --completeness-detector --skip-validation
 conda run -n rpsHunter ./rpsHunter --contingency-parser --skip-validation
+conda run -n rpsHunter ./rpsHunter --hit-domain-inventory --skip-validation
+conda run -n rpsHunter ./rpsHunter --concordance --skip-validation
+conda run -n rpsHunter ./rpsHunter --extended-plots --skip-validation
 ```
 
 ### Rerun visualisation only
@@ -234,13 +232,12 @@ Use this after modifying R visualisation scripts or wanting to regenerate plots
 from existing domain data.
 
 ```bash
-rm -f results/plots/tile_plot.png \
-      results/plots/scatter_3D_plot.html \
-      results/tables/contingency_table.csv \
-      results/ranges/*.gff3
+rm -rf results/plots/ results/ranges/ \
+       results/tables/contingency/
 
 conda run -n rpsHunter ./rpsHunter --completeness-detector --skip-validation
 conda run -n rpsHunter ./rpsHunter --contingency-parser --skip-validation
+conda run -n rpsHunter ./rpsHunter --extended-plots --skip-validation
 ```
 
 ### Rerun domain annotation only
@@ -248,19 +245,22 @@ conda run -n rpsHunter ./rpsHunter --contingency-parser --skip-validation
 Use this after changing RPSBLAST parameters or the CDD subset configuration.
 
 ```bash
-rm -rf results/rpsblast/*.parquet results/asn/rpsblast/*.asn \
-       results/rpsbproc/*.txt \
-       results/domains/*.parquet \
-       results/tables/domains.* results/tables/rpsblast.* \
-       results/tables/contingency_table.csv \
-       results/plots/tile_plot.png results/plots/scatter_3D_plot.html \
-       results/ranges/*.gff3
+rm -rf results/rpsblast/ results/asn/rpsblast/ \
+       results/rpsbproc/ \
+       results/domains/ \
+       results/tables/rpsblast/ results/tables/domains/ \
+       results/tables/contingency/ results/tables/concordance/ \
+       results/tables/inventory/ \
+       results/plots/ results/ranges/
 
 conda run -n rpsHunter ./rpsHunter --rpsblast --skip-validation
 conda run -n rpsHunter ./rpsHunter --rpsbproc --skip-validation
 conda run -n rpsHunter ./rpsHunter --rpsbproc-parser --skip-validation
 conda run -n rpsHunter ./rpsHunter --completeness-detector --skip-validation
 conda run -n rpsHunter ./rpsHunter --contingency-parser --skip-validation
+conda run -n rpsHunter ./rpsHunter --hit-domain-inventory --skip-validation
+conda run -n rpsHunter ./rpsHunter --concordance --skip-validation
+conda run -n rpsHunter ./rpsHunter --extended-plots --skip-validation
 ```
 
 ---
@@ -298,19 +298,19 @@ All per-species outputs now include a `{query_label}` subdirectory for multi-que
 
 | Stage | Per-Query Per-Species Output | Per-Query Aggregate | Merged Output |
 |-------|------------------------------|---------------------|---------------|
-| tBLASTn | `results/blast/{ql}/{species}.parquet` | `results/tables/{ql}/aggregate.parquet` | `results/tables/aggregate.parquet` |
+| tBLASTn | `results/blast/{ql}/{species}.parquet` | `results/tables/blast/{ql}/aggregate.parquet` | `results/tables/blast/aggregate.parquet` |
 | ORF | `results/orf/{ql}/{species}.parquet` | _(enriches blast)_ | |
 | HMMER | `results/hmmer/{ql}/{species}.parquet` | _(enriches blast)_ | |
-| BLAST parser | `results/fastas/{ql}/{species}.fa` | `results/tables/{ql}/aggregate.parquet` | `results/tables/aggregate.parquet` |
-| RPSBLAST | `results/rpsblast/{ql}/{species}.parquet` | `results/tables/{ql}/rpsblast.parquet` | `results/tables/rpsblast.parquet` |
+| BLAST parser | `results/fastas/{ql}/{species}.fa` | `results/tables/blast/{ql}/aggregate.parquet` | `results/tables/blast/aggregate.parquet` |
+| RPSBLAST | `results/rpsblast/{ql}/{species}.parquet` | `results/tables/rpsblast/{ql}/rpsblast.parquet` | `results/tables/rpsblast/rpsblast.parquet` |
 | rpsbproc | `results/rpsbproc/{ql}/{species}.txt` | _(text)_ | |
-| Domain parser | `results/domains/{ql}/{species}.parquet` | `results/tables/{ql}/domains.parquet` | `results/tables/domains.parquet` (deduplicated) |
+| Domain parser | `results/domains/{ql}/{species}.parquet` | `results/tables/domains/{ql}/domains.parquet` | `results/tables/domains/domains.parquet` (deduplicated) |
 | Tile plot | | `results/plots/{ql}/tile_plot.png` | `results/plots/tile_plot.png` |
 | 3D plot | | `results/plots/{ql}/scatter_3D_plot.html` | `results/plots/scatter_3D_plot.html` |
-| Contingency | | `results/tables/{ql}/contingency_table.csv` | `results/tables/contingency_table.csv` |
+| Contingency | | `results/tables/contingency/{ql}/contingency_table.csv` | `results/tables/contingency/contingency_table.csv` |
 | GFF3 | | `results/ranges/{ql}/{species}.gff3` | `results/ranges/{species}.gff3` |
-| Hit–domain inventory | | `results/tables/{ql}/hit_domain_inventory.*`, `locus_domain_inventory.*` | `results/tables/hit_domain_inventory.*`, `locus_domain_inventory.*` |
-| Concordance | | `results/tables/{ql}/concordance_*.*` | `results/tables/merged_concordance_*.*` |
+| Hit–domain inventory | | `results/tables/inventory/{ql}/hit_domain_inventory.*`, `locus_domain_inventory.*` | `results/tables/inventory/hit_domain_inventory.*`, `locus_domain_inventory.*` |
+| Concordance | | `results/tables/concordance/{ql}/concordance_*.*` | `results/tables/concordance/merged_concordance_*.*` |
 | Extended plots | | _(none — reads merged outputs only)_ | `results/plots/concordance_heatmap.png`, `evidence_quality.png`, `completeness_bars.png`, `sequence_complexity.png`, `chromosomal_density.png`, `cross_query_comparison.png`, `hit_type_distribution.png` |
 
 `{ql}` = query label (e.g., `human_PRDM9`, `mouse_PRDM9`)

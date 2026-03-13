@@ -28,22 +28,22 @@ graph TD
     G --> G2["hmmer/{species}.parquet"]
     G2 --> H
     H --> I["fastas/{species}.fa"]
-    H --> I2["tables/selected/{species}.parquet"]
+    H --> I2["tables/blast/selected/{species}.parquet"]
     H --> I3["fastas/{species}.parquet<br/>(audit)"]
     I --> J["RPSBLAST<br/>rpsblast_species"]
     J --> K["rpsbproc<br/>rpsbproc_species"]
     K --> L["rpsbproc_parser<br/>rpsbproc_parser_species"]
     L --> M["domains/{species}.parquet"]
     M --> N["aggregate_domains<br/>(per query)"]
-    N --> O["tables/{ql}/domains.parquet"]
+    N --> O["tables/domains/{ql}/domains.parquet"]
     O --> MM["merge_domains<br/>(cross-query dedup)"]
-    MM --> MO["tables/domains.parquet"]
+    MM --> MO["tables/domains/domains.parquet"]
     MO --> P1["Tile Plot<br/>completeness_detector"]
     MO --> P2["3D Plot + GFF3<br/>contingency_sorter"]
     P1 --> R1["plots/tile_plot.png"]
     P2 --> R2["plots/scatter_3D_plot.html"]
     P2 --> R3["ranges/{species}.gff3"]
-    P2 --> R4["tables/contingency_table.csv/.parquet"]
+    P2 --> R4["tables/contingency/contingency_table.csv/.parquet"]
 
     style C fill:#e1f5fe
     style E2 fill:#e1f5fe
@@ -91,7 +91,7 @@ graph TD
 | Rule | CLI Flag | Description |
 |------|----------|-------------|
 | `blast_parser_species` | `--blast` | Apply 3-gate filter chain (Quality + ORF + HMMER), export FASTA |
-| `aggregate_blast` | `--blast` | Concatenate enriched per-species parquets into `tables/aggregate.parquet` |
+| `aggregate_blast` | `--blast` | Concatenate enriched per-species parquets into `tables/blast/aggregate.parquet` |
 
 ### Stage 6: Domain Detection
 
@@ -100,7 +100,7 @@ graph TD
 | `rpsblast_species` | `--rpsblast` | Search filtered sequences against CDD (or CDD subset) |
 | `rpsbproc_species` | `--rpsbproc` | Post-process RPSBLAST ASN output with rpsbproc |
 | `rpsbproc_parser_species` | `--rpsbproc-parser` | Parse rpsbproc text output into structured domain parquets |
-| `aggregate_domains` | `--rpsbproc-parser` | Concatenate per-species domain parquets into `tables/domains.parquet` |
+| `aggregate_domains` | `--rpsbproc-parser` | Concatenate per-species domain parquets into `tables/domains/domains.parquet` |
 
 ### Stage 7: Hit–Domain Inventory
 

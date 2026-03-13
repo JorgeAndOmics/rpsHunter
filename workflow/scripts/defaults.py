@@ -75,8 +75,13 @@ PATH_DICT['ASN_ROOT_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'asn'
 PATH_DICT['RPSBPROC_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'rpsbproc'
 PATH_DICT['XML_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'xml'
 PATH_DICT['RANGE_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'ranges'
-PATH_DICT['LOCI_TABLE_OUTPUT_DIR'] = PATH_DICT['TABLE_OUTPUT_DIR'] / 'loci_tables'
-PATH_DICT['SELECTED_OUTPUT_DIR'] = PATH_DICT['TABLE_OUTPUT_DIR'] / 'selected'
+# === Table Stage Subdirectories ===
+PATH_DICT['TABLE_BLAST_DIR']       = PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast'
+PATH_DICT['TABLE_RPSBLAST_DIR']    = PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast'
+PATH_DICT['TABLE_DOMAINS_DIR']     = PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains'
+PATH_DICT['TABLE_CONTINGENCY_DIR'] = PATH_DICT['TABLE_OUTPUT_DIR'] / 'contingency'
+PATH_DICT['TABLE_CONCORDANCE_DIR'] = PATH_DICT['TABLE_OUTPUT_DIR'] / 'concordance'
+PATH_DICT['TABLE_INVENTORY_DIR']   = PATH_DICT['TABLE_OUTPUT_DIR'] / 'inventory'
 
 # === Per-Species Intermediate Directories ===
 # Each step that produces per-species parquets before aggregation gets its own directory.
@@ -152,14 +157,19 @@ _PER_QUERY_PARENTS = [
     PATH_DICT['DOMAINS_SPECIES_DIR'],     # results/domains/{ql}/
     PATH_DICT['ASN_TBLASTN_DIR'],         # results/asn/tblastn/{ql}/
     PATH_DICT['ASN_RPSBLAST_DIR'],        # results/asn/rpsblast/{ql}/
-    PATH_DICT['TABLE_OUTPUT_DIR'],        # results/tables/{ql}/ (aggregates + contingency)
+    PATH_DICT['TABLE_BLAST_DIR'],         # results/tables/blast/{ql}/
+    PATH_DICT['TABLE_RPSBLAST_DIR'],     # results/tables/rpsblast/{ql}/
+    PATH_DICT['TABLE_DOMAINS_DIR'],      # results/tables/domains/{ql}/
+    PATH_DICT['TABLE_CONTINGENCY_DIR'],  # results/tables/contingency/{ql}/
+    PATH_DICT['TABLE_CONCORDANCE_DIR'],  # results/tables/concordance/{ql}/
+    PATH_DICT['TABLE_INVENTORY_DIR'],    # results/tables/inventory/{ql}/
     PATH_DICT['PLOT_DIR'],                # results/plots/{ql}/ (tile + 3D plots)
     PATH_DICT['RANGE_OUTPUT_DIR'],        # results/ranges/{ql}/ (GFF3)
 ]
 
-# Also: results/tables/{ql}/selected/
+# Also: results/tables/blast/{ql}/selected/
 _PER_QUERY_NESTED = [
-    PATH_DICT['TABLE_OUTPUT_DIR'] / '{ql}' / 'selected',
+    PATH_DICT['TABLE_BLAST_DIR'] / '{ql}' / 'selected',
 ]
 
 for _ql in QUERY_LABEL_LIST:
@@ -213,6 +223,9 @@ HMMER_MIN_ALN_LEN: int    = config.get('hmmer', {}).get('min_alignment_length', 
 HMMER_MAX_SENS: bool      = config.get('hmmer', {}).get('max_sensitivity', False)
 HMMER_BIAS_FILTER: bool   = config.get('hmmer', {}).get('bias_filter', True)
 HMMER_SEED: int           = config.get('hmmer', {}).get('seed', 67)
+
+# === Hit-Domain Inventory Configuration ===
+LOCUS_GAP: int = config.get('hit_domain_inventory', {}).get('locus_gap', 50000)
 
 # === External Program Names ===
 _programs = config.get('programs', {})

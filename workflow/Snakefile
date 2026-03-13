@@ -23,66 +23,66 @@ ORF_PQ       = _R + '/orf/{query_label}/{species}.parquet'
 HMM_PQ       = _R + '/hmmer/{query_label}/{species}.parquet'
 FASTA_OUT    = _R + '/fastas/{query_label}/{species}.fa'
 FASTA_AUDIT  = _R + '/fastas/{query_label}/{species}.parquet'
-SELECTED_PQ  = _R + '/tables/{query_label}/selected/{species}.parquet'
+SELECTED_PQ  = _R + '/tables/blast/{query_label}/selected/{species}.parquet'
 RPSBLAST_PQ  = _R + '/rpsblast/{query_label}/{species}.parquet'
 ASN_RPSBLAST = _R + '/asn/rpsblast/{query_label}/{species}.asn'
 RPSBPROC_TXT = _R + '/rpsbproc/{query_label}/{species}.txt'
 DOMAINS_PQ   = _R + '/domains/{query_label}/{species}.parquet'
 
 # Per-query aggregate tables
-AGG_BLAST_PQ  = _R + '/tables/{query_label}/aggregate.parquet'
-AGG_BLAST_CSV = _R + '/tables/{query_label}/aggregate.csv'
-AGG_RPS_PQ    = _R + '/tables/{query_label}/rpsblast.parquet'
-AGG_RPS_CSV   = _R + '/tables/{query_label}/rpsblast.csv'
-AGG_DOM_PQ    = _R + '/tables/{query_label}/domains.parquet'
-AGG_DOM_CSV   = _R + '/tables/{query_label}/domains.csv'
+AGG_BLAST_PQ  = _R + '/tables/blast/{query_label}/aggregate.parquet'
+AGG_BLAST_CSV = _R + '/tables/blast/{query_label}/aggregate.csv'
+AGG_RPS_PQ    = _R + '/tables/rpsblast/{query_label}/rpsblast.parquet'
+AGG_RPS_CSV   = _R + '/tables/rpsblast/{query_label}/rpsblast.csv'
+AGG_DOM_PQ    = _R + '/tables/domains/{query_label}/domains.parquet'
+AGG_DOM_CSV   = _R + '/tables/domains/{query_label}/domains.csv'
 
 # Per-query visualization outputs
 PQ_TILE      = _R + '/plots/{query_label}/tile_plot.png'
 PQ_3D        = _R + '/plots/{query_label}/scatter_3D_plot.html'
-PQ_CONT_CSV  = _R + '/tables/{query_label}/contingency_table.csv'
-PQ_CONT_PQ   = _R + '/tables/{query_label}/contingency_table.parquet'
+PQ_CONT_CSV  = _R + '/tables/contingency/{query_label}/contingency_table.csv'
+PQ_CONT_PQ   = _R + '/tables/contingency/{query_label}/contingency_table.parquet'
 
 # Per-query hit–domain inventory outputs
-PQ_HDI_PQ        = _R + '/tables/{query_label}/hit_domain_inventory.parquet'
-PQ_HDI_CSV       = _R + '/tables/{query_label}/hit_domain_inventory.csv'
-PQ_LDI_PQ        = _R + '/tables/{query_label}/locus_domain_inventory.parquet'
-PQ_LDI_CSV       = _R + '/tables/{query_label}/locus_domain_inventory.csv'
+PQ_HDI_PQ        = _R + '/tables/inventory/{query_label}/hit_domain_inventory.parquet'
+PQ_HDI_CSV       = _R + '/tables/inventory/{query_label}/hit_domain_inventory.csv'
+PQ_LDI_PQ        = _R + '/tables/inventory/{query_label}/locus_domain_inventory.parquet'
+PQ_LDI_CSV       = _R + '/tables/inventory/{query_label}/locus_domain_inventory.csv'
 
 # Merged hit–domain inventory outputs
-MERGED_HDI_PQ    = _R + '/tables/hit_domain_inventory.parquet'
-MERGED_HDI_CSV   = _R + '/tables/hit_domain_inventory.csv'
-MERGED_LDI_PQ    = _R + '/tables/locus_domain_inventory.parquet'
-MERGED_LDI_CSV   = _R + '/tables/locus_domain_inventory.csv'
+MERGED_HDI_PQ    = _R + '/tables/inventory/hit_domain_inventory.parquet'
+MERGED_HDI_CSV   = _R + '/tables/inventory/hit_domain_inventory.csv'
+MERGED_LDI_PQ    = _R + '/tables/inventory/locus_domain_inventory.parquet'
+MERGED_LDI_CSV   = _R + '/tables/inventory/locus_domain_inventory.csv'
 
 # Per-query concordance outputs
-PQ_CONC_DIR      = _R + '/tables/{query_label}'
-PQ_CONC_DOM      = _R + '/tables/{query_label}/concordance_domains.parquet'
-PQ_CONC_DOM_CSV  = _R + '/tables/{query_label}/concordance_domains.csv'
-PQ_CONC_SEQ      = _R + '/tables/{query_label}/concordance_sequences.parquet'
-PQ_CONC_SEQ_CSV  = _R + '/tables/{query_label}/concordance_sequences.csv'
-PQ_CONC_SUM      = _R + '/tables/{query_label}/concordance_summary.parquet'
-PQ_CONC_SUM_CSV  = _R + '/tables/{query_label}/concordance_summary.csv'
+PQ_CONC_DIR      = _R + '/tables/concordance/{query_label}'
+PQ_CONC_DOM      = _R + '/tables/concordance/{query_label}/concordance_domains.parquet'
+PQ_CONC_DOM_CSV  = _R + '/tables/concordance/{query_label}/concordance_domains.csv'
+PQ_CONC_SEQ      = _R + '/tables/concordance/{query_label}/concordance_sequences.parquet'
+PQ_CONC_SEQ_CSV  = _R + '/tables/concordance/{query_label}/concordance_sequences.csv'
+PQ_CONC_SUM      = _R + '/tables/concordance/{query_label}/concordance_summary.parquet'
+PQ_CONC_SUM_CSV  = _R + '/tables/concordance/{query_label}/concordance_summary.csv'
 
 # Merged concordance outputs
-MERGED_CONC_DOM     = _R + '/tables/merged_concordance_domains.parquet'
-MERGED_CONC_DOM_CSV = _R + '/tables/merged_concordance_domains.csv'
-MERGED_CONC_SEQ     = _R + '/tables/merged_concordance_sequences.parquet'
-MERGED_CONC_SEQ_CSV = _R + '/tables/merged_concordance_sequences.csv'
-MERGED_CONC_SUM     = _R + '/tables/merged_concordance_summary.parquet'
-MERGED_CONC_SUM_CSV = _R + '/tables/merged_concordance_summary.csv'
+MERGED_CONC_DOM     = _R + '/tables/concordance/merged_concordance_domains.parquet'
+MERGED_CONC_DOM_CSV = _R + '/tables/concordance/merged_concordance_domains.csv'
+MERGED_CONC_SEQ     = _R + '/tables/concordance/merged_concordance_sequences.parquet'
+MERGED_CONC_SEQ_CSV = _R + '/tables/concordance/merged_concordance_sequences.csv'
+MERGED_CONC_SUM     = _R + '/tables/concordance/merged_concordance_summary.parquet'
+MERGED_CONC_SUM_CSV = _R + '/tables/concordance/merged_concordance_summary.csv'
 
 # Merged outputs (top-level, post-deduplication)
-MERGED_DOM_PQ    = _R + '/tables/domains.parquet'
-MERGED_DOM_CSV   = _R + '/tables/domains.csv'
-MERGED_BLAST_PQ  = _R + '/tables/aggregate.parquet'
-MERGED_BLAST_CSV = _R + '/tables/aggregate.csv'
-MERGED_RPS_PQ    = _R + '/tables/rpsblast.parquet'
-MERGED_RPS_CSV   = _R + '/tables/rpsblast.csv'
+MERGED_DOM_PQ    = _R + '/tables/domains/domains.parquet'
+MERGED_DOM_CSV   = _R + '/tables/domains/domains.csv'
+MERGED_BLAST_PQ  = _R + '/tables/blast/aggregate.parquet'
+MERGED_BLAST_CSV = _R + '/tables/blast/aggregate.csv'
+MERGED_RPS_PQ    = _R + '/tables/rpsblast/rpsblast.parquet'
+MERGED_RPS_CSV   = _R + '/tables/rpsblast/rpsblast.csv'
 MERGED_TILE      = _R + '/plots/tile_plot.png'
 MERGED_3D        = _R + '/plots/scatter_3D_plot.html'
-MERGED_CONT_CSV  = _R + '/tables/contingency_table.csv'
-MERGED_CONT_PQ   = _R + '/tables/contingency_table.parquet'
+MERGED_CONT_CSV  = _R + '/tables/contingency/contingency_table.csv'
+MERGED_CONT_PQ   = _R + '/tables/contingency/contingency_table.parquet'
 
 # Extended visualization suite outputs — paths owned by defaults.py
 EXT_CONC_HEATMAP = str(defaults.EXT_CONC_HEATMAP_PATH)
@@ -664,7 +664,7 @@ rule pq_concordance:
         conc_sum_csv=PQ_CONC_SUM_CSV
     params:
         config_path=str(defaults.CONFIG_FILE),
-        outdir=PQ_CONC_DIR
+        outdir=_R + '/tables/concordance/{query_label}'
     shell:
         '''
         python scripts/concordance.py \
@@ -729,14 +729,16 @@ rule pq_hit_domain_inventory:
         locus_csv=PQ_LDI_CSV
     params:
         config_path=str(defaults.CONFIG_FILE),
-        outdir=_R + '/tables/{query_label}'
+        outdir=_R + '/tables/inventory/{query_label}',
+        locus_gap=defaults.LOCUS_GAP
     shell:
         '''
         python scripts/hit_domain_inventory.py \
             --aggregate {input.aggregate:q} \
             --domains {input.domains:q} \
             --config {params.config_path:q} \
-            --outdir {params.outdir:q}
+            --outdir {params.outdir:q} \
+            --locus-gap {params.locus_gap}
         '''
 
 rule merge_hit_domain_inventory:
@@ -751,14 +753,16 @@ rule merge_hit_domain_inventory:
         locus_csv=MERGED_LDI_CSV
     params:
         config_path=str(defaults.CONFIG_FILE),
-        outdir=str(defaults.PATH_DICT['TABLE_OUTPUT_DIR'])
+        outdir=str(defaults.PATH_DICT['TABLE_INVENTORY_DIR']),
+        locus_gap=defaults.LOCUS_GAP
     shell:
         '''
         python scripts/hit_domain_inventory.py \
             --aggregate {input.aggregates} \
             --domains {input.domains} \
             --config {params.config_path:q} \
-            --outdir {params.outdir:q}
+            --outdir {params.outdir:q} \
+            --locus-gap {params.locus_gap}
         '''
 
 rule merge_concordance:

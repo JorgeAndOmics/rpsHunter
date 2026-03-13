@@ -74,6 +74,14 @@ Controls hmmsearch against the Pfam database. When enabled, sequences are enrich
 | `bias_filter` | `bool` | `true` | `bool()` | Enable the bias composition filter. Disabling (`false`) increases sensitivity for biased-composition sequences at the cost of more false positives. |
 | `seed` | `int` | `67` | `int(min=0)` | Random seed for hmmsearch reproducibility. |
 
+### `hit_domain_inventory` -- Hit–Domain Inventory (Optional)
+
+Controls the locus-level aggregation in the hit–domain inventory stage. This section is optional; when omitted, the default locus gap of 50,000 bp is used.
+
+| Parameter | Type | Default | Validation | Description |
+|-----------|------|---------|------------|-------------|
+| `locus_gap` | `int` | `50000` | `int(min=0)`, optional | Maximum gap in base pairs between BLAST hits on the same chromosome to cluster them into a single genomic locus. Hits within this distance are merged, and their domains are unioned to assess completeness. The default (50 kb) accommodates typical mammalian introns between PRDM9-like exons. |
+
 ### `programs` -- External Program Names (Optional)
 
 Override BLAST+ and related program binary names. This entire section is optional; when omitted, bioconda-standard names are used. Useful when your system provides modern BLAST+ naming conventions (e.g., `rpsblast+` instead of `rpsblast`).
@@ -113,7 +121,7 @@ queries:
 
 When `queries` is present, it takes precedence over `query`. Both formats are supported for backward compatibility. The pipeline normalizes both to an internal `QUERY_DICT: Dict[str, str]`.
 
-**Output directory structure:** Per-query intermediate files are stored under `{query_label}/` subdirectories (e.g., `results/blast/human_PRDM9/`). Merged outputs (cross-query deduplicated) are written to the top-level directories (e.g., `results/tables/domains.parquet`).
+**Output directory structure:** Per-query intermediate files are stored under `{query_label}/` subdirectories (e.g., `results/blast/human_PRDM9/`). Aggregate tables are organized by stage under `results/tables/` (e.g., `results/tables/blast/`, `results/tables/domains/`). Merged outputs (cross-query deduplicated) are written at the root of each stage subdirectory (e.g., `results/tables/domains/domains.parquet`).
 
 **Deduplication:** After all queries complete, `merge_queries.R` merges overlapping domain annotations across queries using GenomicRanges. The `Query_Accession` column in merged outputs lists all contributing query accessions (comma-separated).
 
