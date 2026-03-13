@@ -49,7 +49,14 @@ results/
 │   │   ├── tile_plot.png             Per-query tile plot
 │   │   └── scatter_3D_plot.html      Per-query 3D scatter plot
 │   ├── tile_plot.png                 Merged tile plot
-│   └── scatter_3D_plot.html          Merged 3D scatter plot
+│   ├── scatter_3D_plot.html          Merged 3D scatter plot
+│   ├── concordance_heatmap.png       Extended: concordance validation
+│   ├── evidence_quality.png          Extended: evidence quality landscape
+│   ├── completeness_bars.png         Extended: domain completeness bars
+│   ├── sequence_complexity.png       Extended: per-sequence domain complexity
+│   ├── chromosomal_density.png       Extended: chromosomal domain density
+│   ├── cross_query_comparison.png    Extended: cross-query domain comparison
+│   └── hit_type_distribution.png     Extended: hit-type distribution
 ├── ranges/
 │   ├── {query_label}/                Per-query GFF3 files
 │   └── {species}.gff3                Merged GFF3 files
@@ -310,9 +317,9 @@ Cross-query merged and deduplicated domain annotations. Overlapping annotations 
 
 ### tables/rpsblast/rpsblast.parquet / rpsblast.csv
 
-Concatenation of all `rpsblast/{species}.parquet` files. Contains the 16-column RPSBLAST schema described above.
+Cross-query merged concatenation of all per-query RPSBLAST aggregate tables. Contains the 16-column RPSBLAST schema described above. Per-query aggregates are at `tables/rpsblast/{query_label}/rpsblast.parquet`.
 
-**Produced by:** `aggregate_domains` rule (`aggregate.py`)
+**Produced by:** `aggregate_rpsblast` (per-query) and `merge_rpsblast` (merged) rules (`aggregate.py`)
 
 ---
 
@@ -484,6 +491,19 @@ Per-sequence (Tag) concordance summary.
 Per-domain-family concordance summary with aggregate statistics.
 
 **Produced by:** `pq_concordance` rule (`concordance.py`)
+
+| Column | Type | Description |
+|--------|------|-------------|
+| Query_Accession | str | Query protein accession |
+| Domain_Family | str | CDD domain name normalized to config target via prefix matching |
+| Total | int | Total number of annotations for this domain family |
+| Confirmed | int | CDD domains confirmed by HMMER |
+| Unmatched | int | CDD domains with HMMER profile but no HMMER hit |
+| Not_Searched | int | CDD domains with no HMMER profile |
+| Concordance_Rate | float | Confirmed / (Confirmed + Unmatched), or null if no searchable domains |
+| Median_CDD_Evalue | float | Median E-value across all CDD annotations for this family |
+| Median_CDD_Bitscore | float | Median bit score across all CDD annotations for this family |
+| Median_HMM_Evalue | float | Median HMMER E-value for confirmed annotations, or null |
 
 ---
 

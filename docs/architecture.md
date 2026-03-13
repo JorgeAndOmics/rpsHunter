@@ -91,16 +91,20 @@ graph TD
 | Rule | CLI Flag | Description |
 |------|----------|-------------|
 | `blast_parser_species` | `--blast` | Apply 3-gate filter chain (Quality + ORF + HMMER), export FASTA |
-| `aggregate_blast` | `--blast` | Concatenate enriched per-species parquets into `tables/blast/aggregate.parquet` |
+| `aggregate_blast` | `--blast` | Concatenate enriched per-species parquets into per-query `tables/blast/{ql}/aggregate.parquet` |
+| `merge_blast` | `--blast` | Merge per-query BLAST aggregates into `tables/blast/aggregate.parquet` |
 
 ### Stage 6: Domain Detection
 
 | Rule | CLI Flag | Description |
 |------|----------|-------------|
 | `rpsblast_species` | `--rpsblast` | Search filtered sequences against CDD (or CDD subset) |
+| `aggregate_rpsblast` | `--rpsblast` | Concatenate per-species RPSBLAST parquets into per-query `tables/rpsblast/{ql}/rpsblast.parquet` |
+| `merge_rpsblast` | `--rpsblast` | Merge per-query RPSBLAST aggregates into `tables/rpsblast/rpsblast.parquet` |
 | `rpsbproc_species` | `--rpsbproc` | Post-process RPSBLAST ASN output with rpsbproc |
 | `rpsbproc_parser_species` | `--rpsbproc-parser` | Parse rpsbproc text output into structured domain parquets |
-| `aggregate_domains` | `--rpsbproc-parser` | Concatenate per-species domain parquets into `tables/domains/domains.parquet` |
+| `aggregate_domains` | `--rpsbproc-parser` | Concatenate per-species domain parquets into per-query `tables/domains/{ql}/domains.parquet` |
+| `merge_domains` | `--rpsbproc-parser` | Merge per-query domain tables with GenomicRanges deduplication into `tables/domains/domains.parquet` |
 
 ### Stage 7: Hit–Domain Inventory
 
@@ -117,6 +121,14 @@ Both visualization rules also trigger all three aggregation rules (`aggregate_bl
 |------|----------|-------------|
 | `completeness_detector` | `--completeness-detector` | Generate tile plot (domain completeness heatmap) |
 | `contingency_sorter` | `--contingency-parser` | Generate 3D scatter plot, contingency table, GFF3 files |
+
+### Stage 9: Concordance & Extended Plots
+
+| Rule | CLI Flag | Description |
+|------|----------|-------------|
+| `pq_concordance` | `--concordance` | Per-query HMMER vs CDD concordance analysis |
+| `merge_concordance` | `--concordance` | Merge per-query concordance tables |
+| `extended_plots` | `--extended-plots` | Generate 7 analytical plots from merged domain and concordance data |
 
 ## ENRICHED_BLAST_DIR Resolution
 
