@@ -43,12 +43,13 @@ AGG_BLAST_PQ  = _R + '/tables/blast/{query_label}/aggregate.parquet'
 AGG_BLAST_CSV = _R + '/tables/blast/{query_label}/aggregate.csv'
 AGG_RPS_PQ    = _R + '/tables/rpsblast/{query_label}/rpsblast.parquet'
 AGG_RPS_CSV   = _R + '/tables/rpsblast/{query_label}/rpsblast.csv'
-AGG_DOM_PQ    = _R + '/tables/domains/{query_label}/domains.parquet'
-AGG_DOM_CSV   = _R + '/tables/domains/{query_label}/domains.csv'
 
 # Merged outputs (top-level, post-deduplication)
 MERGED_DOM_PQ    = _R + '/tables/domains/domains.parquet'
 MERGED_DOM_CSV   = _R + '/tables/domains/domains.csv'
+CALLS_PQ         = _R + '/tables/domains/calls.parquet'
+CALLS_CSV        = _R + '/tables/domains/calls.csv'
+GFF3             = _R + '/ranges/{species}.gff3'
 MERGED_BLAST_PQ  = _R + '/tables/blast/aggregate.parquet'
 MERGED_BLAST_CSV = _R + '/tables/blast/aggregate.csv'
 MERGED_RPS_PQ    = _R + '/tables/rpsblast/rpsblast.parquet'
@@ -603,9 +604,11 @@ rule rpsbproc_species:
 # Per-Query Per-Species rpsbproc Parser
 # =============================================================================
 
-rule rpsbproc_parser_species:
+rule call_domains_species:
+    """Domain calls of one query and species: family, evidence tier, own coordinates."""
     input:
-        txt=RPSBPROC_TXT
+        report=RPSBPROC_TXT,
+        alignments=RPSBLAST_PQ
     output:
         parquet=DOMAINS_PQ
     params:
@@ -613,16 +616,18 @@ rule rpsbproc_parser_species:
         query_acc=query_acc_for_label
     threads: 1
     log:
-        job_log('rpsbproc_parser_species', 'query_label', 'species')
+        job_log('call_domains_species', 'query_label', 'species')
     benchmark:
-        job_benchmark('rpsbproc_parser_species', 'query_label', 'species')
+        job_benchmark('call_domains_species', 'query_label', 'species')
     shell:
         '''
         (
-        python scripts/rpsbproc_parser.py \
-            --input-txt {input.txt:q} \
-            --output-parquet {output.parquet:q} \
-            --query-accession {params.query_acc}
+        python scripts/call_domains.py \
+            --species {wildcards.species} \
+            --query-accession {params.query_acc} \
+            --report {input.report:q} \
+            --alignments {input.alignments:q} \
+            --output {output.parquet:q}
         ) > {log:q} 2>&1
         '''
 
@@ -657,19 +662,6 @@ rule aggregate_rpsblast:
     shell:
         'python scripts/aggregate.py rpsblast {output.parquet:q} {input} > {log:q} 2>&1'
 
-rule aggregate_domains:
-    input:
-        lambda wc: expand(DOMAINS_PQ, query_label=wc.query_label, species=SPECIES)
-    output:
-        parquet=AGG_DOM_PQ,
-        csv=AGG_DOM_CSV
-    log:
-        job_log('aggregate_domains', 'query_label')
-    benchmark:
-        job_benchmark('aggregate_domains', 'query_label')
-    shell:
-        'python scripts/aggregate.py domains {output.parquet:q} {input} > {log:q} 2>&1'
-
 # =============================================================================
 # Cross-Query Merge Rules
 # =============================================================================
@@ -702,26 +694,30 @@ rule merge_rpsblast:
     shell:
         'python scripts/aggregate.py rpsblast {output.parquet:q} {input} > {log:q} 2>&1'
 
-rule merge_domains:
-    """Merge per-query domain tables with cross-query deduplication."""
+rule domain_tables:
+    """All domain calls, the domain instances they merge into, and a GFF3 per species."""
     input:
-        expand(AGG_DOM_PQ, query_label=QUERY_LABELS)
+        expand(DOMAINS_PQ, query_label=QUERY_LABELS, species=SPECIES)
     output:
-        parquet=MERGED_DOM_PQ,
-        csv=MERGED_DOM_CSV
+        calls=CALLS_PQ,
+        calls_csv=CALLS_CSV,
+        domains=MERGED_DOM_PQ,
+        domains_csv=MERGED_DOM_CSV,
+        gff=expand(GFF3, species=SPECIES)
     params:
-        config_path=str(defaults.CONFIG_FILE)
+        gff_dir=str(defaults.PATH_DICT['RANGE_OUTPUT_DIR'])
     log:
-        job_log('merge_domains')
+        job_log('domain_tables')
     benchmark:
-        job_benchmark('merge_domains')
+        job_benchmark('domain_tables')
     shell:
         '''
         (
-        Rscript scripts/merge_queries.R \
-            {output.parquet:q} \
-            {params.config_path:q} \
-            {input}
+        python scripts/domain_tables.py \
+            --calls-out {output.calls:q} \
+            --domains-out {output.domains:q} \
+            --gff-dir {params.gff_dir:q} \
+            {input:q}
         ) > {log:q} 2>&1
         '''
 
@@ -764,7 +760,8 @@ rule rpsbproc:
         expand(RPSBPROC_TXT, query_label=QUERY_LABELS, species=SPECIES)
 
 rule rpsbproc_parser:
-    """Per-query parsing + per-query aggregation + cross-query merge."""
+    """Domain calls, domain instances and GFF3 tracks."""
     input:
-        expand(AGG_DOM_PQ, query_label=QUERY_LABELS),
-        MERGED_DOM_PQ
+        CALLS_PQ,
+        MERGED_DOM_PQ,
+        expand(GFF3, species=SPECIES)
