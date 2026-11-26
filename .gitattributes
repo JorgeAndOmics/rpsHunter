@@ -1,0 +1,4 @@
+# Store text with LF everywhere; the tree was written on Windows and mixed CRLF and LF.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
