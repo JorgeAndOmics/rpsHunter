@@ -29,7 +29,6 @@ import defaults
 import domain_calls
 import domain_families
 import external
-import tags
 
 RAW_COLUMNS = (
     "Tag",
@@ -149,17 +148,14 @@ def gathering_thresholds(profiles_text: str) -> dict[str, float]:
 def _row(fields: list[str]) -> dict[str, object]:
     """One domain from the fields of a domain-table line."""
     target = fields[_TARGET]
-    found = tags.TAG_IN_IDENTIFIER.search(target)
-    place = target.split("|")[0]
-    sequence, _, span = place.rpartition(":")
-    hit_a, _, hit_b = span.partition("-")
-    if found is None or not (sequence and hit_a.isdigit() and hit_b.isdigit()):
+    hit = domain_calls.DEFINITION.fullmatch(target)
+    if hit is None:
         raise ValueError(f"target name is not `<seq>:<a>-<b>|tag:<Tag>`: {target}")
     return {
-        "Tag": found.group(1),
-        "Sequence": sequence,
-        "Hit_A": hit_a,
-        "Hit_B": hit_b,
+        "Tag": hit["tag"],
+        "Sequence": hit["sequence"],
+        "Hit_A": hit["a"],
+        "Hit_B": hit["b"],
         "Profile": fields[_PROFILE],
         "Pfam": fields[_ACCESSION].split(".")[0],
         "Residue_From": fields[_ALI_FROM],

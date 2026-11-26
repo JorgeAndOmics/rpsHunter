@@ -25,14 +25,18 @@ def confirmed(own: pd.DataFrame, other: pd.DataFrame) -> pd.Series:
     """Say, for each row of `own`, whether `other` has an overlapping domain.
 
     Both tables need Tag, Family, Start and End (genomic, start <= end).
-    Overlap is of at least one base. The result is on `own`'s index.
+    Overlap is of at least one base. The result is on `own`'s index, whatever
+    that index is: rows are told apart by position, not by label.
     """
-    left = own[[*_KEY, "Start", "End"]].reset_index(names="_row")
+    left = own[[*_KEY, "Start", "End"]].reset_index(drop=True)
+    left["_row"] = range(len(left))
     pairs = left.merge(other[[*_KEY, "Start", "End"]], on=_KEY, suffixes=("", "_other"))
     overlap = (pairs["Start"] <= pairs["End_other"]) & (
         pairs["Start_other"] <= pairs["End"]
     )
-    return pd.Series(own.index.isin(pairs.loc[overlap, "_row"]), index=own.index)
+    matched = set(pairs.loc[overlap, "_row"])
+    flags = [row in matched for row in range(len(own))]
+    return pd.Series(flags, index=own.index, dtype=bool)
 
 
 def agreement(

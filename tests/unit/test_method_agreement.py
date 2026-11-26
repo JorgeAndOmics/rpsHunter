@@ -62,3 +62,13 @@ def test_several_matches_still_give_one_label_per_row_on_the_own_index():
 
 def test_no_rows_give_no_labels():
     assert ma.agreement(_domains(), _domains(), {"SET"}, "hmmer_only").empty
+
+
+def test_rows_sharing_an_index_label_are_judged_one_by_one():
+    calls = _domains(
+        ("A", "SET", 100, 400), ("A", "SET", 900, 950), ("A", "SET", 2000, 2100)
+    )
+    calls.index = [7, 7, 9]
+    other = _domains(("A", "SET", 90, 200))
+
+    assert list(ma.confirmed(calls, other)) == [True, False, False]

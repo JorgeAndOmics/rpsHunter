@@ -165,3 +165,17 @@ def test_a_call_without_a_matching_alignment_is_an_error():
 
     with pytest.raises(ValueError, match="AAAAAAAAAAAA"):
         domain_calls.add_model_coordinates(calls, ALIGNMENTS.iloc[:3], LENGTHS)
+
+
+def test_placing_no_calls_keeps_coordinates_as_integers():
+    empty = pd.DataFrame(
+        {
+            name: pd.Series(dtype="int64")
+            for name in ("Hit_A", "Hit_B", "Residue_From", "Residue_To")
+        }
+    )
+
+    placed = domain_calls.place_on_genome(empty)
+
+    for column in ("Hit_Start", "Hit_End", "Start", "End"):
+        assert str(placed[column].dtype) == "int64", column

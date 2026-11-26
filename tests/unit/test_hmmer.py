@@ -216,3 +216,14 @@ def test_a_species_without_sequences_still_gets_a_table_with_every_column(
     written = pd.read_parquet(output)
     assert len(written) == 0
     assert list(written.columns) == list(hmmer.DOMAIN_COLUMNS)
+
+
+def test_a_sequence_name_containing_a_bar_is_parsed_like_any_other():
+    line = DOMTBL.splitlines()[1].replace(
+        "chr1:1300-1001", "gi|12|ref|NC_1.1|:1300-1001"
+    )
+
+    first = hmmer.parse_domains(line + "\n").iloc[0]
+
+    assert first["Sequence"] == "gi|12|ref|NC_1.1|"
+    assert (first["Hit_A"], first["Hit_B"]) == (1300, 1001)
