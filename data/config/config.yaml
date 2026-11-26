@@ -18,6 +18,8 @@ databases:
   cdd:
     version: '3.22'
     residues: 15821058
+  pfam:
+    version: '38.2'    # the release --download-databases fetches
 
 # Domain families: what to look for inside the hits. Each family is a name of your
 # choosing and the accessions of the models that count as evidence for it:

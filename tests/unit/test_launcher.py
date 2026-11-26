@@ -25,6 +25,7 @@ class Runner:
     def __init__(self, dry_run: str, dry_status: int = 0, run_status: int = 0) -> None:
         self.calls: list[SimpleNamespace] = []
         self.real: list[SimpleNamespace] = []
+        self.manifests: list = []
         self._dry_run, self._dry_status, self._run_status = (
             dry_run,
             dry_status,
@@ -44,7 +45,13 @@ class Runner:
         return self._run_status
 
     def tools(self, check=None):
-        return launcher.Tools(run=self, stream=self.stream, check=check or _sound)
+        return launcher.Tools(
+            run=self, stream=self.stream, check=check or _sound, record=self.record
+        )
+
+    def record(self, run, config_file, folder, stamp):
+        self.manifests.append(run)
+        return folder / f"{stamp}.yaml"
 
 
 def _sound(_request, _config):
@@ -57,7 +64,11 @@ def config(tmp_path):
     logs = tmp_path / "logs"
     (logs / "runs").mkdir(parents=True)  # the Snakefile makes it in a real run
     path = tmp_path / "config.yaml"
-    settings = {"execution": {"num_cores": 6}, "root": {"logs_root_folder": str(logs)}}
+    roots = {
+        "logs_root_folder": str(logs),
+        "results_root_folder": str(tmp_path / "results"),
+    }
+    settings = {"execution": {"num_cores": 6}, "root": roots}
     path.write_text(yaml.safe_dump(settings))
     return path
 
@@ -271,3 +282,29 @@ def test_quiet_shows_no_job_line(config, capsys):
 
 def test_the_version_comes_from_the_citation_file():
     assert launcher.version()[0].isdigit()
+
+
+def test_a_run_that_executed_jobs_gets_a_manifest_with_its_stages_jobs_and_status(
+    config, capsys
+):
+    runner = Runner(WORK, run_status=5)
+
+    launcher.main(["--search", "--loci", "--config", str(config)], tools=runner.tools())
+
+    (run,) = runner.manifests
+    assert run.stages == ["--search", "--loci"]
+    assert run.jobs["blast_species"] == 15
+    assert run.exit_status == 5  # a failed run is recorded too
+    assert "Manifest: " in capsys.readouterr().out
+
+
+def test_a_dry_run_and_a_run_with_nothing_to_do_write_no_manifest(config):
+    dry, idle = Runner(WORK), Runner(NOTHING)
+
+    launcher.main(
+        ["--search", "--loci", "-n", "--config", str(config)], tools=dry.tools()
+    )
+    launcher.main(["--loci", "--config", str(config)], tools=idle.tools())
+
+    assert dry.manifests == []
+    assert idle.manifests == []

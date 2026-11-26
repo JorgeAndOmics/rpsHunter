@@ -3,8 +3,8 @@
 The command line is parsed by stages.py. This module finds the config, asks
 Snakemake what would run, lets guard.py stop a run that would start a download
 or a search nobody asked for, and then runs Snakemake once with every requested
-target, showing the run through console.py and keeping all of its output in
-`<logs>/runs/<time>.log`. Before any of that, preflight.py checks the config, the tools and the
+target, showing the run through console.py, keeping all of its output in
+`<logs>/runs/<time>.log` and writing the run's manifest (manifest.py). Before any of that, preflight.py checks the config, the tools and the
 input files. The exit status is Snakemake's, 2 for a usage, config or input
 problem, and EXIT_GUARD when the guard stopped the run.
 """
@@ -23,6 +23,7 @@ import yaml
 import console
 import external
 import guard
+import manifest
 import preflight
 import stages
 
@@ -47,6 +48,7 @@ class Tools(NamedTuple):
     run: Run = external.run_plain
     stream: Stream = external.run_streaming
     check: Check = preflight.check
+    record: Callable[..., Path] = manifest.record
 
 
 class LaunchError(Exception):
@@ -140,14 +142,13 @@ def version() -> str:
     return str(declared.get("version", "unknown"))
 
 
-def _run_log(settings: dict[str, Any]) -> Path:
-    """Return where this run's output is kept.
+def _folder(settings: dict[str, Any], root: str, name: str) -> Path:
+    """Return a folder under one of the config's roots.
 
-    The folder is made when the Snakefile is read (defaults.ensure_dirs), which
-    the dry run has already done.
+    These folders are made when the Snakefile is read (defaults.ensure_dirs),
+    which the dry run has already done.
     """
-    logs = Path(settings["root"]["logs_root_folder"]).resolve()
-    return logs / "runs" / f"{time.strftime('%Y-%m-%d_%H%M%S')}.log"
+    return Path(settings["root"][root]).resolve() / name
 
 
 def _screen(request: stages.Request, settings: dict[str, Any]) -> console.Console:
@@ -165,26 +166,46 @@ def _screen(request: stages.Request, settings: dict[str, Any]) -> console.Consol
     return console.Console(chosen, style, write)
 
 
-def _execute(
-    command: list[str],
-    environment: dict[str, str],
-    screen: console.Console,
-    kept: Path,
-    tools: Tools,
-) -> int:
-    """Run Snakemake, showing the run on the screen and keeping every line."""
-    started = time.monotonic()
+class _Session(NamedTuple):
+    """One run about to start: what to call, where, and what it was asked to do."""
+
+    request: stages.Request
+    config: Path
+    command: list[str]
+    environment: dict[str, str]
+    jobs: dict[str, int]
+
+
+def _execute(session: _Session, screen: console.Console, tools: Tools) -> int:
+    """Run Snakemake: show the run, keep every line, write the manifest."""
+    settings = _settings(session.config)
+    stamp = time.strftime("%Y-%m-%d_%H%M%S")
+    kept = _folder(settings, "logs_root_folder", "runs") / f"{stamp}.log"
+    started, clock = time.strftime("%Y-%m-%dT%H:%M:%S"), time.monotonic()
     with kept.open("w") as record:
 
         def take(line: str) -> None:
             record.write(line + "\n")
             screen.feed(line)
 
-        status = int(tools.stream(command, take, cwd=WORKFLOW, env=environment))
-    screen.summary(status, time.monotonic() - started)
+        options = {"cwd": WORKFLOW, "env": session.environment}
+        status = int(tools.stream(session.command, take, **options))
+    seconds = time.monotonic() - clock
+    screen.summary(status, seconds)
     if screen.warnings:
         kept.with_suffix(".warnings.txt").write_text("\n".join(screen.warnings) + "\n")
-    print(f"Run log: {kept}")
+    run = manifest.Run(
+        command=[Path(sys.argv[0]).name, *sys.argv[1:]],
+        stages=[stage.flag for stage in session.request.stages],
+        started=started,
+        seconds=seconds,
+        exit_status=status,
+        jobs=session.jobs,
+    )
+    folder = _folder(settings, "results_root_folder", "manifests")
+    print(
+        f"Run log: {kept}\nManifest: {tools.record(run, session.config, folder, stamp)}"
+    )
     return status
 
 
@@ -210,12 +231,13 @@ def _launch(request: stages.Request, environment: dict[str, str], tools: Tools) 
         return EXIT_GUARD
     if request.dry_run:
         return 0
-    settings = _settings(config)
-    screen = _screen(request, settings)
+    screen = _screen(request, _settings(config))
     screen.banner(
         version(), str(config), cores, [stage.flag for stage in request.stages]
     )
-    return _execute(command, environment, screen, _run_log(settings), tools)
+    return _execute(
+        _Session(request, config, command, environment, counts), screen, tools
+    )
 
 
 DEFAULT_TOOLS = Tools()
