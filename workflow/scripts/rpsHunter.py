@@ -150,7 +150,7 @@ def cli_entry() -> None:
                         help='Run tBLASTn of the query sequence against genome databases.')
 
     parser.add_argument('--hmmer', action='store_true',
-                        help='Run HMMER domain filtering on BLAST hits.')
+                        help='Search the selected hits with the Pfam profiles of the families (independent evidence).')
 
     parser.add_argument('--rpsblast', action='store_true',
                         help='Run RPS-BLAST against a domain database.')

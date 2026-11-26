@@ -1,3 +1,4 @@
+import shlex
 import sys
 from pathlib import Path
 
@@ -49,6 +50,8 @@ MERGED_DOM_CSV   = _R + '/tables/domains/domains.csv'
 CALLS_PQ         = _R + '/tables/domains/calls.parquet'
 CALLS_CSV        = _R + '/tables/domains/calls.csv'
 GFF3             = _R + '/ranges/{species}.gff3'
+HMMER_DOM_PQ     = _R + '/tables/domains/hmmer_domains.parquet'
+HMMER_DOM_CSV    = _R + '/tables/domains/hmmer_domains.csv'
 LOCI_PQ          = _R + '/tables/loci/loci.parquet'
 LOCI_CSV         = _R + '/tables/loci/loci.csv'
 LOCUS_FAM_PQ     = _R + '/tables/loci/locus_families.parquet'
@@ -58,27 +61,13 @@ MERGED_BLAST_CSV = _R + '/tables/blast/aggregate.csv'
 MERGED_RPS_PQ    = _R + '/tables/rpsblast/rpsblast.parquet'
 MERGED_RPS_CSV   = _R + '/tables/rpsblast/rpsblast.csv'
 
-# Enriched blast pattern — determines which per-query per-species directory
-# holds the "final" blast parquet after all enabled enrichment steps.
-ENRICHED_PATTERN = (
-    HMM_PQ if defaults.HMMER_ENABLED
-    else BLAST_PQ
-)
-
-# Input pattern for HMMER (one step back from ENRICHED_PATTERN).
-PRE_HMMER_PATTERN = (
-    BLAST_PQ
-)
-
 # RPSBLAST database path
 RPSBLAST_DB = defaults.PATH_DICT['CDD_SUBSET_DB'] / 'families_db'
 
-# Pre-built HMMER subset HMM path
-HMMER_SUBSET_HMM = (
-    defaults.PATH_DICT['HMM_OUTPUT_DIR'] / 'subset.hmm'
-    if defaults.PFAM_ACCESSIONS
-    else None
-)
+# HMMER runs when it is enabled and at least one family lists a Pfam accession.
+HMMER_ACTIVE = bool(defaults.HMMER_ENABLED and defaults.PFAM_ACCESSIONS)
+HMMER_SUBSET_HMM = defaults.PATH_DICT['HMM_OUTPUT_DIR'] / 'subset.hmm'
+HMMER_TABLES = expand(HMM_PQ, query_label=QUERY_LABELS, species=SPECIES) if HMMER_ACTIVE else []
 
 configfile: str(defaults.CONFIG_FILE)
 
@@ -347,33 +336,6 @@ rule cdd_subset_builder:
         '''
 
 # =============================================================================
-# HMMER profile extraction (when families list Pfam accessions)
-# =============================================================================
-
-if defaults.HMMER_ENABLED and defaults.PFAM_ACCESSIONS:
-    rule hmmer_extract_profiles:
-        """Extract and press HMMER subset profiles once for all species."""
-        input:
-            pfam_hmm=str(defaults.PATH_DICT['HMM_DB'] / 'Pfam-A.hmm')
-        output:
-            subset_hmm=str(HMMER_SUBSET_HMM)
-        params:
-            settings=tracked('domains')
-        log:
-            job_log('hmmer_extract_profiles')
-        benchmark:
-            job_benchmark('hmmer_extract_profiles')
-        shell:
-            '''
-            (
-            python scripts/hmmer.py \
-                --extract-only \
-                {input.pfam_hmm:q} \
-                {output.subset_hmm:q}
-            ) > {log:q} 2>&1
-            '''
-
-# =============================================================================
 # BLAST DB Generation
 # =============================================================================
 
@@ -444,24 +406,71 @@ rule blast_species:
         '''
 
 # =============================================================================
-# Per-Query Per-Species HMMER (conditional)
+# Per-Query Per-Species Hit Selection
 # =============================================================================
 
-if defaults.HMMER_ENABLED:
-    rule hmmer_species:
+rule select_hits_species:
+    """Hits that pass the quality gate, as tables and as sequences to search."""
+    input:
+        parquet=BLAST_PQ
+    output:
+        fasta=FASTA_OUT,
+        audit=FASTA_AUDIT,
+        selected=SELECTED_PQ
+    params:
+        settings=tracked('blast')
+    threads: 1
+    log:
+        job_log('select_hits_species', 'query_label', 'species')
+    benchmark:
+        job_benchmark('select_hits_species', 'query_label', 'species')
+    shell:
+        '''
+        (
+        python scripts/select_hits.py \
+            --input {input.parquet:q} \
+            --output-fasta {output.fasta:q} \
+            --output-audit {output.audit:q} \
+            --output-selected {output.selected:q}
+        ) > {log:q} 2>&1
+        '''
+
+# =============================================================================
+# HMMER: independent evidence on the selected sequences (ADR-010)
+# =============================================================================
+
+if HMMER_ACTIVE:
+    rule pfam_subset:
+        """The families' Pfam profiles, extracted once for all species."""
         input:
-            parquet=PRE_HMMER_PATTERN,
-            pfam_hmm=str(defaults.PATH_DICT['HMM_DB'] / 'Pfam-A.hmm'),
-            subset_hmm=(str(HMMER_SUBSET_HMM)
-                        if defaults.PFAM_ACCESSIONS
-                        else [])
+            library=str(defaults.PATH_DICT['HMM_DB'] / 'Pfam-A.hmm')
+        output:
+            subset=str(HMMER_SUBSET_HMM)
+        params:
+            settings=tracked('domains')
+        log:
+            job_log('pfam_subset')
+        benchmark:
+            job_benchmark('pfam_subset')
+        shell:
+            '''
+            (
+            python scripts/pfam_subset.py \
+                --library {input.library:q} \
+                --output {output.subset:q}
+            ) > {log:q} 2>&1
+            '''
+
+    rule hmmer_species:
+        """HMMER domains of one query and species, at their own genomic position."""
+        input:
+            fasta=FASTA_OUT,
+            profiles=str(HMMER_SUBSET_HMM)
         output:
             parquet=HMM_PQ
         params:
-            settings=tracked('hmmer'),
-            hmm_db_flag=('--hmm-db ' + str(HMMER_SUBSET_HMM)
-                         if defaults.PFAM_ACCESSIONS
-                         else '')
+            settings=tracked('hmmer', 'domains'),
+            query_acc=query_acc_for_label
         threads:
             workflow.cores
         log:
@@ -473,45 +482,13 @@ if defaults.HMMER_ENABLED:
             (
             python scripts/hmmer.py \
                 --species {wildcards.species} \
+                --query-accession {params.query_acc} \
                 --threads {threads} \
-                {params.hmm_db_flag} \
-                {input.parquet:q} \
-                {input.pfam_hmm:q} \
-                {output.parquet:q}
+                --fasta {input.fasta:q} \
+                --profiles {input.profiles:q} \
+                --output {output.parquet:q}
             ) > {log:q} 2>&1
             '''
-
-# =============================================================================
-# Per-Query Per-Species BLAST Parser
-# =============================================================================
-
-rule blast_parser_species:
-    input:
-        parquet=ENRICHED_PATTERN
-    output:
-        fasta=FASTA_OUT,
-        audit=FASTA_AUDIT,
-        selected=SELECTED_PQ
-    params:
-        settings=tracked('blast', 'hmmer.enabled'),
-        query_acc=query_acc_for_label
-    threads: 1
-    log:
-        job_log('blast_parser_species', 'query_label', 'species')
-    benchmark:
-        job_benchmark('blast_parser_species', 'query_label', 'species')
-    shell:
-        '''
-        (
-        python scripts/blast_parser.py \
-            --species {wildcards.species} \
-            --query-accession {params.query_acc} \
-            --input-parquet {input.parquet:q} \
-            --output-fasta {output.fasta:q} \
-            --output-audit {output.audit:q} \
-            --output-selected {output.selected:q}
-        ) > {log:q} 2>&1
-        '''
 
 # =============================================================================
 # Per-Query Per-Species RPSBLAST
@@ -608,9 +585,9 @@ rule call_domains_species:
 # =============================================================================
 
 rule aggregate_blast:
-    """Per-query: aggregates the FINAL enriched blast parquets across species."""
+    """Per-query: every tBLASTn hit of every species."""
     input:
-        lambda wc: expand(ENRICHED_PATTERN, query_label=wc.query_label, species=SPECIES)
+        lambda wc: expand(BLAST_PQ, query_label=wc.query_label, species=SPECIES)
     output:
         parquet=AGG_BLAST_PQ,
         csv=AGG_BLAST_CSV
@@ -669,15 +646,19 @@ rule merge_rpsblast:
 rule domain_tables:
     """All domain calls, the domain instances they merge into, and a GFF3 per species."""
     input:
-        expand(DOMAINS_PQ, query_label=QUERY_LABELS, species=SPECIES)
+        calls=expand(DOMAINS_PQ, query_label=QUERY_LABELS, species=SPECIES),
+        hmmer=HMMER_TABLES
     output:
         calls=CALLS_PQ,
         calls_csv=CALLS_CSV,
         domains=MERGED_DOM_PQ,
         domains_csv=MERGED_DOM_CSV,
-        gff=expand(GFF3, species=SPECIES)
+        gff=expand(GFF3, species=SPECIES),
+        hmmer=[HMMER_DOM_PQ, HMMER_DOM_CSV] if HMMER_ACTIVE else []
     params:
-        gff_dir=str(defaults.PATH_DICT['RANGE_OUTPUT_DIR'])
+        settings=tracked('domains', 'hmmer.enabled'),
+        gff_dir=str(defaults.PATH_DICT['RANGE_OUTPUT_DIR']),
+        hmmer=('--hmmer-out ' + shlex.quote(HMMER_DOM_PQ) + ' --hmmer') if HMMER_ACTIVE else ''
     log:
         job_log('domain_tables')
     benchmark:
@@ -689,7 +670,8 @@ rule domain_tables:
             --calls-out {output.calls:q} \
             --domains-out {output.domains:q} \
             --gff-dir {params.gff_dir:q} \
-            {input:q}
+            --calls {input.calls:q} \
+            {params.hmmer} {input.hmmer:q}
         ) > {log:q} 2>&1
         '''
 
@@ -736,9 +718,9 @@ rule blaster:
         expand(BLAST_PQ, query_label=QUERY_LABELS, species=SPECIES)
 
 rule hmmer:
-    """Per-query HMMER filtering (no-op if hmmer.enabled: false)."""
+    """HMMER domains of the selected hits (nothing to do if HMMER is off)."""
     input:
-        expand(HMM_PQ, query_label=QUERY_LABELS, species=SPECIES) if defaults.HMMER_ENABLED else []
+        HMMER_TABLES
 
 rule blast_parser:
     """Per-query FASTA export, aggregation, and cross-query merge."""

@@ -79,17 +79,26 @@ in NCBI's Conserved Domain Database or in InterPro. A model may belong to one fa
 reported at superfamily level are assigned to the family whose models belong to that superfamily.
 Every domain table carries a `Family` column beside the model.
 
-### `hmmer` -- HMMER Domain Filtering
+### `hmmer` -- HMMER as Independent Evidence
 
-Controls hmmsearch against the Pfam database. When enabled, sequences are enriched with HMM domain annotations and optionally filtered by domain match. HMMER runs after ORF analysis (if enabled) and before BLAST parsing. All quality-passing domain hits per sequence are retained as list-valued columns.
+Searches the selected hit sequences with the Pfam profiles of the families under `domains:`
+(`pfam:` accessions). HMMER annotates and never filters: every hit that passes the quality gate
+(`blast:`) goes to RPS-BLAST whether or not HMMER matches it
+([ADR-010](adr/ADR-010-scope-and-hmmer-evidence.md)). Its domains are written to
+`tables/domains/hmmer_domains.*` at their own genomic position, each with `Above_GA` (whether it
+clears Pfam's curated gathering threshold). CDD calls and HMMER domains both carry
+`Method_Agreement`: `both` when the other method reports the same family on the same hit at an
+overlapping position, `cdd_only` / `hmmer_only` when it does not, `not_compared` when the family has
+models in only one library or HMMER is off. HMMER runs only if at least one family lists a Pfam
+accession.
 
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|
-| `enabled` | `bool` | `true` | `bool()` | Master toggle. When `false`, the HMMER stage is skipped and no `HMM_*` columns are added. |
+| `enabled` | `bool` | `true` | `bool()` | Master toggle. When `false`, HMMER is not run, no HMMER table is written and every call is `not_compared`. |
 | `use_gathering_threshold` | `bool` | `false` | `bool()` | Use Pfam's curated `--cut_ga` thresholds instead of manual E-value thresholds. When `true`, `evalue` and `dom_evalue` are ignored. |
 | `evalue` | `float` | `1e-5` | `num(min=0)`, optional | Sequence-level E-value threshold for hmmsearch. Ignored when `use_gathering_threshold` is `true`. |
 | `dom_evalue` | `float` | `1e-3` | `num(min=0)`, optional | Per-domain E-value threshold. Controls sensitivity for individual domain hits within multi-domain sequences. Ignored when `use_gathering_threshold` is `true`. |
-| `min_score` | `float\|null` | `null` | `any(num(min=0), null())`, optional | Minimum bit-score filter. `null` disables this filter. |
+| `min_score` | `float\|null` | `null` | `any(num(min=0), null())`, optional | Minimum sequence bit score to report (`hmmsearch -T`). `null` disables it. Ignored when `use_gathering_threshold` is `true`. |
 | `min_coverage` | `float` | `0.5` | `num(min=0, max=1)` | Minimum fraction of the HMM profile aligned to the target sequence. Range 0.0-1.0. |
 | `min_alignment_length` | `int` | `20` | `int(min=0)` | Minimum alignment length in amino acids. Filters short, unreliable matches. |
 | `max_sensitivity` | `bool` | `false` | `bool()` | Enable hmmsearch `--max` flag, which disables all heuristic filters. Significantly slower but maximally sensitive. |
@@ -100,7 +109,7 @@ Controls hmmsearch against the Pfam database. When enabled, sequences are enrich
 
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|
-| `gap` | `int` | `20000` | `int(min=0)`, optional | Largest distance in bases between hits for them to be chained into one locus. Only hits that passed the gates are chained, on either strand. 20 kb keeps the exons of a gene together (the domain-bearing exons of human PRDM9 are up to 11 kb apart) without fusing tandem copies (40 kb apart in *Desmodus*); raise it for a gene family with longer introns. See [ADR-008](adr/ADR-008-loci.md). |
+| `gap` | `int` | `20000` | `int(min=0)`, optional | Largest distance in bases between hits for them to be chained into one locus. Only hits that passed the quality gate are chained, on either strand. 20 kb keeps the exons of a gene together (the domain-bearing exons of human PRDM9 are up to 11 kb apart) without fusing tandem copies (40 kb apart in *Desmodus*); raise it for a gene family with longer introns. See [ADR-008](adr/ADR-008-loci.md). |
 
 A locus reports which families it carries, each with its evidence tier, the fraction of a model
 covered when the locus's exon fragments are put together, and the number of separate places the

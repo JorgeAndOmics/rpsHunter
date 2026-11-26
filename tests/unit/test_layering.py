@@ -25,6 +25,7 @@ PURE_MODULES = (
     "gff3",
     "loci",
     "hit_table",
+    "method_agreement",
 )
 
 FORBIDDEN = frozenset(

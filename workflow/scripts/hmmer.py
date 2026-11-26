@@ -1,348 +1,275 @@
+"""Search one species' selected hit sequences with the families' Pfam profiles.
+
+HMMER is a second, independent look at the same sequences RPS-BLAST searches.
+It decides nothing: every domain it reports is written to a table with its own
+position on the genome, and whether the two methods agree is worked out later
+from positions (ADR-010). Each domain says whether it clears Pfam's curated
+gathering threshold (Above_GA), so permissive search settings stay visible.
+
+Usage (called by the Snakefile):
+    python hmmer.py --species KEY --query-accession ACC --fasta FASTA \
+        --profiles SUBSET.hmm --output TABLE.parquet --threads N
+
+A FASTA with no sequence gives an empty table without running the search. A
+failing hmmsearch stops the job (external.ToolError).
 """
-HMMER domain filtering — single-species mode.
 
-Reads a per-species blast parquet, extracts Subject Sequence, runs hmmsearch
-against a Pfam HMM database, and enriches the parquet with HMM_* columns:
-    HMM_Filtered   (bool)   – True if sequence passed any HMMER quality filter
-    HMM_Evalue     (list)   – per-domain E-values for all quality-passing hits
-    HMM_Score      (list)   – domain bit scores for all quality-passing hits
-    HMM_Domain     (list)   – Pfam domain names for all quality-passing hits
-    HMM_Coverage   (list)   – fraction of HMM model covered per quality-passing hit
-
-Lists are sorted by E-value ascending (best first).
-
-Usage (invoked by Snakefile):
-    python hmmer.py --species <name> <input.parquet> <Pfam-A.hmm> <output.parquet>
-"""
+from __future__ import annotations
 
 import argparse
-import logging
-import subprocess
+import sys
 import tempfile
+from collections.abc import Mapping
 from pathlib import Path
+from typing import NamedTuple
 
 import pandas as pd
 
 import defaults
+import domain_calls
 import domain_families
-from colored_logging import colored_logging
+import external
+import tags
+
+RAW_COLUMNS = (
+    "Tag",
+    "Sequence",
+    "Hit_A",
+    "Hit_B",
+    "Profile",
+    "Pfam",
+    "Residue_From",
+    "Residue_To",
+    "Model_From",
+    "Model_To",
+    "Model_Length",
+    "Evalue",
+    "Score",
+)
+"""One row per HMMER domain. Hit_A and Hit_B are the hit's genomic ends as
+tBLASTn wrote them; residues count along the hit's translation."""
+
+DOMAIN_COLUMNS = (
+    "Species",
+    "Query_Accession",
+    "Tag",
+    "Family",
+    "Profile",
+    "Pfam",
+    "Sequence",
+    "Strand",
+    "Start",
+    "End",
+    "Hit_Start",
+    "Hit_End",
+    "Residue_From",
+    "Residue_To",
+    "Model_From",
+    "Model_To",
+    "Model_Length",
+    "Evalue",
+    "Score",
+    "Above_GA",
+)
+
+_INTEGERS = (
+    "Hit_A",
+    "Hit_B",
+    "Residue_From",
+    "Residue_To",
+    "Model_From",
+    "Model_To",
+    "Model_Length",
+)
+_FLOATS = ("Evalue", "Score")
+# Fields of hmmsearch --domtblout, by position (HMMER 3.4 user guide, "tabular output").
+_TARGET, _PROFILE, _ACCESSION, _MODEL_LENGTH = 0, 3, 4, 5
+_I_EVALUE, _SCORE, _HMM_FROM, _HMM_TO, _ALI_FROM, _ALI_TO = 12, 13, 15, 16, 17, 18
+_FIELDS = 22
 
 
-# -----------------------------------------------------------------------------
-# FASTA helpers
-# -----------------------------------------------------------------------------
+class SearchSettings(NamedTuple):
+    """The hmmsearch options that come from the config."""
 
-def df_to_fasta(df: pd.DataFrame, fasta_path: Path) -> None:
-    """Write Subject Sequence column as a FASTA file keyed by row index."""
-    with open(fasta_path, 'w') as fh:
-        for idx, row in df.iterrows():
-            seq = str(row['Subject Sequence']).replace('-', '').replace('*', '')
-            if seq:
-                fh.write(f'>seq_{idx}\n{seq}\n')
+    use_gathering_threshold: bool
+    evalue: float
+    dom_evalue: float
+    min_score: float | None
+    max_sensitivity: bool
+    bias_filter: bool
+    seed: int
+    threads: int
 
 
-# -----------------------------------------------------------------------------
-# Profile extraction (hmmfetch subset)
-# -----------------------------------------------------------------------------
+def _reporting_flags(settings: SearchSettings) -> list[str]:
+    """What hmmsearch reports: Pfam's gathering thresholds, or explicit cut-offs."""
+    if settings.use_gathering_threshold:
+        return ["--cut_ga"]
+    flags = ["-E", str(settings.evalue), "--domE", str(settings.dom_evalue)]
+    if settings.min_score is not None:
+        flags += ["-T", str(settings.min_score)]
+    return flags
 
-def configured_profile_names(full_hmm: Path) -> list:
-    """Names, in the HMM library, of the Pfam accessions listed under `domains:`.
 
-    The config gives accessions without version (PF01352); hmmfetch wants names.
-    The library's NAME and ACC lines are read once to translate.
+def search_command(
+    profiles: Path, fasta: Path, domain_table: Path, settings: SearchSettings
+) -> list[str]:
+    """Return the hmmsearch command that writes a per-domain table."""
+    command = ["hmmsearch", *_reporting_flags(settings)]
+    if settings.max_sensitivity:
+        command.append("--max")
+    if not settings.bias_filter:
+        command.append("--nobias")
+    return [
+        *command,
+        "--cpu", str(settings.threads),
+        "--seed", str(settings.seed),
+        "--domtblout", str(domain_table),
+        str(profiles),
+        str(fasta),
+    ]  # fmt: skip
+
+
+def gathering_thresholds(profiles_text: str) -> dict[str, float]:
+    """Return each profile's per-domain gathering threshold (bit score) by name.
+
+    A profile's `GA` line holds the sequence and the domain threshold, in that
+    order; a domain is compared with the second.
     """
-    def library():
-        name = None
-        with open(full_hmm) as handle:
-            for line in handle:
-                if line.startswith('NAME'):
-                    name = line.split()[1]
-                elif line.startswith('ACC'):
-                    yield name, line.split()[1]
-
-    names = domain_families.pfam_profile_names(defaults.FAMILIES, library())
-    return list(names.values())
+    thresholds: dict[str, float] = {}
+    name = ""
+    for line in profiles_text.splitlines():
+        if line.startswith("NAME"):
+            name = line.split()[1]
+        elif line.startswith("GA"):
+            thresholds[name] = float(line.split()[2].rstrip(";"))
+    return thresholds
 
 
-def extract_profiles(full_hmm: Path, domains: list, subset_hmm: Path) -> None:
-    """Extract a subset of HMM profiles from a pressed database using hmmfetch.
+def _row(fields: list[str]) -> dict[str, object]:
+    """One domain from the fields of a domain-table line."""
+    target = fields[_TARGET]
+    found = tags.TAG_IN_IDENTIFIER.search(target)
+    place = target.split("|")[0]
+    sequence, _, span = place.rpartition(":")
+    hit_a, _, hit_b = span.partition("-")
+    if found is None or not (sequence and hit_a.isdigit() and hit_b.isdigit()):
+        raise ValueError(f"target name is not `<seq>:<a>-<b>|tag:<Tag>`: {target}")
+    return {
+        "Tag": found.group(1),
+        "Sequence": sequence,
+        "Hit_A": hit_a,
+        "Hit_B": hit_b,
+        "Profile": fields[_PROFILE],
+        "Pfam": fields[_ACCESSION].split(".")[0],
+        "Residue_From": fields[_ALI_FROM],
+        "Residue_To": fields[_ALI_TO],
+        "Model_From": fields[_HMM_FROM],
+        "Model_To": fields[_HMM_TO],
+        "Model_Length": fields[_MODEL_LENGTH],
+        "Evalue": fields[_I_EVALUE],
+        "Score": fields[_SCORE],
+    }
 
-    domains are Pfam profile NAMEs.  Existence is validated against
-    the flat file before fetching; a missing name raises early with an
-    explicit error.
 
-    Presses full_hmm if not already pressed.  Writes the extracted profiles
-    to subset_hmm and presses that file so hmmsearch can use it directly.
+def parse_domains(text: str) -> pd.DataFrame:
+    """Parse hmmsearch's per-domain table into a typed table with RAW_COLUMNS.
+
+    The E-value and score are the domain's own (independent E-value), not the
+    whole sequence's.
+
+    Raises:
+        ValueError: A line has too few fields, or its target is not named
+            `<seq>:<a>-<b>|tag:<Tag>`.
     """
-    # Ensure the full database is pressed (one-time cost, ~30 s for Pfam).
-    # hmmpress appends suffixes to the full filename (Pfam-A.hmm.h3m, etc.).
-    # Check all four; if any is missing the index is incomplete.  Use -f so
-    # a partially-written index from a previous interrupted run doesn't block.
-    _index_exts = ('.h3f', '.h3i', '.h3m', '.h3p')
-    if not all(Path(str(full_hmm) + ext).exists() for ext in _index_exts):
-        logging.info('Pressing full HMM database (one-time)...')
-        result = subprocess.run(['hmmpress', '-f', str(full_hmm)], capture_output=True, text=True)
-        if result.returncode != 0:
-            raise RuntimeError(f'hmmpress failed: {result.stderr}')
-
-    # Validate that every requested NAME exists in the flat file.
-    pattern = '^NAME  (' + '|'.join(domains) + ')$'
-    count_result = subprocess.run(
-        ['grep', '-cE', pattern, str(full_hmm)],
-        capture_output=True, text=True
+    lines = [line.split() for line in text.splitlines() if line and line[0] != "#"]
+    short = [fields for fields in lines if len(fields) < _FIELDS]
+    if short:
+        raise ValueError(f"expected at least {_FIELDS} fields, got {len(short[0])}")
+    table = pd.DataFrame([_row(fields) for fields in lines], columns=list(RAW_COLUMNS))
+    return table.astype(
+        dict.fromkeys(_INTEGERS, "int64") | dict.fromkeys(_FLOATS, "float64")
     )
-    found_count = int(count_result.stdout.strip()) if count_result.stdout.strip() else 0
-    if found_count != len(domains):
-        match_result = subprocess.run(
-            ['grep', '-oP', pattern, str(full_hmm)],
-            capture_output=True, text=True
-        )
-        found_names = {line.split()[1] for line in match_result.stdout.strip().splitlines() if line}
-        missing = sorted(set(domains) - found_names)
-        raise RuntimeError(f'Domain name(s) not found in {full_hmm}: {missing}')
-    logging.info(f'Validated profiles: {domains}')
 
-    # Write NAME key file and fetch
-    key_file = subset_hmm.with_suffix('.keys')
-    key_file.write_text('\n'.join(domains) + '\n')
 
-    result = subprocess.run(
-        ['hmmfetch', '-f', str(full_hmm), str(key_file)],
-        capture_output=True, text=True
+def keep_substantial(
+    domains: pd.DataFrame, min_coverage: float, min_length: int
+) -> pd.DataFrame:
+    """Keep domains covering enough of their model over enough residues."""
+    covered = domains["Model_To"] - domains["Model_From"] + 1
+    length = domains["Residue_To"] - domains["Residue_From"] + 1
+    keep = (covered / domains["Model_Length"] >= min_coverage) & (length >= min_length)
+    return domains[keep].reset_index(drop=True)
+
+
+def describe(
+    domains: pd.DataFrame,
+    family_of: Mapping[str, str],
+    thresholds: Mapping[str, float],
+) -> pd.DataFrame:
+    """Add each domain's family, genomic position and gathering-threshold verdict.
+
+    Raises:
+        ValueError: A domain's profile belongs to no configured family, so the
+            profile library and the config do not match.
+    """
+    unknown = sorted(set(domains["Pfam"]) - set(family_of))
+    if unknown:
+        raise ValueError(f"profiles of no configured family: {', '.join(unknown)}")
+    placed = domain_calls.place_on_genome(domains)
+    return placed.assign(
+        Family=placed["Pfam"].map(family_of),
+        Above_GA=placed["Score"] >= placed["Profile"].map(thresholds),
     )
-    if result.returncode != 0:
-        raise RuntimeError(f'hmmfetch failed: {result.stderr}')
-    if not result.stdout.strip():
-        raise RuntimeError(f'hmmfetch returned no profiles for {domains}')
-    subset_hmm.write_text(result.stdout)
-
-    # Press the subset so hmmsearch can use it
-    result = subprocess.run(['hmmpress', str(subset_hmm)], capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f'hmmpress on subset failed: {result.stderr}')
-
-    logging.info(f'Extracted {len(domains)} profiles → {subset_hmm}')
 
 
-# -----------------------------------------------------------------------------
-# hmmsearch execution
-# -----------------------------------------------------------------------------
-
-def run_hmmsearch(fasta_path: Path, hmm_path: Path, tbl_path: Path, threads: int) -> None:
-    """Run hmmsearch with config-driven flags; write --tblout to tbl_path."""
-    cmd = ['hmmsearch']
-
-    if defaults.HMMER_USE_GA:
-        cmd.append('--cut_ga')
-    else:
-        cmd.extend(['--domE', str(defaults.HMMER_DOM_EVALUE)])
-        cmd.extend(['-E', str(defaults.HMMER_EVALUE)])
-        if defaults.HMMER_MIN_SCORE is not None:
-            cmd.extend(['--score', str(defaults.HMMER_MIN_SCORE)])
-
-    if defaults.HMMER_MAX_SENS:
-        cmd.append('--max')
-
-    if not defaults.HMMER_BIAS_FILTER:
-        cmd.append('--nobias')
-
-    cmd.extend(['--cpu', str(threads)])
-    cmd.extend(['--seed', str(defaults.HMMER_SEED)])
-    cmd.extend(['--tblout', str(tbl_path)])
-    cmd.extend(['--domtblout', str(tbl_path.with_suffix('.domtbl'))])
-    cmd.append(str(hmm_path))
-    cmd.append(str(fasta_path))
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        logging.error(f'hmmsearch failed: {result.stderr}')
-        raise RuntimeError('hmmsearch exited with non-zero status')
+def configured_settings(threads: int) -> SearchSettings:
+    """The search settings of the current config."""
+    return SearchSettings(
+        use_gathering_threshold=defaults.HMMER_USE_GA,
+        evalue=defaults.HMMER_EVALUE,
+        dom_evalue=defaults.HMMER_DOM_EVALUE,
+        min_score=defaults.HMMER_MIN_SCORE,
+        max_sensitivity=defaults.HMMER_MAX_SENS,
+        bias_filter=defaults.HMMER_BIAS_FILTER,
+        seed=defaults.HMMER_SEED,
+        threads=threads,
+    )
 
 
-# -----------------------------------------------------------------------------
-# Domain table parser
-# -----------------------------------------------------------------------------
-
-def parse_domtbl(domtbl_path: Path) -> pd.DataFrame:
-    """
-    Parse hmmsearch --domtblout into a DataFrame.
-
-    Columns retained: target_name, target_len, query_name (Pfam accession),
-    query_name_desc (Pfam name), from, to, evalue, score, cov_from, cov_to, cov_len.
-    """
-    rows = []
-    with open(domtbl_path) as fh:
-        for line in fh:
-            if line.startswith('#'):
-                continue
-            parts = line.split()
-            if len(parts) < 23:
-                continue
-            rows.append({
-                'target_name': parts[0],
-                'target_len': int(parts[2]),
-                'query_name': parts[3],       # Pfam profile NAME
-                'evalue': float(parts[12]),   # per-domain i-evalue
-                'score': float(parts[13]),    # per-domain score
-                'from': int(parts[17]),       # ali from (alignment start on target)
-                'to': int(parts[18]),         # ali to   (alignment end on target)
-                'cov_from': int(parts[15]),   # hmm from (model start)
-                'cov_to': int(parts[16]),     # hmm to   (model end)
-                'cov_len': int(parts[5]),     # qlen     (model length)
-            })
-            # Pfam domain name is everything after column 22
-            if len(parts) > 22:
-                rows[-1]['query_name_desc'] = ' '.join(parts[22:])
-            else:
-                rows[-1]['query_name_desc'] = ''
-    return pd.DataFrame(rows) if rows else pd.DataFrame(
-        columns=['target_name', 'target_len', 'query_name', 'evalue',
-                 'score', 'from', 'to', 'cov_from', 'cov_to', 'cov_len', 'query_name_desc'])
+def search(fasta: Path, profiles: Path, settings: SearchSettings) -> pd.DataFrame:
+    """Run the search for one FASTA and return its domains (RAW_COLUMNS)."""
+    if fasta.stat().st_size == 0:
+        return parse_domains("")
+    with tempfile.TemporaryDirectory() as folder:
+        domain_table = Path(folder) / "domains.tbl"
+        command = search_command(profiles, fasta, domain_table, settings)
+        external.run_tool(command, tool="hmmsearch")
+        return parse_domains(domain_table.read_text())
 
 
-# -----------------------------------------------------------------------------
-# Quality filtering
-# -----------------------------------------------------------------------------
+def main(argv: list[str] | None = None) -> int:
+    """Command-line entry point; returns the process exit status."""
+    parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    parser.add_argument("--species", required=True)
+    parser.add_argument("--query-accession", required=True)
+    parser.add_argument("--fasta", type=Path, required=True)
+    parser.add_argument("--profiles", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--threads", type=int, default=1)
+    args = parser.parse_args(argv)
 
-def quality_filter(hits: pd.DataFrame) -> pd.DataFrame:
-    """Apply min_coverage and min_alignment_length filters."""
-    if hits.empty:
-        return hits
-    hits = hits.copy()
-    hits['coverage'] = (hits['cov_to'] - hits['cov_from'] + 1) / hits['cov_len']
-    hits['aln_len'] = hits['to'] - hits['from'] + 1
-    return hits[
-        (hits['coverage'] >= defaults.HMMER_MIN_COVERAGE) &
-        (hits['aln_len'] >= defaults.HMMER_MIN_ALN_LEN)
-    ]
-
-
-# -----------------------------------------------------------------------------
-# Enrichment
-# -----------------------------------------------------------------------------
-
-def enrich(blast_df: pd.DataFrame, hits: pd.DataFrame) -> pd.DataFrame:
-    """
-    Add HMM_* columns to blast_df.  hits is indexed by 'seq_{row_index}'.
-
-    HMM_Filtered is a scalar bool (True if any domain passed quality filters).
-    HMM_Domain, HMM_Evalue, HMM_Score, HMM_Coverage are lists of all
-    quality-passing hits sorted by E-value ascending (best first).
-    """
-    # Build lookup: seq index → list of hit rows
-    lookup: dict[int, list] = {}
-    for _, row in hits.iterrows():
-        idx = int(row['target_name'].split('_')[1])
-        lookup.setdefault(idx, []).append(row)
-
-    hmm_filtered = []
-    hmm_evalue  = []
-    hmm_score   = []
-    hmm_domain  = []
-    hmm_cov     = []
-
-    for idx in range(len(blast_df)):
-        if idx in lookup:
-            rows = sorted(lookup[idx], key=lambda r: r['evalue'])
-            hmm_filtered.append(True)
-            hmm_domain.append([r['query_name'] for r in rows])
-            hmm_evalue.append([r['evalue'] for r in rows])
-            hmm_score.append([r['score'] for r in rows])
-            hmm_cov.append([r['coverage'] for r in rows])
-        else:
-            hmm_filtered.append(False)
-            hmm_domain.append(None)
-            hmm_evalue.append(None)
-            hmm_score.append(None)
-            hmm_cov.append(None)
-
-    blast_df = blast_df.copy()
-    blast_df['HMM_Filtered']  = hmm_filtered
-    blast_df['HMM_Evalue']    = hmm_evalue
-    blast_df['HMM_Score']     = hmm_score
-    blast_df['HMM_Domain']    = hmm_domain
-    blast_df['HMM_Coverage']  = hmm_cov
-    return blast_df
+    found = search(args.fasta, args.profiles, configured_settings(args.threads))
+    kept = keep_substantial(
+        found, defaults.HMMER_MIN_COVERAGE, defaults.HMMER_MIN_ALN_LEN
+    )
+    family_of = domain_families.family_by_pfam(defaults.FAMILIES)
+    table = describe(kept, family_of, gathering_thresholds(args.profiles.read_text()))
+    table = table.assign(Species=args.species, Query_Accession=args.query_accession)
+    table[list(DOMAIN_COLUMNS)].to_parquet(args.output, index=False)
+    print(f"{args.species}: {len(table)} HMMER domains ({len(found)} before filters)")
+    return 0
 
 
-# -----------------------------------------------------------------------------
-# Main
-# -----------------------------------------------------------------------------
-
-def main():
-    colored_logging(log_file_name='hmmer.txt')
-
-    parser = argparse.ArgumentParser(description='Run HMMER domain filtering for a single species.')
-    parser.add_argument('--species', required=False, help='Species name.')
-    parser.add_argument('--threads', type=int, default=1, help='CPU threads for hmmsearch (set by Snakemake).')
-    parser.add_argument('--hmm-db', type=str, default=None,
-                        help='Path to pre-built subset HMM (skips per-species extraction).')
-    parser.add_argument('--extract-only', action='store_true',
-                        help='Extract profiles only (no hmmsearch). Requires pfam_hmm and output path.')
-    parser.add_argument('input_parquet', nargs='?', help='Per-species blast parquet (input).')
-    parser.add_argument('pfam_hmm', help='Path to Pfam-A.hmm profile database.')
-    parser.add_argument('output_parquet', help='Per-species enriched parquet (or subset HMM output).')
-    args = parser.parse_args()
-
-    # Extract-only mode: build subset HMM and exit
-    if args.extract_only:
-        if not defaults.PFAM_ACCESSIONS:
-            raise RuntimeError("--extract-only requires Pfam accessions under 'domains:' in the config.")
-        subset_path = Path(args.output_parquet)  # repurposed as subset HMM output
-        names = configured_profile_names(Path(args.pfam_hmm))
-        extract_profiles(Path(args.pfam_hmm), names, subset_path)
-        logging.info(f'Extracted {len(names)} profiles → {subset_path}')
-        return
-
-    blast_df = pd.read_parquet(args.input_parquet)
-
-    # Remove previous HMM columns if re-running
-    hmm_cols = ['HMM_Filtered', 'HMM_Evalue', 'HMM_Score', 'HMM_Domain', 'HMM_Coverage']
-    blast_df = blast_df.drop(columns=[c for c in hmm_cols if c in blast_df.columns])
-
-    # Short-circuit: no searchable sequences
-    if 'Subject Sequence' not in blast_df.columns:
-        logging.warning(f'{args.species}: no Subject Sequence column — skipping hmmsearch')
-        hits = pd.DataFrame()
-    else:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            fasta_path  = Path(tmpdir) / 'seqs.fasta'
-            tbl_path    = Path(tmpdir) / 'hits.tbl'
-
-            df_to_fasta(blast_df, fasta_path)
-
-            # Check if any non-empty sequences were written
-            if fasta_path.stat().st_size == 0:
-                logging.warning(f'{args.species}: all sequences empty after gap/stop stripping — skipping hmmsearch')
-                hits = pd.DataFrame()
-            else:
-                # Determine which HMM to search against
-                if args.hmm_db:
-                    # Pre-built subset provided by Snakefile rule
-                    hmm_to_search = Path(args.hmm_db)
-                elif defaults.PFAM_ACCESSIONS:
-                    # Legacy per-species extraction (fallback)
-                    subset_hmm = Path(tmpdir) / 'subset.hmm'
-                    extract_profiles(
-                        Path(args.pfam_hmm), configured_profile_names(Path(args.pfam_hmm)), subset_hmm
-                    )
-                    hmm_to_search = subset_hmm
-                else:
-                    hmm_to_search = Path(args.pfam_hmm)
-
-                run_hmmsearch(fasta_path, hmm_to_search, tbl_path, args.threads)
-
-                domtbl_path = tbl_path.with_suffix('.domtbl')
-                domtbl = parse_domtbl(domtbl_path)
-                hits = quality_filter(domtbl)
-
-    blast_enriched = enrich(blast_df, hits)
-
-    n_pass = blast_enriched['HMM_Filtered'].sum()
-    logging.info(f'{args.species}: {n_pass}/{len(blast_enriched)} sequences pass HMMER filters')
-
-    blast_enriched.to_parquet(args.output_parquet, index=False)
-
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    sys.exit(main())

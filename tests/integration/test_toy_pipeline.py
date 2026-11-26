@@ -256,13 +256,10 @@ def test_planted_copies_have_no_internal_stop_codon(toy_run: ToyRun):
     assert not hits.loc[hits["Pct Identity"] == 100, "Internal_Stop"].any()
 
 
-def test_chance_hits_in_random_dna_do_not_pass_the_gates(toy_run: ToyRun):
+def test_chance_hits_in_random_dna_yield_no_domain(toy_run: ToyRun):
     # tBLASTn at the configured E-value reports chance matches even in random
-    # DNA; none may survive into the selected table or the domain table.
-    for label in QUERY_LABELS:
-        selected = toy_run.results / "tables" / "blast" / label / "selected"
-
-        assert len(pd.read_parquet(selected / "Toyus_vacuus.parquet")) == 0
+    # DNA, and some pass the quality gate. They are searched like any other hit
+    # (ADR-010: nothing but the quality gate selects) and must yield no domain.
     assert "Toyus_vacuus" not in set(_domains(toy_run)["Species"])
 
 
@@ -320,7 +317,7 @@ def test_every_job_leaves_a_log_and_a_benchmark(toy_run: ToyRun):
 def test_changing_a_gate_threshold_reruns_the_gate_and_not_the_search(toy_run: ToyRun):
     plan = _jobs_planned_after_changing(toy_run, "blast", "bitscore", 55)
 
-    assert _scheduled(plan, "blast_parser_species")
+    assert _scheduled(plan, "select_hits_species")
     assert not _scheduled(plan, "blast_species")
 
 
@@ -336,7 +333,7 @@ def test_an_unchanged_config_schedules_no_search_or_gate_job(toy_run: ToyRun):
     plan = _jobs_planned_after_changing(toy_run, "blast", "bitscore", current)
 
     assert not _scheduled(plan, "blast_species")
-    assert not _scheduled(plan, "blast_parser_species")
+    assert not _scheduled(plan, "select_hits_species")
 
 
 def test_every_call_carries_the_family_of_its_model(toy_run: ToyRun):
@@ -393,14 +390,19 @@ def test_numeric_columns_of_the_domain_table_are_numbers(toy_run: ToyRun):
         assert pd.api.types.is_numeric_dtype(table[column]), column
 
 
-# Fixed by ADR-008: loci used to be built from hits that had failed the gates.
-def test_random_dna_yields_no_locus(toy_run: ToyRun):
-    assert "Toyus_vacuus" not in set(_loci(toy_run)["Species"])
+# ADR-008 and ADR-010: a locus is a query-like region; one made of chance hits
+# is listed, and is told apart by carrying no family.
+def test_random_dna_yields_no_locus_with_a_family(toy_run: ToyRun):
+    loci = _loci(toy_run)
+    vacuus = loci[loci["Species"] == "Toyus_vacuus"]
+
+    assert (vacuus["N_Families"] == 0).all()
+    assert set(vacuus["Families"]) <= {""}
 
 
 def test_each_whole_copy_is_one_locus_carrying_every_family(toy_run: ToyRun):
     loci = _loci(toy_run)
-    plenus = loci[loci["Species"] == "Toyus_plenus"]
+    plenus = loci[(loci["Species"] == "Toyus_plenus") & (loci["N_Families"] > 0)]
 
     assert len(plenus) == 2
     assert set(plenus["Families"]) == {"KRAB,SSXRD,SET,zinc_fingers"}
@@ -421,6 +423,41 @@ def test_fragments_of_a_copy_do_not_add_up_to_a_whole_set_domain(toy_run: ToyRun
 
     assert not coverage.empty
     assert (coverage < 0.5).all()
+
+
+# ADR-010: HMMER is independent evidence. It reports its own domains and filters nothing.
+def _hmmer_domains(run: ToyRun) -> pd.DataFrame:
+    return pd.read_parquet(run.results / "tables" / "domains" / "hmmer_domains.parquet")
+
+
+def test_hmmer_reports_the_planted_families_at_their_own_position(toy_run: ToyRun):
+    found = _hmmer_domains(toy_run)
+    plenus = found[found["Species"] == "Toyus_plenus"]
+
+    assert {"KRAB", "SET", "zinc_fingers"} <= set(plenus["Family"])
+    assert (plenus["Start"] >= plenus["Hit_Start"]).all()
+    assert (plenus["End"] <= plenus["Hit_End"]).all()
+    assert plenus["Above_GA"].any()
+
+
+def test_the_two_methods_agree_on_the_planted_set_domains(toy_run: ToyRun):
+    calls = pd.read_parquet(toy_run.results / "tables" / "domains" / "calls.parquet")
+    planted = calls[(calls["Species"] == "Toyus_plenus") & (calls["Family"] == "SET")]
+
+    assert not planted.empty
+    assert "both" in set(planted["Method_Agreement"])
+    assert set(calls["Method_Agreement"]) <= {"both", "cdd_only", "not_compared"}
+
+
+def test_every_selected_hit_is_searched_whether_or_not_hmmer_matched_it(
+    toy_run: ToyRun,
+):
+    selected = toy_run.results / "tables" / "blast" / "Human_PRDM9" / "selected"
+    hits = pd.read_parquet(selected / "Toyus_plenus.parquet")
+    fasta = toy_run.results / "fastas" / "Human_PRDM9" / "Toyus_plenus.fa"
+
+    assert "HMM_Filtered" not in hits.columns
+    assert fasta.read_text().count(">") == len(hits)
 
 
 # Fixed with ADR-007: a species without domains used to get no GFF3 file.

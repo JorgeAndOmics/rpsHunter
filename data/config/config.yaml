@@ -42,7 +42,7 @@ domains:
     repeat: true
 
 hmmer:
-  enabled: true            # Toggle HMMER on/off
+  enabled: true            # Second, independent domain search; annotates, never filters
 
   # Threshold strategy
   use_gathering_threshold: false  # Use Pfam's curated --cut_ga

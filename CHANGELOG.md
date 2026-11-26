@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Stop codons no longer shift domain positions.** A stop codon inside a hit's translation was
+  deleted before the domain searches, moving every later residue, and the genomic position of
+  every domain after it, by three bases per stop. It is now masked with `X`
+  ([ADR-007](docs/adr/ADR-007-domain-coordinates.md), implementation note).
+- `hmmer.min_score` passed hmmsearch a flag that does not exist (`--score`); it now uses `-T`.
 - A failed `tblastn`, `rpsblast` or `blast_formatter` now fails its job. Previously the error
   was logged and an empty table written, so a crashed search looked like a genome without hits.
 - Changing a threshold in the config now reruns the rules that depend on it. The scripts read
@@ -39,6 +44,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The config key `execution.random_id_length` is removed.
 - License is MIT ([ADR-003](docs/adr/ADR-003-mit-licence.md)). The `LICENSE` file previously held
   the GPL v2 text while the README said MIT.
+- **HMMER is independent evidence, not a gate**
+  ([ADR-010](docs/adr/ADR-010-scope-and-hmmer-evidence.md)). Hits are selected by the quality gate
+  alone and all of them reach RPS-BLAST; HMMER searches the same sequences and writes its own
+  domains to `tables/domains/hmmer_domains.*` with genomic positions and `Above_GA`. Calls and
+  HMMER domains carry `Method_Agreement` (`both`, `cdd_only` / `hmmer_only`, `not_compared`),
+  which requires the same family on the same hit at an overlapping position. The hit tables no
+  longer have `HMM_*` columns. A consequence: a locus made of chance hits is now listed, and is
+  told apart by carrying no family (`N_Families` 0).
 - **Loci are chained from gate-passing hits within 20 kb and report what they carry**
   ([ADR-008](docs/adr/ADR-008-loci.md), [ADR-009](docs/adr/ADR-009-completeness-across-exons.md)).
   `tables/loci/loci.*` lists each locus with the families present; `tables/loci/locus_families.*`

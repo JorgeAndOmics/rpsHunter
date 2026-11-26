@@ -20,10 +20,8 @@ extend-exclude = [
     # --- legacy list (see the top of this file) ---
     "workflow/scripts/aggregate.py",
     "workflow/scripts/blast.py",
-    "workflow/scripts/blast_parser.py",
     "workflow/scripts/colored_logging.py",
     "workflow/scripts/defaults.py",
-    "workflow/scripts/hmmer.py",
     "workflow/scripts/rpsHunter.py",
     "workflow/scripts/validator.py",
 ]
@@ -87,7 +85,7 @@ files = ["workflow/scripts"]
 # The second alternative is the legacy list (see the top of this file).
 exclude = [
     '(^|/)tests/',
-    'workflow/scripts/(aggregate|blast|blast_parser|colored_logging|defaults|hmmer|rpsHunter|validator)\.py$',
+    'workflow/scripts/(aggregate|blast|colored_logging|defaults|rpsHunter|validator)\.py$',
 ]
 enable_error_code = [
     "ignore-without-code",
@@ -120,10 +118,8 @@ branch = true
 omit = [
     "workflow/scripts/aggregate.py",
     "workflow/scripts/blast.py",
-    "workflow/scripts/blast_parser.py",
     "workflow/scripts/colored_logging.py",
     "workflow/scripts/defaults.py",
-    "workflow/scripts/hmmer.py",
     "workflow/scripts/rpsHunter.py",
     "workflow/scripts/validator.py",
 ]
