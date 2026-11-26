@@ -1,5 +1,10 @@
-# Claude Code session file - DO NOT PUSH
+# Claude Code session files and local project memory - never pushed
 CLAUDE.md
+.claude/
+
+# Machine-local configs and download records
+data/config/*.local.yaml
+data/config/download.txt
 
 # Python
 __pycache__/
