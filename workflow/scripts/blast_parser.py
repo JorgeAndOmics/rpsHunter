@@ -181,7 +181,6 @@ if __name__ == '__main__':
 
     # ── Write audit parquet ─────────────────────────────────────────────────
     output_audit_path: Path = Path(args.output_audit)
-    output_audit_path.parent.mkdir(parents=True, exist_ok=True)
     raw_df.to_parquet(output_audit_path, index=False)
     logging.info(f"Audit parquet written: {len(raw_df)} rows, {raw_df['Selected'].sum()} selected → {output_audit_path}")
 
@@ -190,7 +189,6 @@ if __name__ == '__main__':
     # dropped — they are all True by construction here; the audit parquet is
     # the place to inspect per-row pass/fail detail.
     output_selected_path: Path = Path(args.output_selected)
-    output_selected_path.parent.mkdir(parents=True, exist_ok=True)
     flag_cols = ['Quality_Pass', 'ORF_Pass', 'HMM_Pass']
     selected_df = blast_df.drop(columns=[c for c in flag_cols if c in blast_df.columns])
     selected_df.to_parquet(output_selected_path, index=False)
@@ -202,7 +200,6 @@ if __name__ == '__main__':
 
     # ── Write FASTA ─────────────────────────────────────────────────────────
     output_fasta_path: Path = Path(args.output_fasta)
-    output_fasta_path.parent.mkdir(parents=True, exist_ok=True)
 
     if 'Subject Sequence' in blast_df.columns and not blast_df.empty:
         blast_df['Subject Sequence'] = (

@@ -237,10 +237,8 @@ def main() -> None:
 
     if args.output_asn:
         asn_dir = Path(args.output_asn).parent
-        asn_dir.mkdir(parents=True, exist_ok=True)
     else:
         asn_dir = None
-        defaults.PATH_DICT['ASN_RPSBLAST_DIR'].mkdir(parents=True, exist_ok=True)
 
     result_df = process_rps_species(args.species, fasta_input_dir=fasta_input_dir,
                                     asn_output_dir=asn_dir, db_override=db_path)
@@ -260,7 +258,6 @@ def main() -> None:
     else:
         asn_path = defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / f'{args.species}.asn'
 
-    parquet_path.parent.mkdir(parents=True, exist_ok=True)
 
     if result_df is not None and not result_df.empty:
         result_df.to_parquet(parquet_path, index=False)

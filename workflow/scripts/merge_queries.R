@@ -50,7 +50,6 @@ for (f in input_files) {
 
 if (length(dfs) == 0) {
   cat("No input data — writing empty parquet.\n")
-  dir.create(dirname(output_parquet), recursive = TRUE, showWarnings = FALSE)
   arrow::write_parquet(tibble(), output_parquet)
   # Also write CSV companion
   write_csv(tibble(), sub("\\.parquet$", ".csv", output_parquet))
@@ -64,7 +63,6 @@ cat(sprintf("Combined: %d rows from %d files\n", nrow(combined), length(dfs)))
 unique_queries <- unique(combined$Query_Accession)
 if (length(unique_queries) <= 1) {
   cat("Single query detected — skipping deduplication, writing as-is.\n")
-  dir.create(dirname(output_parquet), recursive = TRUE, showWarnings = FALSE)
   arrow::write_parquet(combined, output_parquet)
   write_csv(combined, sub("\\.parquet$", ".csv", output_parquet))
   cat(sprintf("Output: %d rows\n", nrow(combined)))
@@ -101,7 +99,6 @@ if (nrow(dedup_df) == 0) {
   cat("No rows with valid coordinates — writing combined as-is.\n")
   out <- combined %>% select(-.row_id, -Start_num, -End_num, -Bitscore_num,
                               -Evalue_num, -From_num, -To_num, -Seq_length_num)
-  dir.create(dirname(output_parquet), recursive = TRUE, showWarnings = FALSE)
   arrow::write_parquet(out, output_parquet)
   write_csv(out, sub("\\.parquet$", ".csv", output_parquet))
   cat(sprintf("Output: %d rows\n", nrow(out)))
@@ -236,7 +233,6 @@ cat(sprintf("Deduplication: %d -> %d rows (%.1f%% reduction)\n",
 # =============================================================================
 # Write output
 # =============================================================================
-dir.create(dirname(output_parquet), recursive = TRUE, showWarnings = FALSE)
 arrow::write_parquet(deduped, output_parquet)
 write_csv(deduped, sub("\\.parquet$", ".csv", output_parquet))
 cat(sprintf("Output written: %s (%d rows)\n", output_parquet, nrow(deduped)))

@@ -39,7 +39,6 @@ def main() -> None:
     cddid_path = Path(args.cddid)
     smp_dir = Path(args.smp_dir)
     output_db = Path(args.output_db)
-    output_db.parent.mkdir(parents=True, exist_ok=True)
 
     # Resolve target domain names → CDD accessions
     accessions = defaults.resolve_cdd_targets(target_domains, cddid_path)

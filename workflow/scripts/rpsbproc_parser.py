@@ -194,7 +194,6 @@ def parse_rpsbproc_output(
     df = pd.DataFrame(domain_hits, columns=fieldnames)
     tag_pattern = re.compile(r'\|tag:(\w+)')
     df['Tag'] = df['Definition'].str.extract(tag_pattern, expand=False)
-    output_parquet.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(output_parquet, index=False)
     logging.info(f'Parquet output written to {output_parquet} ({len(domain_hits)} domain hits)')
 

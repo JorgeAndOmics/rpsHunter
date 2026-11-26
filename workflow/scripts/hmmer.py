@@ -269,7 +269,6 @@ def main():
         if not defaults.HMMER_PROFILES:
             raise RuntimeError('--extract-only requires hmmer.profiles to be set in config.')
         subset_path = Path(args.output_parquet)  # repurposed as subset HMM output
-        subset_path.parent.mkdir(parents=True, exist_ok=True)
         extract_profiles(Path(args.pfam_hmm), defaults.HMMER_PROFILES, subset_path)
         logging.info(f'Extracted {len(defaults.HMMER_PROFILES)} profiles → {subset_path}')
         return
@@ -319,7 +318,6 @@ def main():
     n_pass = blast_enriched['HMM_Filtered'].sum()
     logging.info(f'{args.species}: {n_pass}/{len(blast_enriched)} sequences pass HMMER filters')
 
-    Path(args.output_parquet).parent.mkdir(parents=True, exist_ok=True)
     blast_enriched.to_parquet(args.output_parquet, index=False)
 
 

@@ -85,7 +85,6 @@ if __name__ == '__main__':
 
     input_file = Path(args.input_asn)
     output_file = Path(args.output_txt)
-    output_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Empty ASN (species had 0 sequences after gating) — rpsbproc would crash on it.
     # Touch the output so the Snakemake rule is satisfied; rpsbproc_parser already
