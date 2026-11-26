@@ -1,6 +1,6 @@
 # ADR-007: Report each domain at its own genomic position
 
-- **Status**: Proposed
+- **Status**: Accepted (2026-11-27)
 - **Date**: 2026-11-26
 - **Deciders**: Jorge Gonzalez Garcia
 - **Affects results**: yes

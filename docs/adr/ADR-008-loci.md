@@ -1,6 +1,6 @@
 # ADR-008: Loci from gate-passing hits, chained within 20 kb
 
-- **Status**: Proposed
+- **Status**: Accepted (2026-11-27)
 - **Date**: 2026-11-26
 - **Deciders**: Jorge Gonzalez Garcia
 - **Affects results**: yes
@@ -42,7 +42,9 @@ thresholds on the annotated proteins, mapped through exons to genome coordinates
 
 Build loci from hits that passed the gates, with a default chaining gap of 20 kb
 (`hit_domain_inventory.locus_gap`), and report per locus which families are present, with the
-evidence tier of ADR-006, instead of a single "complete" flag whose meaning depends on the query.
+evidence tier of ADR-006 and the coverage of ADR-009. A locus carries no verdict of its own: the
+single "complete" flag is dropped, because what makes a gene complete depends on the family being
+studied (the PRDM9 literature uses KRAB plus SET), and the listed families let the user decide.
 
 ## Consequences
 

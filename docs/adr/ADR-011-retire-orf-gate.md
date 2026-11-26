@@ -1,6 +1,6 @@
 # ADR-011: Retire the ORF gate; flag internal stop codons instead
 
-- **Status**: Proposed
+- **Status**: Accepted (2026-11-27)
 - **Date**: 2026-11-26
 - **Deciders**: Jorge Gonzalez Garcia
 - **Affects results**: no (the stage is disabled by default)

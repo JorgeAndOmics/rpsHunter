@@ -1,6 +1,6 @@
 # ADR-010: State what the tool finds, and make HMMER evidence instead of a gate
 
-- **Status**: Proposed
+- **Status**: Accepted (2026-11-27)
 - **Date**: 2026-11-26
 - **Deciders**: Jorge Gonzalez Garcia
 - **Affects results**: yes (second part)
@@ -41,6 +41,9 @@ removed from the query and anchor on SET (Baker 2017; Cavassim 2022).
 1. Document the scope: rpsHunter finds regions similar to the query proteins and describes their
    domains; counts are of query-like loci, not of a domain family genome-wide. Keep the tBLASTn
    E-value at 10 and say why.
+   The shipped PRDM9 example keeps its full-length queries; the documentation explains that a
+   query containing a repeat array attracts the whole repeat family, and how to trim a query
+   when only orthologs are wanted, as the published surveys do.
 2. Run HMMER on every quality-passing hit and record its result as columns; do not use it to decide
    which hits reach RPS-BLAST. Report agreement between the two methods per call, requiring
    positional overlap, under the name "method agreement".

@@ -1,6 +1,6 @@
 # ADR-012: Domain families defined in the config by CDD and Pfam accession
 
-- **Status**: Proposed
+- **Status**: Accepted (2026-11-27)
 - **Date**: 2026-11-26
 - **Deciders**: Jorge Gonzalez Garcia
 - **Affects results**: yes
