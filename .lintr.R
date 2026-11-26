@@ -23,7 +23,5 @@ exclusions <- list(
   "workflow/scripts/contingency_sorter.R",
   "workflow/scripts/extended_plots.R",
   "workflow/scripts/merge_queries.R",
-  "workflow/scripts/orf_analyser.R",
-  "workflow/scripts/tests/orf_analyser_test.R",
-  "workflow/scripts/tests/ranges_sorter_test.R"
+  "workflow/scripts/orf_analyser.R"
 )
