@@ -222,69 +222,56 @@ The species list drives the entire pipeline DAG. Each species generates an indep
 
 ## Configuration Examples
 
-### Relaxed BLAST Thresholds for Weak Domain Capture
+### Defining the families to look for
 
-When searching for domains with weak homology to the query protein (e.g., KRAB, SET, SSXRD), standard thresholds filter them out. Relaxing all four BLAST parameters captures these hits at the cost of more noise in the initial hit set. Downstream HMMER filtering compensates for the relaxed entry criteria.
+A family is a name of your choice and the accessions of the models that count as evidence for it.
+Accessions are used, not names, because the libraries rename models between releases.
 
 ```yaml
-blast:
-  e_value: 0.01
-  perc_identity: 35
-  seq_length: 24
-  bitscore: 45
-
-hmmer:
-  enabled: true
-  profiles: ['KRAB', 'SET', 'SSXRD', 'zf-C2H2']
-  evalue: 1e-5
-  dom_evalue: 1e-3
-  min_coverage: 0.5
-  min_alignment_length: 20
-
-orf:
-  enabled: false    # Disabled -- short domains lack ORFs
+domains:
+  kinase:
+    cdd: [cd00180, pfam00069, smart00220]   # CDD accessions, searched with RPS-BLAST
+    pfam: [PF00069]                         # Pfam accessions, searched with HMMER
+  sh2:
+    cdd: [cd00173, pfam00017]
+    pfam: [PF00017]
+  ankyrin:
+    cdd: [pfam00023, pfam12796]
+    pfam: [PF00023]
+    repeat: true                            # occurs in tandem arrays
 ```
 
-### Targeted CDD Subset Searching
+A model may belong to one family only. A family may list only `cdd:` or only `pfam:`; its domains
+are then reported by one method and `Method_Agreement` is `not_compared`.
 
-Instead of searching the full CDD (>60,000 domains), restrict RPSBLAST to specific domains of interest. The pipeline resolves ShortNames against `cddid.tbl` using prefix matching: `'KRAB'` matches both `'KRAB'` and `'KRAB_A-box'`. This reduces runtime and eliminates irrelevant domain annotations.
+### Stricter or looser domain calls
+
+`rpsblast.e_value` is on the scale of NCBI's CD-Search. Keep the default of 1 and filter the tables
+on `Evidence` (`standard`, `borderline`), or change the cut-off itself:
 
 ```yaml
 rpsblast:
-  e_value: 2
-  comp_based_stats: 0
-  seg: 'no'
-  window_size: 0
-  target_domains:
-    - 'KRAB'
-    - 'SET'
-    - 'SSXRD'
-    - 'zf-C2H2'
-    - 'COG5048'
-    - 'zf-H2C2'
-    - 'ZnF_C2H2'
+  e_value: 0.01     # CD-Search's default: only "standard" calls are kept
 ```
 
-### Combined ORF + HMMER Filtering
+Raising it above 1 keeps weaker calls, which are then labelled `rescue`.
 
-For maximum specificity, enable both ORF detection and HMMER domain filtering. Sequences must contain an ORF of the specified minimum length *and* match at least one of the specified Pfam profiles to reach RPSBLAST. This configuration is aggressive -- expect significant data reduction. Short domains (KRAB, SET, SSXRD) may be entirely filtered out by the ORF requirement.
+### HMMER with Pfam's curated thresholds
+
+The shipped settings report every HMMER domain with E <= 10 and mark those above Pfam's gathering
+threshold in `Above_GA`. To report only those:
 
 ```yaml
-orf:
-  enabled: true
-  min_orf_length: 200
-  start_codon: 'ATG'
-  longest_orf: true
-
 hmmer:
   enabled: true
-  profiles: ['zf-C2H2']
-  use_gathering_threshold: false
-  evalue: 1e-5
-  dom_evalue: 1e-3
-  min_coverage: 0.5
-  min_alignment_length: 20
-  seed: 67
+  use_gathering_threshold: true
+```
+
+### A gene family with long introns
+
+```yaml
+loci:
+  gap: 50000        # chain exons up to 50 kb apart; tandem copies closer than this will fuse
 ```
 
 ### Multi-Query for Divergent Species

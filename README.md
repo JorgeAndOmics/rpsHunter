@@ -23,15 +23,18 @@ Built on Snakemake, rpsHunter provides fully parallelized, reproducible, and fau
 
 ## Key Features
 
-- **Two-database domain detection** combining NCBI CDD (RPSBLAST) and Pfam (HMMER) for sensitive and specific identification
-- **Multi-gate filtering** with configurable BLAST quality, ORF detection, and HMMER thresholds --- each independently toggleable
-- **CDD subset searching** to target specific domain families instead of the full database
-- **HMMER profile isolation** to search only user-specified Pfam domains
-- **Multi-domain capture** retaining all quality-passing HMMER hits per sequence, not just the best
-- **Snakemake-orchestrated parallelism** with per-species wildcard rules and automatic dependency resolution
-- **Comprehensive audit trail** with per-sequence pass/fail flags at every filtering gate
-- **Dual output formats** (Parquet + CSV) for all tables, GFF3 for genomic coordinates
-- **Publication-quality visualizations** including domain completeness heatmaps and interactive 3D scatter plots
+- **Finds query-like regions and describes their domains**: tBLASTn with your proteins, then domain
+  searches of every hit that passes a quality gate
+- **Two independent domain searches**: NCBI CDD models (RPS-BLAST) and Pfam profiles (HMMER), with
+  agreement reported only where their positions overlap
+- **Families defined by accession** in the config, so any protein family can be studied
+- **E-values on NCBI's scale** although only the families' models are searched, with an evidence tier
+  on every call
+- **Each domain at its own genomic position**, as tables and as GFF3 tracks
+- **Loci**: exons chained into gene-sized regions, with the coverage of each family's model added up
+  across exons
+- **Reproducible**: locked environment, genomes pinned by assembly, identical tables on rerun
+- **Audit trail**: every hit keeps the gate's verdict; every job keeps a log and a benchmark
 - **Linux** (including Windows through WSL); the shell steps rely on GNU tools
 
 ## Quick Start
@@ -135,20 +138,10 @@ For the complete flag reference and workflow recipes, see the [CLI Reference](do
 |----------|-------------|
 | [Architecture](docs/architecture.md) | Pipeline stages, data flow diagrams, parallelism model, design principles |
 | [Configuration](docs/configuration.md) | Complete `config.yaml` parameter reference with types, defaults, and examples |
-| [Filtering](docs/filtering.md) | BLAST quality gate, ORF gate, HMMER two-level filtering, the "riding" edge case |
+| [Filtering](docs/filtering.md) | What is searched, kept and reported at each step, and what cannot be concluded |
 | [Outputs](docs/outputs.md) | Output directory structure, parquet column schemas, file format descriptions |
 | [CLI Reference](docs/cli-reference.md) | All CLI flags, invocation patterns, flag-to-rule mapping, rerun recipes |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues, empty species handling, Windows/WSL caveats |
-
-## Screenshots
-
-### Domain Completeness Heatmap
-
-[![tile-plot.jpg](images/tile-plot.jpg)](images/tile-plot.jpg)
-
-### Interactive 3D Domain Scatter Plot
-
-[![3D-plot.png](images/3D-plot.png)](images/3D-plot.png)
 
 ## Environment Variables
 
