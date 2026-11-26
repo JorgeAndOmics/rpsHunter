@@ -1,0 +1,154 @@
+# rpsHunter tooling config. Not a Python package manifest: this repository is a
+# Snakemake workflow, not a library. Ruff, mypy, pytest, coverage and import
+# checks are configured here. Runtime dependencies live in
+# data/config/environment.yaml.
+#
+# LEGACY LIST. The scripts below predate the quality gate and are being rewritten
+# stage by stage, tests first. Until a script is rewritten it is left out of ruff
+# and mypy as a whole file, instead of silencing its findings line by line. The
+# list only shrinks: delete an entry in the commit that rewrites the file, and
+# never add one. `qlty metrics` still measures every file, so the debt stays
+# visible in the quality trend. Keep the two copies of the list (ruff, mypy) equal.
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["workflow/scripts", "tests"]
+extend-exclude = [
+    ".snakemake",
+    "results",
+    # --- legacy list (see the top of this file) ---
+    "workflow/scripts/aggregate.py",
+    "workflow/scripts/blast.py",
+    "workflow/scripts/blast_parser.py",
+    "workflow/scripts/cdd_subset.py",
+    "workflow/scripts/colored_logging.py",
+    "workflow/scripts/concordance.py",
+    "workflow/scripts/defaults.py",
+    "workflow/scripts/hit_domain_inventory.py",
+    "workflow/scripts/hmmer.py",
+    "workflow/scripts/rpsHunter.py",
+    "workflow/scripts/rpsblast.py",
+    "workflow/scripts/rpsbproc.py",
+    "workflow/scripts/rpsbproc_parser.py",
+    "workflow/scripts/validator.py",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    "PTH",    # flake8-use-pathlib
+    "RUF",    # Ruff-specific
+    "A",      # flake8-builtins
+    "DTZ",    # flake8-datetimez
+    "LOG",    # flake8-logging
+    "PT",     # flake8-pytest-style
+    "RSE",    # flake8-raise
+    "RET",    # flake8-return
+    "ARG",    # flake8-unused-arguments
+    "PL",     # Pylint
+    "PERF",   # Perflint
+    "D",      # pydocstyle, Google convention (below)
+]
+ignore = [
+    "E501",    # line length is the formatter's job
+    "PLR0913", # too many arguments: script entry points mirror their CLI
+    "PLR0917", # too many positional arguments: PLR0913's sibling
+    "PLR2004", # magic values in comparisons
+    "D105",    # dunder methods: their behaviour is the protocol's, documented by Python
+    "D107",    # __init__: Google style documents construction in the class docstring
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test names state the behaviour under test, so tests need no docstrings; the
+# docstring FORMAT rules still apply to the ones they have.
+"tests/**/*.py" = ["ARG", "PLR2004", "D100", "D101", "D102", "D103", "D104"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unreachable = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+no_implicit_reexport = true
+files = ["workflow/scripts"]
+# The second alternative is the legacy list (see the top of this file).
+exclude = [
+    '(^|/)tests/',
+    'workflow/scripts/(aggregate|blast|blast_parser|cdd_subset|colored_logging|concordance|defaults|hit_domain_inventory|hmmer|rpsHunter|rpsblast|rpsbproc|rpsbproc_parser|validator)\.py$',
+]
+enable_error_code = [
+    "ignore-without-code",
+    "redundant-cast",
+    "truthy-bool",
+]
+
+# Third-party libraries without type stubs. Keep this list narrow.
+[[tool.mypy.overrides]]
+module = ["Bio.*", "pyarrow.*", "yamale.*", "snakemake.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["workflow/scripts"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short",
+    "-q",
+]
+markers = [
+    "integration: runs external tools (blast, hmmer, rpsbproc, snakemake)",
+]
+
+[tool.coverage.run]
+source = ["workflow/scripts"]
+branch = true
+# Coverage is measured on rewritten code only: the legacy list above, as a glob.
+omit = [
+    "workflow/scripts/aggregate.py",
+    "workflow/scripts/blast.py",
+    "workflow/scripts/blast_parser.py",
+    "workflow/scripts/cdd_subset.py",
+    "workflow/scripts/colored_logging.py",
+    "workflow/scripts/concordance.py",
+    "workflow/scripts/defaults.py",
+    "workflow/scripts/hit_domain_inventory.py",
+    "workflow/scripts/hmmer.py",
+    "workflow/scripts/rpsHunter.py",
+    "workflow/scripts/rpsblast.py",
+    "workflow/scripts/rpsbproc.py",
+    "workflow/scripts/rpsbproc_parser.py",
+    "workflow/scripts/validator.py",
+]
+
+[tool.coverage.report]
+# The floor only rises. It starts at 0 because no rewritten code exists yet; it
+# is set to the achieved value when the first modules land.
+fail_under = 0
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

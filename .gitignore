@@ -57,3 +57,10 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Tool caches
+.coverage
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/

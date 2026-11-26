@@ -60,3 +60,17 @@ dependencies:
   - urllib3=2.2.2
   - wget
   - yamale
+  # --- development tooling (make check); never affects results ---
+  - deptry
+  - import-linter
+  - mypy
+  - pandas-stubs
+  - pre-commit
+  - pytest
+  - pytest-cov
+  - pytest-mock
+  - r-cyclocomp
+  - r-lintr
+  - r-testthat
+  - ruff
+  - types-pyyaml
