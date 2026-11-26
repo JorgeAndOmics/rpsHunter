@@ -1,5 +1,10 @@
 # Architecture
 
+> **Being rebuilt.** The stages after domain parsing (contingency tables, GFF3 ranges, hit-domain
+> inventory, concordance and every figure) were removed on 2026-11-27 and are being rebuilt on the
+> decisions in [ADR-006 to ADR-012](adr/README.md). Sections below that describe them are kept for
+> reference until the new stages land and this document is rewritten.
+
 ## Overview
 
 rpsHunter is a multi-stage bioinformatics pipeline that detects, quantifies, and classifies protein domains in genomic sequences. It uses a **two-database approach**:

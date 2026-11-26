@@ -75,7 +75,6 @@ PATH_DICT['FASTA_DIR'] = PATH_DICT['INPUT_DIR'] / 'fastas'
 PATH_DICT['TMP_DIR'] = PATH_DICT['DATA_DIR'] / 'tmp'
 
 # === Results Subdirectories ===
-PATH_DICT['PLOT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'plots'
 PATH_DICT['TABLE_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'tables'
 PATH_DICT['FASTA_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'fastas'
 PATH_DICT['ASN_ROOT_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'asn'
@@ -86,9 +85,6 @@ PATH_DICT['RANGE_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'ranges'
 PATH_DICT['TABLE_BLAST_DIR']       = PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast'
 PATH_DICT['TABLE_RPSBLAST_DIR']    = PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast'
 PATH_DICT['TABLE_DOMAINS_DIR']     = PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains'
-PATH_DICT['TABLE_CONTINGENCY_DIR'] = PATH_DICT['TABLE_OUTPUT_DIR'] / 'contingency'
-PATH_DICT['TABLE_CONCORDANCE_DIR'] = PATH_DICT['TABLE_OUTPUT_DIR'] / 'concordance'
-PATH_DICT['TABLE_INVENTORY_DIR']   = PATH_DICT['TABLE_OUTPUT_DIR'] / 'inventory'
 
 # === Per-Species Intermediate Directories ===
 # Each step that produces per-species parquets before aggregation gets its own directory.
@@ -162,10 +158,6 @@ _PER_QUERY_PARENTS = [
     PATH_DICT['TABLE_BLAST_DIR'],         # results/tables/blast/{ql}/
     PATH_DICT['TABLE_RPSBLAST_DIR'],     # results/tables/rpsblast/{ql}/
     PATH_DICT['TABLE_DOMAINS_DIR'],      # results/tables/domains/{ql}/
-    PATH_DICT['TABLE_CONTINGENCY_DIR'],  # results/tables/contingency/{ql}/
-    PATH_DICT['TABLE_CONCORDANCE_DIR'],  # results/tables/concordance/{ql}/
-    PATH_DICT['TABLE_INVENTORY_DIR'],    # results/tables/inventory/{ql}/
-    PATH_DICT['PLOT_DIR'],                # results/plots/{ql}/ (tile + 3D plots)
     PATH_DICT['RANGE_OUTPUT_DIR'],        # results/ranges/{ql}/ (GFF3)
 ]
 
@@ -196,20 +188,6 @@ def ensure_dirs() -> None:
             (parent / label).mkdir(parents=True, exist_ok=True)
         for template in _PER_QUERY_NESTED:
             Path(str(template).replace('{ql}', label)).mkdir(parents=True, exist_ok=True)
-
-# =============================================================================
-# Extended Visualization Suite — Output File Paths
-# =============================================================================
-# All 7 extended plots write into results/plots/ (already created above).
-# Defining the full paths here keeps defaults.py as the single source of truth
-# for all path definitions, consistent with PATH_DICT.
-EXT_CONC_HEATMAP_PATH: Path = PATH_DICT['PLOT_DIR'] / 'concordance_heatmap.png'
-EXT_EVID_QUALITY_PATH: Path = PATH_DICT['PLOT_DIR'] / 'evidence_quality.png'
-EXT_COMP_BARS_PATH:    Path = PATH_DICT['PLOT_DIR'] / 'completeness_bars.png'
-EXT_SEQ_COMPLEX_PATH:  Path = PATH_DICT['PLOT_DIR'] / 'sequence_complexity.png'
-EXT_CHR_DENSITY_PATH:  Path = PATH_DICT['PLOT_DIR'] / 'chromosomal_density.png'
-EXT_CROSS_QUERY_PATH:  Path = PATH_DICT['PLOT_DIR'] / 'cross_query_comparison.png'
-EXT_HIT_TYPE_PATH:     Path = PATH_DICT['PLOT_DIR'] / 'hit_type_distribution.png'
 
 
 def query_file_path(accession: str) -> Path:

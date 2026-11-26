@@ -55,9 +55,6 @@ STAGES = (
     "rpsblast",
     "rpsbproc",
     "rpsbproc-parser",
-    "contingency-parser",
-    "hit-domain-inventory",
-    "concordance",
 )
 
 

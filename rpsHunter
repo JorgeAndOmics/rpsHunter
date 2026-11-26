@@ -85,36 +85,6 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--completeness-detector',
-        action='store_true',
-        help="Generates tile plot with highest-completeness degree per domain."
-    )
-
-    parser.add_argument(
-        '--contingency-parser',
-        action='store_true',
-        help="Generates contingency tables and plots."
-    )
-
-    parser.add_argument(
-        '--hit-domain-inventory',
-        action='store_true',
-        help="Generates hit–domain inventory table (BLAST hits joined with CDD domains)."
-    )
-
-    parser.add_argument(
-        '--concordance',
-        action='store_true',
-        help="Runs multi-method concordance analysis (HMMER vs CDD agreement)."
-    )
-
-    parser.add_argument(
-        '--extended-plots',
-        action='store_true',
-        help="Generates extended visualization suite (7 analytical plots) from merged outputs."
-    )
-
-    parser.add_argument(
         '--skip-validation', '-skp',
         action='store_true',
         help='Skip input validation.'
@@ -164,21 +134,6 @@ if __name__ == '__main__':
 
     if args.rpsbproc_parser:
         main_cmd.append('--rpsbproc-parser')
-
-    if args.completeness_detector:
-        main_cmd.append('--completeness-detector')
-
-    if args.contingency_parser:
-        main_cmd.append('--contingency-parser')
-
-    if args.hit_domain_inventory:
-        main_cmd.append('--hit-domain-inventory')
-
-    if args.concordance:
-        main_cmd.append('--concordance')
-
-    if args.extended_plots:
-        main_cmd.append('--extended-plots')
 
     if unknown:
         main_cmd.extend(unknown)
