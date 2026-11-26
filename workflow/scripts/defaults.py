@@ -165,8 +165,6 @@ _PER_QUERY_PARENTS = [
     PATH_DICT['ASN_RPSBLAST_DIR'],        # results/asn/rpsblast/{ql}/
     PATH_DICT['TABLE_BLAST_DIR'],         # results/tables/blast/{ql}/
     PATH_DICT['TABLE_RPSBLAST_DIR'],     # results/tables/rpsblast/{ql}/
-    PATH_DICT['TABLE_DOMAINS_DIR'],      # results/tables/domains/{ql}/
-    PATH_DICT['RANGE_OUTPUT_DIR'],        # results/ranges/{ql}/ (GFF3)
 ]
 
 # Also: results/tables/blast/{ql}/selected/

@@ -49,14 +49,6 @@ DOMAINS = {
     },
 }
 
-# Domain names (CDD short names) that count as evidence for each family.
-FAMILY_MODELS = {
-    "KRAB": {"KRAB", "KRAB_A-box"},
-    "SSXRD": {"SSXRD"},
-    "SET": {"PR-SET_PRDM7_9", "SET"},
-    "zinc_fingers": {"zf-C2H2", "zf-H2C2_2", "ZMS1"},
-}
-
 # Launcher flags in pipeline order (the v0.9.0 launcher runs one stage per call).
 STAGES = (
     "blast-dbs",
@@ -170,16 +162,8 @@ def toy_run(tmp_path_factory: pytest.TempPathFactory) -> ToyRun:
 
 
 def _domains(run: ToyRun) -> pd.DataFrame:
-    """The merged domain table, with its coordinates as numbers.
-
-    v0.9.0 writes Start and End as text; they are converted here so the tests
-    about content do not all fail for that one reason. The text columns have a
-    test of their own below.
-    """
-    table = pd.read_parquet(run.results / "tables" / "domains" / "domains.parquet")
-    for column in ("Start", "End"):
-        table[column] = pd.to_numeric(table[column])
-    return table
+    """The table of domain instances of the whole run."""
+    return pd.read_parquet(run.results / "tables" / "domains" / "domains.parquet")
 
 
 def _loci(run: ToyRun) -> pd.DataFrame:
@@ -200,7 +184,7 @@ def _domains_over(run: ToyRun, plant: pd.Series) -> pd.DataFrame:
     """Domain rows of the plant's species that overlap the planted copy."""
     domains = _domains(run)
     same_species = domains[domains["Species"] == plant["species"]]
-    return _overlapping(same_species, plant, ("Chromosome", "Start", "End"))
+    return _overlapping(same_species, plant, ("Sequence", "Start", "End"))
 
 
 def _annotated(run: ToyRun, plant: pd.Series) -> pd.DataFrame:
@@ -226,9 +210,8 @@ def _families_touched(run: ToyRun, plant: pd.Series) -> set[str]:
 
 
 def _found_families(domains: pd.DataFrame) -> set[str]:
-    """Families for which at least one of their models appears in `domains`."""
-    names = set(domains["Domain"])
-    return {family for family, models in FAMILY_MODELS.items() if names & models}
+    """Families reported among the given domain rows."""
+    return set(domains["Family"])
 
 
 def _describe(plant: pd.Series) -> str:
@@ -341,11 +324,10 @@ def test_an_unchanged_config_schedules_no_search_or_gate_job(toy_run: ToyRun):
 def test_every_call_carries_the_family_of_its_model(toy_run: ToyRun):
     path = toy_run.results / "domains" / "Human_PRDM9" / "Toyus_plenus.parquet"
     calls = pd.read_parquet(path)
-    calls = calls[calls["Accession"] != ""]
 
     assert not calls.empty
     assert set(calls["Family"]) <= set(DOMAINS)
-    by_model = calls.drop_duplicates("Accession").set_index("Accession")["Family"]
+    by_model = calls.drop_duplicates("Model").set_index("Model")["Family"]
     assert by_model["pfam09514"] == "SSXRD"
     assert by_model["cd19193"] == "SET"
 
@@ -368,11 +350,7 @@ def test_no_family_is_reported_that_the_copy_lacks(toy_run: ToyRun):
 AWAITING_SCIENCE_AUDIT = "result-affecting; to be settled by an ADR after the audit"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=f"domains carry the coordinates of the whole BLAST hit, not their "
-    f"own: {AWAITING_SCIENCE_AUDIT}",
-)
+# Fixed by ADR-007: domains used to carry the coordinates of the whole BLAST hit.
 def test_a_domain_is_reported_at_its_own_position(toy_run: ToyRun):
     plant = toy_run.truth.iloc[0]  # the whole protein on the forward strand
     annotated = toy_run.query_domains
@@ -383,20 +361,17 @@ def test_a_domain_is_reported_at_its_own_position(toy_run: ToyRun):
     expected_end = plant["start"] + 3 * krab["aa_end"] - 1
     slack = 90  # bp; profile matches rarely end on the annotated residue
     over = _domains_over(toy_run, plant)
-    reported = over[over["Domain"].isin(FAMILY_MODELS["KRAB"])]
+    reported = over[over["Family"] == "KRAB"]
 
     assert not reported.empty
     assert (reported["Start"] >= expected_start - slack).all()
     assert (reported["End"] <= expected_end + slack).all()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="the merged domain table stores numeric columns as text (backlog)",
-)
+# Fixed with ADR-007: the domain table used to store its numbers as text.
 def test_numeric_columns_of_the_domain_table_are_numbers(toy_run: ToyRun):
     table = pd.read_parquet(toy_run.results / "tables" / "domains" / "domains.parquet")
-    for column in ("Start", "End", "From", "To", "Evalue", "Bitscore"):
+    for column in ("Start", "End", "Evalue", "Bitscore", "N_Calls"):
         assert pd.api.types.is_numeric_dtype(table[column]), column
 
 
@@ -420,10 +395,7 @@ def test_two_partial_copies_are_not_one_complete_locus(toy_run: ToyRun):
     assert not fractus["Complete_CDD"].any()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="no GFF3 is written for a species without domains (backlog)",
-)
+# Fixed with ADR-007: a species without domains used to get no GFF3 file.
 def test_every_species_has_a_range_file(toy_run: ToyRun):
     for species in SPECIES:
         assert (toy_run.results / "ranges" / f"{species}.gff3").is_file()

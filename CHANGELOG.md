@@ -39,6 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The config key `execution.random_id_length` is removed.
 - License is MIT ([ADR-003](docs/adr/ADR-003-mit-licence.md)). The `LICENSE` file previously held
   the GPL v2 text while the README said MIT.
+- **Each domain is reported at its own genomic position**
+  ([ADR-007](docs/adr/ADR-007-domain-coordinates.md)), computed from where it lies in the translated
+  hit; the hit's span is kept in `Hit_Start` and `Hit_End`. Positions used to be those of the whole
+  BLAST hit (median error for zinc fingers 411 bp in human; 48 bp with the domain's own position).
+- **New domain tables.** `tables/domains/calls.*` holds every call with its family, evidence tier,
+  coordinates and the part of the model it covers; `tables/domains/domains.*` holds domain
+  instances (overlapping calls of one model on one strand, counted once). Numbers are stored as
+  numbers. `ranges/<species>.gff3` is written for every species, also one without domains. The
+  per-query domain tables and the R cross-query merge are gone.
 - **RPS-BLAST E-values are on NCBI's scale, with a cut-off of 1**
   ([ADR-006](docs/adr/ADR-006-rpsblast-evalue-scale-and-cutoff.md)). The search is told the size of
   the full CDD (`databases.cdd.residues`), `rpsblast.e_value` defaults to 1 instead of 1000, the same
