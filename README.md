@@ -91,6 +91,7 @@ that change affects. See the [CLI Reference](docs/cli-reference.md).
 | [Filtering](docs/filtering.md) | What is searched, kept and reported at each step, and what cannot be concluded |
 | [Outputs](docs/outputs.md) | Output directory structure, parquet column schemas, file format descriptions |
 | [CLI Reference](docs/cli-reference.md) | All CLI flags, invocation patterns, flag-to-rule mapping, rerun recipes |
+| [Console and logs](docs/console_style.md) | What a run prints, where every line is kept, verbosity and colour |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues, empty species handling, Windows/WSL caveats |
 
 ## Environment Variables

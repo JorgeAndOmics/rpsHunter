@@ -14,6 +14,8 @@ from pathlib import Path
 
 import yaml
 
+import defaults
+
 REPO = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO / "workflow"
 CREATES_DIRECTORY = re.compile(r"\bmkdir\b|\bmakedirs\b|\bdir\.create\b")
@@ -80,3 +82,27 @@ def test_ensure_dirs_creates_the_tree_including_per_query_folders(tmp_path):
     assert (tmp_path / "db" / "cdd_dbs").is_dir()
     # RPS_DB is a database name prefix (cdd_dbs/Cdd.*), not a folder.
     assert not (tmp_path / "db" / "cdd_dbs" / "Cdd").exists()
+
+
+def test_ensure_dirs_creates_folders_and_only_the_parent_of_a_file_prefix(
+    tmp_path, monkeypatch
+):
+    paths = {
+        "RESULTS_DIR": tmp_path / "results",
+        "RPS_DB": tmp_path / "cdd_dbs" / "Cdd",
+    }
+    monkeypatch.setattr(defaults, "PATH_DICT", paths)
+    monkeypatch.setattr(defaults, "QUERY_LABEL_LIST", ["query_1"])
+    monkeypatch.setattr(
+        defaults, "_PER_QUERY_PARENTS", [tmp_path / "results" / "blast"]
+    )
+    monkeypatch.setattr(
+        defaults, "_PER_QUERY_NESTED", [tmp_path / "tables" / "{ql}" / "selected"]
+    )
+
+    defaults.ensure_dirs()
+
+    assert (tmp_path / "results" / "blast" / "query_1").is_dir()
+    assert (tmp_path / "tables" / "query_1" / "selected").is_dir()
+    assert (tmp_path / "cdd_dbs").is_dir()
+    assert not (tmp_path / "cdd_dbs" / "Cdd").exists()

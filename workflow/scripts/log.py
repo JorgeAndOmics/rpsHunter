@@ -16,6 +16,7 @@ INFO, detail.
 
 from __future__ import annotations
 
+import argparse
 import logging
 import re
 import sys
@@ -107,6 +108,15 @@ def job_logging(
     root = logging.getLogger()
     root.handlers[:] = [handler]
     root.setLevel(logging.INFO)
+
+
+def add_scope_argument(parser: argparse.ArgumentParser) -> None:
+    """Give a script the `--scope` option its rule fills with `<query>/<species>`."""
+    parser.add_argument(
+        "--scope",
+        default=EVERYTHING,
+        help="What this job covers, for its log lines (default: the whole run).",
+    )
 
 
 def ok(message: str) -> None:

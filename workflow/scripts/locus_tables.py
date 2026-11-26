@@ -21,6 +21,7 @@ import pandas as pd
 
 import defaults
 import loci
+import log
 
 HIT_COLUMNS = {
     "Subject ID": "Sequence",
@@ -71,7 +72,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--families-out", type=Path, required=True)
     parser.add_argument("--hits", type=Path, nargs="+", required=True)
     parser.add_argument("--calls", type=Path, nargs="+", required=True)
+    log.add_scope_argument(parser)
     args = parser.parse_args(argv)
+    log.job_logging("locus_tables", args.scope)
 
     chained = loci.chain(read_hits(args.hits), gap=defaults.LOCUS_GAP)
     calls = pd.concat([pd.read_parquet(path) for path in args.calls], ignore_index=True)
@@ -79,11 +82,12 @@ def main(argv: list[str] | None = None) -> int:
     table = loci.locus_table(chained, evidence, family_order=list(defaults.FAMILIES))
     write_table(table, args.loci_out)
     write_table(evidence, args.families_out)
-    print(
-        f"{len(table)} loci from {len(chained)} gated hits (gap {defaults.LOCUS_GAP} bp)"
+    log.ok(
+        f"{log.count(len(table))} loci from {log.count(len(chained))} selected hits "
+        f"(gap {log.count(defaults.LOCUS_GAP)} bp)"
     )
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(log.run_main(main))

@@ -1,0 +1,188 @@
+Assuming unrestricted shared filesystem usage.
+
+SNAKEMAKE
+=========
+  Date: 2026-11-27 00:44:32
+  Workflow ID: 72b2a8ff-c09f-4f85-8e74-12b3ced8062c
+  Platform: Linux-7.0.0-42-generic-x86_64-with-glibc2.39
+  Host: example-host
+  User: user
+  Snakemake version: 9.27.2
+  Python version: 3.12.16 (main, Oct 26 2026, 11:37:43) [GCC 15.3.0]
+  Command: /env/lib/python3.12/site-packages/snakemake/__main__.py --snakefile /repo/workflow/Snakefile rpsbproc_parser loci --cores 2 --rerun-incomplete --show-failed-logs --resources ncbi_api=1 --forcerun call_domains_species
+  Snakefile: /repo/workflow/Snakefile
+  Base directory: /repo/workflow
+  Run directory: /repo/workflow
+  Working directory: /repo/workflow
+  Config file(s): ['/work/config.yaml']
+  Config MD5: f4bd5e48a1ffe49d98b4ce7be8035e48
+
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 2
+Rules claiming more threads will be scaled down.
+Provided resources: ncbi_api=Resource("ncbi_api", 1)
+Job stats:
+job                     count
+--------------------  -------
+call_domains_species        6
+domain_tables               1
+locus_tables                1
+loci                        1
+rpsbproc_parser             1
+total                      10
+
+Select jobs to execute...
+Execute 2 jobs...
+
+[Fri Nov 27 00:44:32 2026]
+localrule call_domains_species:
+    input: /work/results/rpsbproc/Mouse_PRDM9/Toyus_plenus.txt, /work/results/rpsblast/Mouse_PRDM9/Toyus_plenus.parquet
+    output: /work/results/domains/Mouse_PRDM9/Toyus_plenus.parquet
+    log: /work/logs/jobs/call_domains_species/Mouse_PRDM9/Toyus_plenus.log
+    jobid: 34
+    benchmark: /work/logs/benchmarks/call_domains_species/Mouse_PRDM9/Toyus_plenus.tsv
+    reason: Forced execution
+    wildcards: query_label=Mouse_PRDM9, species=Toyus_plenus
+    resources: tmpdir=/tmp
+[Fri Nov 27 00:44:32 2026]
+localrule call_domains_species:
+    input: /work/results/rpsbproc/Mouse_PRDM9/Toyus_vacuus.txt, /work/results/rpsblast/Mouse_PRDM9/Toyus_vacuus.parquet
+    output: /work/results/domains/Mouse_PRDM9/Toyus_vacuus.parquet
+    log: /work/logs/jobs/call_domains_species/Mouse_PRDM9/Toyus_vacuus.log
+    jobid: 40
+    benchmark: /work/logs/benchmarks/call_domains_species/Mouse_PRDM9/Toyus_vacuus.tsv
+    reason: Forced execution
+    wildcards: query_label=Mouse_PRDM9, species=Toyus_vacuus
+    resources: tmpdir=/tmp
+00:44:33 OK call_domains Mouse_PRDM9/Toyus_vacuus | 0 domain calls
+00:44:33 OK call_domains Mouse_PRDM9/Toyus_plenus | 14 domain calls
+[Fri Nov 27 00:44:33 2026]
+Finished jobid: 40 (Rule: call_domains_species)
+1 of 10 steps (10%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Nov 27 00:44:33 2026]
+localrule call_domains_species:
+    input: /work/results/rpsbproc/Human_PRDM9/Toyus_vacuus.txt, /work/results/rpsblast/Human_PRDM9/Toyus_vacuus.parquet
+    output: /work/results/domains/Human_PRDM9/Toyus_vacuus.parquet
+    log: /work/logs/jobs/call_domains_species/Human_PRDM9/Toyus_vacuus.log
+    jobid: 31
+    benchmark: /work/logs/benchmarks/call_domains_species/Human_PRDM9/Toyus_vacuus.tsv
+    reason: Forced execution
+    wildcards: query_label=Human_PRDM9, species=Toyus_vacuus
+    resources: tmpdir=/tmp
+[Fri Nov 27 00:44:33 2026]
+Finished jobid: 34 (Rule: call_domains_species)
+2 of 10 steps (20%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Nov 27 00:44:33 2026]
+localrule call_domains_species:
+    input: /work/results/rpsbproc/Human_PRDM9/Toyus_plenus.txt, /work/results/rpsblast/Human_PRDM9/Toyus_plenus.parquet
+    output: /work/results/domains/Human_PRDM9/Toyus_plenus.parquet
+    log: /work/logs/jobs/call_domains_species/Human_PRDM9/Toyus_plenus.log
+    jobid: 22
+    benchmark: /work/logs/benchmarks/call_domains_species/Human_PRDM9/Toyus_plenus.tsv
+    reason: Forced execution
+    wildcards: query_label=Human_PRDM9, species=Toyus_plenus
+    resources: tmpdir=/tmp
+00:44:33 OK call_domains Human_PRDM9/Toyus_vacuus | 0 domain calls
+00:44:33 OK call_domains Human_PRDM9/Toyus_plenus | 10 domain calls
+[Fri Nov 27 00:44:33 2026]
+Finished jobid: 31 (Rule: call_domains_species)
+3 of 10 steps (30%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Nov 27 00:44:33 2026]
+localrule call_domains_species:
+    input: /work/results/rpsbproc/Human_PRDM9/Toyus_fractus.txt, /work/results/rpsblast/Human_PRDM9/Toyus_fractus.parquet
+    output: /work/results/domains/Human_PRDM9/Toyus_fractus.parquet
+    log: /work/logs/jobs/call_domains_species/Human_PRDM9/Toyus_fractus.log
+    jobid: 28
+    benchmark: /work/logs/benchmarks/call_domains_species/Human_PRDM9/Toyus_fractus.tsv
+    reason: Forced execution
+    wildcards: query_label=Human_PRDM9, species=Toyus_fractus
+    resources: tmpdir=/tmp
+[Fri Nov 27 00:44:33 2026]
+Finished jobid: 22 (Rule: call_domains_species)
+4 of 10 steps (40%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Nov 27 00:44:33 2026]
+localrule call_domains_species:
+    input: /work/results/rpsbproc/Mouse_PRDM9/Toyus_fractus.txt, /work/results/rpsblast/Mouse_PRDM9/Toyus_fractus.parquet
+    output: /work/results/domains/Mouse_PRDM9/Toyus_fractus.parquet
+    log: /work/logs/jobs/call_domains_species/Mouse_PRDM9/Toyus_fractus.log
+    jobid: 37
+    benchmark: /work/logs/benchmarks/call_domains_species/Mouse_PRDM9/Toyus_fractus.tsv
+    reason: Forced execution
+    wildcards: query_label=Mouse_PRDM9, species=Toyus_fractus
+    resources: tmpdir=/tmp
+00:44:34 OK call_domains Human_PRDM9/Toyus_fractus | 7 domain calls
+00:44:34 OK call_domains Mouse_PRDM9/Toyus_fractus | 10 domain calls
+[Fri Nov 27 00:44:34 2026]
+Finished jobid: 28 (Rule: call_domains_species)
+5 of 10 steps (50%) done
+[Fri Nov 27 00:44:34 2026]
+Finished jobid: 37 (Rule: call_domains_species)
+6 of 10 steps (60%) done
+Select jobs to execute...
+Execute 2 jobs...
+
+[Fri Nov 27 00:44:34 2026]
+localrule domain_tables:
+    input: /work/results/domains/Human_PRDM9/Toyus_plenus.parquet, /work/results/domains/Human_PRDM9/Toyus_fractus.parquet, /work/results/domains/Human_PRDM9/Toyus_vacuus.parquet, /work/results/domains/Mouse_PRDM9/Toyus_plenus.parquet, /work/results/domains/Mouse_PRDM9/Toyus_fractus.parquet, /work/results/domains/Mouse_PRDM9/Toyus_vacuus.parquet, /work/results/hmmer/Human_PRDM9/Toyus_plenus.parquet, /work/results/hmmer/Human_PRDM9/Toyus_fractus.parquet, /work/results/hmmer/Human_PRDM9/Toyus_vacuus.parquet, /work/results/hmmer/Mouse_PRDM9/Toyus_plenus.parquet, /work/results/hmmer/Mouse_PRDM9/Toyus_fractus.parquet, /work/results/hmmer/Mouse_PRDM9/Toyus_vacuus.parquet
+    output: /work/results/tables/domains/calls.parquet, /work/results/tables/domains/calls.csv, /work/results/tables/domains/domains.parquet, /work/results/tables/domains/domains.csv, /work/results/ranges/Toyus_plenus.gff3, /work/results/ranges/Toyus_fractus.gff3, /work/results/ranges/Toyus_vacuus.gff3, /work/results/tables/domains/hmmer_domains.parquet, /work/results/tables/domains/hmmer_domains.csv
+    log: /work/logs/jobs/domain_tables/all.log
+    jobid: 44
+    benchmark: /work/logs/benchmarks/domain_tables/all.tsv
+    reason: Input files updated by another job: /work/results/domains/Mouse_PRDM9/Toyus_vacuus.parquet, /work/results/domains/Human_PRDM9/Toyus_vacuus.parquet, /work/results/domains/Mouse_PRDM9/Toyus_plenus.parquet, /work/results/domains/Mouse_PRDM9/Toyus_fractus.parquet, /work/results/domains/Human_PRDM9/Toyus_fractus.parquet, /work/results/domains/Human_PRDM9/Toyus_plenus.parquet
+    resources: tmpdir=/tmp
+[Fri Nov 27 00:44:34 2026]
+localrule locus_tables:
+    input: /work/results/tables/blast/Human_PRDM9/selected/Toyus_plenus.parquet, /work/results/tables/blast/Human_PRDM9/selected/Toyus_fractus.parquet, /work/results/tables/blast/Human_PRDM9/selected/Toyus_vacuus.parquet, /work/results/tables/blast/Mouse_PRDM9/selected/Toyus_plenus.parquet, /work/results/tables/blast/Mouse_PRDM9/selected/Toyus_fractus.parquet, /work/results/tables/blast/Mouse_PRDM9/selected/Toyus_vacuus.parquet, /work/results/domains/Human_PRDM9/Toyus_plenus.parquet, /work/results/domains/Human_PRDM9/Toyus_fractus.parquet, /work/results/domains/Human_PRDM9/Toyus_vacuus.parquet, /work/results/domains/Mouse_PRDM9/Toyus_plenus.parquet, /work/results/domains/Mouse_PRDM9/Toyus_fractus.parquet, /work/results/domains/Mouse_PRDM9/Toyus_vacuus.parquet
+    output: /work/results/tables/loci/loci.parquet, /work/results/tables/loci/loci.csv, /work/results/tables/loci/locus_families.parquet, /work/results/tables/loci/locus_families.csv
+    log: /work/logs/jobs/locus_tables/all.log
+    jobid: 1
+    benchmark: /work/logs/benchmarks/locus_tables/all.tsv
+    reason: Input files updated by another job: /work/results/domains/Mouse_PRDM9/Toyus_vacuus.parquet, /work/results/domains/Human_PRDM9/Toyus_vacuus.parquet, /work/results/domains/Mouse_PRDM9/Toyus_plenus.parquet, /work/results/domains/Mouse_PRDM9/Toyus_fractus.parquet, /work/results/domains/Human_PRDM9/Toyus_fractus.parquet, /work/results/domains/Human_PRDM9/Toyus_plenus.parquet
+    resources: tmpdir=/tmp
+00:44:34 OK domain_tables all | 41 calls, 14 domain instances, 3 GFF3 files
+00:44:34 OK locus_tables all | 5 loci from 33 selected hits (gap 20,000 bp)
+[Fri Nov 27 00:44:34 2026]
+Finished jobid: 44 (Rule: domain_tables)
+7 of 10 steps (70%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Nov 27 00:44:34 2026]
+localrule rpsbproc_parser:
+    input: /work/results/tables/domains/calls.parquet, /work/results/tables/domains/domains.parquet, /work/results/ranges/Toyus_plenus.gff3, /work/results/ranges/Toyus_fractus.gff3, /work/results/ranges/Toyus_vacuus.gff3
+    jobid: 43
+    reason: Input files updated by another job: /work/results/ranges/Toyus_plenus.gff3, /work/results/tables/domains/calls.parquet, /work/results/ranges/Toyus_fractus.gff3, /work/results/ranges/Toyus_vacuus.gff3, /work/results/tables/domains/domains.parquet
+    resources: tmpdir=/tmp
+[Fri Nov 27 00:44:34 2026]
+Finished jobid: 1 (Rule: locus_tables)
+8 of 10 steps (80%) done
+[Fri Nov 27 00:44:34 2026]
+Finished jobid: 43 (Rule: rpsbproc_parser)
+9 of 10 steps (90%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Nov 27 00:44:34 2026]
+localrule loci:
+    input: /work/results/tables/loci/loci.parquet, /work/results/tables/loci/locus_families.parquet
+    jobid: 0
+    reason: Input files updated by another job: /work/results/tables/loci/locus_families.parquet, /work/results/tables/loci/loci.parquet
+    resources: tmpdir=/tmp
+[Fri Nov 27 00:44:34 2026]
+Finished jobid: 0 (Rule: loci)
+10 of 10 steps (100%) done
+Complete log(s): /repo/workflow/.snakemake/log/2026-11-27T004432.583007.snakemake.log
+Elapsed time: 0:00:02.408604

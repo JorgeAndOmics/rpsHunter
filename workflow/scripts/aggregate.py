@@ -1,70 +1,40 @@
-"""
-Aggregates per-species parquet files into a combined output.
+"""Concatenate tables of one kind (per species, or per query) into one.
 
-Usage:
-    python aggregate.py <type> <output_parquet> <input1> <input2> ...
+Usage (called by the Snakefile):
+    python aggregate.py --output ALL.parquet TABLE.parquet [TABLE.parquet ...]
 
-Types: blast, rpsblast, domains
+Writes the Parquet file and a CSV beside it. Rows keep the order of the inputs;
+nothing is filtered or changed.
 """
+
+from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 import pandas as pd
 
-import defaults
+import log
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Aggregate per-species parquet files.')
-    parser.add_argument('type', choices=['blast', 'rpsblast', 'domains'],
-                        help='Aggregation type (used for logging).')
-    parser.add_argument('output_parquet', help='Output parquet path.')
-    parser.add_argument('inputs', nargs='+', help='Input parquet file paths.')
-    args = parser.parse_args()
+def main(argv: list[str] | None = None) -> int:
+    """Command-line entry point; returns the process exit status."""
+    parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("inputs", type=Path, nargs="+")
+    log.add_scope_argument(parser)
+    args = parser.parse_args(argv)
+    log.job_logging("aggregate", args.scope)
 
-    dfs = []
-    missing = []
-    for input_path in args.inputs:
-        p = Path(input_path)
-        if p.exists():
-            dfs.append(pd.read_parquet(p))
-        else:
-            missing.append(p.stem)
-
-    if missing:
-        print(f'WARNING: {args.type} aggregation — missing per-species files for: {", ".join(missing)}')
-
-    output_path = Path(args.output_parquet)
-
-    if dfs:
-        combined = pd.concat(dfs, ignore_index=True)
-
-        # Backfill Species_Name when upstream parquets lack the column
-        if 'Species' in combined.columns and 'Species_Name' not in combined.columns:
-            combined['Species_Name'] = combined['Species'].map(
-                lambda s: defaults.SPECIES_DICT.get(s, s)
-            )
-
-        # Backfill Query_Accession when upstream parquets lack the column
-        if 'Query_Accession' not in combined.columns:
-            combined['Query_Accession'] = ''
-
-        combined.to_parquet(output_path, index=False)
-
-        csv_path = output_path.with_suffix('.csv')
-        try:
-            combined.to_csv(csv_path, index=False)
-        except PermissionError:
-            print(f'Warning: could not write {csv_path} (permission denied); parquet written successfully')
-
-        print(f'Aggregated {len(dfs)} {args.type} files -> {len(combined)} rows')
-    else:
-        # Write empty outputs so Snakemake declared outputs are satisfied
-        pd.DataFrame().to_parquet(output_path)
-        output_path.with_suffix('.csv').touch()
-        print(f'No input files found for {args.type} aggregation — empty outputs written')
+    combined = pd.concat(
+        [pd.read_parquet(path) for path in args.inputs], ignore_index=True
+    )
+    combined.to_parquet(args.output, index=False)
+    combined.to_csv(args.output.with_suffix(".csv"), index=False)
+    log.ok(f"{log.count(len(combined))} rows from {len(args.inputs)} tables")
+    return 0
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    sys.exit(log.run_main(main))

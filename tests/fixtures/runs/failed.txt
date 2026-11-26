@@ -1,0 +1,135 @@
+Assuming unrestricted shared filesystem usage.
+
+SNAKEMAKE
+=========
+  Date: 2026-11-27 00:45:16
+  Workflow ID: 46565342-680a-4876-989c-5d09e6105053
+  Platform: Linux-7.0.0-42-generic-x86_64-with-glibc2.39
+  Host: example-host
+  User: user
+  Snakemake version: 9.27.2
+  Python version: 3.12.16 (main, Oct 26 2026, 11:37:43) [GCC 15.3.0]
+  Command: /env/lib/python3.12/site-packages/snakemake/__main__.py --snakefile /repo/workflow/Snakefile rpsbproc_parser --cores 2 --rerun-incomplete --show-failed-logs --resources ncbi_api=1
+  Snakefile: /repo/workflow/Snakefile
+  Base directory: /repo/workflow
+  Run directory: /repo/workflow
+  Working directory: /repo/workflow
+  Config file(s): ['/work/config.yaml
+  Config MD5: a0dbd02a201210065eabba1b25ed6245
+
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 2
+Rules claiming more threads will be scaled down.
+Provided resources: ncbi_api=Resource("ncbi_api", 1)
+Job stats:
+job                     count
+--------------------  -------
+blast_species               6
+cdd_subset_builder          1
+select_hits_species         6
+hmmer_species               6
+rpsblast_species            6
+rpsbproc_species            6
+call_domains_species        6
+...
+Execute 1 jobs...
+
+[Fri Nov 27 00:45:20 2026]
+localrule rpsblast_species:
+    input: /work/results/fastas/Human_PRDM9/Toyus_plenus.fa, /work/db/cdd_subset/families_db.rps
+    output: /work/results/rpsblast/Human_PRDM9/Toyus_plenus.parquet, /work/results/asn/rpsblast/Human_PRDM9/Toyus_plenus.asn
+    log: /work/logs/jobs/rpsblast_species/Human_PRDM9/Toyus_plenus.log
+    jobid: 4
+    benchmark: /work/logs/benchmarks/rpsblast_species/Human_PRDM9/Toyus_plenus.tsv
+    reason: Input files updated by another job: /work/db/cdd_subset/families_db.rps, /work/results/fastas/Human_PRDM9/Toyus_plenus.fa
+    wildcards: query_label=Human_PRDM9, species=Toyus_plenus
+    resources: tmpdir=/tmp
+Select jobs to execute...
+00:45:20 OK rpsblast Human_PRDM9/Toyus_vacuus | 0 alignments at E <= 1
+[Fri Nov 27 00:45:20 2026]
+Finished jobid: 22 (Rule: rpsblast_species)
+13 of 39 steps (33%) done
+Execute 1 jobs...
+
+[Fri Nov 27 00:45:21 2026]
+localrule rpsbproc_species:
+    input: /work/results/asn/rpsblast/Human_PRDM9/Toyus_vacuus.asn, /work/db/rpsbproc_dbs/cddid.tbl, /work/db/rpsbproc_dbs/cdtrack.txt, /work/db/rpsbproc_dbs/family_superfamily_links, /work/db/rpsbproc_dbs/cddannot.dat, /work/db/rpsbproc_dbs/cddannot_generic.dat, /work/db/rpsbproc_dbs/bitscore_specific.txt
+    output: /work/results/rpsbproc/Human_PRDM9/Toyus_vacuus.txt
+    log: /work/logs/jobs/rpsbproc_species/Human_PRDM9/Toyus_vacuus.log
+    jobid: 21
+    benchmark: /work/logs/benchmarks/rpsbproc_species/Human_PRDM9/Toyus_vacuus.tsv
+    reason: Input files updated by another job: /work/results/asn/rpsblast/Human_PRDM9/Toyus_vacuus.asn
+    wildcards: query_label=Human_PRDM9, species=Toyus_vacuus
+    resources: tmpdir=/tmp
+Select jobs to execute...
+00:45:21 ERROR rpsbproc Human_PRDM9/Toyus_vacuus | ToolError: rpsbproc exited with status 1
+Traceback (most recent call last):
+  File "/repo/workflow/scripts/log.py", line 145, in run_main
+    return main()
+           ^^^^^^
+  File "/repo/workflow/scripts/rpsbproc.py", line 71, in main
+    ran = process(tool, args.input_asn, args.output_txt)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/repo/workflow/scripts/rpsbproc.py", line 53, in process
+    external.run_tool(command(tool, archive, report), tool="rpsbproc")
+  File "/repo/workflow/scripts/external.py", line 62, in run_tool
+    raise ToolError(name, done.returncode, tail)
+external.ToolError: rpsbproc exited with status 1
+RuleException:
+CalledProcessError in file "/repo/workflow/Snakefile", line 550:
+Command 'set -euo pipefail;  
+        (
+        python scripts/rpsbproc.py             --scope Human_PRDM9/Toyus_vacuus             --input-asn /work/results/asn/rpsblast/Human_PRDM9/Toyus_vacuus.asn             --output-txt /work/results/rpsbproc/Human_PRDM9/Toyus_vacuus.txt
+        ) 2>&1 | tee /work/logs/jobs/rpsbproc_species/Human_PRDM9/Toyus_vacuus.log' returned non-zero exit status 1.
+[Fri Nov 27 00:45:21 2026]
+Error in rule rpsbproc_species:
+    message: None
+    jobid: 21
+    input: /work/results/asn/rpsblast/Human_PRDM9/Toyus_vacuus.asn, /work/db/rpsbproc_dbs/cddid.tbl, /work/db/rpsbproc_dbs/cdtrack.txt, /work/db/rpsbproc_dbs/family_superfamily_links, /work/db/rpsbproc_dbs/cddannot.dat, /work/db/rpsbproc_dbs/cddannot_generic.dat, /work/db/rpsbproc_dbs/bitscore_specific.txt
+    output: /work/results/rpsbproc/Human_PRDM9/Toyus_vacuus.txt
+    log: /work/logs/jobs/rpsbproc_species/Human_PRDM9/Toyus_vacuus.log (check log file(s) for error details)
+    shell:
+        
+        (
+        python scripts/rpsbproc.py             --scope Human_PRDM9/Toyus_vacuus             --input-asn /work/results/asn/rpsblast/Human_PRDM9/Toyus_vacuus.asn             --output-txt /work/results/rpsbproc/Human_PRDM9/Toyus_vacuus.txt
+        ) 2>&1 | tee /work/logs/jobs/rpsbproc_species/Human_PRDM9/Toyus_vacuus.log
+        
+        (command exited with non-zero exit code)
+Logfile /work/logs/jobs/rpsbproc_species/Human_PRDM9/Toyus_vacuus.log:
+================================================================================
+00:45:21 ERROR rpsbproc Human_PRDM9/Toyus_vacuus | ToolError: rpsbproc exited with status 1
+Traceback (most recent call last):
+  File "/repo/workflow/scripts/log.py", line 145, in run_main
+    return main()
+           ^^^^^^
+  File "/repo/workflow/scripts/rpsbproc.py", line 71, in main
+    ran = process(tool, args.input_asn, args.output_txt)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/repo/workflow/scripts/rpsbproc.py", line 53, in process
+    external.run_tool(command(tool, archive, report), tool="rpsbproc")
+  File "/repo/workflow/scripts/external.py", line 62, in run_tool
+    raise ToolError(name, done.returncode, tail)
+external.ToolError: rpsbproc exited with status 1
+================================================================================
+00:45:21 OK rpsblast Human_PRDM9/Toyus_plenus | 62 alignments at E <= 1
+[Fri Nov 27 00:45:21 2026]
+Finished jobid: 4 (Rule: rpsblast_species)
+14 of 39 steps (36%) done
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error messages
+Complete log(s): /repo/workflow/.snakemake/log/2026-11-27T004516.968149.snakemake.log
+Elapsed time: 0:00:04.381430
+WorkflowError:
+At least one job did not complete successfully.
+Jobs (config.fail.yaml):
+  blast_species             6
+  cdd_subset_builder        1
+  select_hits_species       6
+  hmmer_species             6
+  rpsblast_species          6
+  rpsbproc_species          6
+  call_domains_species      6
+  domain_tables             1
+  rpsbproc_parser           1
+  total                    39

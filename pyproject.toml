@@ -3,12 +3,11 @@
 # checks are configured here. Runtime dependencies live in
 # data/config/environment.yaml.
 #
-# LEGACY LIST. The scripts below predate the quality gate and are being rewritten
-# stage by stage, tests first. Until a script is rewritten it is left out of ruff
-# and mypy as a whole file, instead of silencing its findings line by line. The
-# list only shrinks: delete an entry in the commit that rewrites the file, and
-# never add one. `qlty metrics` still measures every file, so the debt stays
-# visible in the quality trend. Keep the two copies of the list (ruff, mypy) equal.
+# LEGACY LIST: empty for Python since 2026-11-27. Scripts that predated the quality
+# gate were left out of ruff, mypy and coverage as whole files until rewritten
+# (docs/adr/ADR-002). Every Python file is now under the gate; the list may not
+# grow again (tests/unit/test_legacy_list.py). The shell list in the Makefile is
+# empty too.
 
 [tool.ruff]
 target-version = "py312"
@@ -17,11 +16,6 @@ src = ["workflow/scripts", "tests"]
 extend-exclude = [
     ".snakemake",
     "results",
-    # --- legacy list (see the top of this file) ---
-    "workflow/scripts/aggregate.py",
-    "workflow/scripts/blast.py",
-    "workflow/scripts/colored_logging.py",
-    "workflow/scripts/defaults.py",
 ]
 
 [tool.ruff.lint]
@@ -80,10 +74,8 @@ disallow_untyped_defs = true
 check_untyped_defs = true
 no_implicit_reexport = true
 files = ["workflow/scripts"]
-# The second alternative is the legacy list (see the top of this file).
 exclude = [
     '(^|/)tests/',
-    'workflow/scripts/(aggregate|blast|colored_logging|defaults)\.py$',
 ]
 enable_error_code = [
     "ignore-without-code",
@@ -93,7 +85,7 @@ enable_error_code = [
 
 # Third-party libraries without type stubs. Keep this list narrow.
 [[tool.mypy.overrides]]
-module = ["Bio.*", "pyarrow.*", "yamale.*", "snakemake.*"]
+module = ["pyarrow.*", "yamale.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -112,13 +104,7 @@ markers = [
 [tool.coverage.run]
 source = ["workflow/scripts"]
 branch = true
-# Coverage is measured on rewritten code only: the legacy list above, as a glob.
-omit = [
-    "workflow/scripts/aggregate.py",
-    "workflow/scripts/blast.py",
-    "workflow/scripts/colored_logging.py",
-    "workflow/scripts/defaults.py",
-]
+omit = []
 
 [tool.coverage.report]
 # The floor only rises. 100% was measured when tags.py, the first rewritten

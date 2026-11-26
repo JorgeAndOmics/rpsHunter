@@ -30,6 +30,7 @@ Any number of stages can be given in one call; they run in the order below, as o
 | `-n`, `--dry-run` | Run the checks, list the jobs, run nothing |
 | `--cores N` | Cores to use; default `execution.num_cores` |
 | `--config FILE` | Config for this run. Otherwise `$RPSHUNTER_CONFIG`, otherwise `data/config/config.yaml`. One complete file; nothing is merged |
+| `--verbosity quiet\|normal\|verbose` | What the screen shows; default `display.verbosity`, else `normal`. See [console_style.md](console_style.md) |
 | `--allow-heavy` | Let a stage start a download, database build or search it does not own (see the guard) |
 
 ## What happens before anything runs
@@ -58,7 +59,7 @@ Any number of stages can be given in one call; they run in the order below, as o
 | 0 | Done, or nothing to do |
 | 2 | Wrong usage, a problem found by the checks, or a missing config |
 | 3 | Stopped by the guard |
-| other | Snakemake's own status: a job failed. Its log is printed and kept under `logs/jobs/<rule>/` (see [outputs.md](outputs.md#logs-and-benchmarks)) |
+| other | Snakemake's own status: a job failed. The summary names the failed rule and its log under `logs/jobs/<rule>/`; everything the run printed is in `logs/runs/` |
 
 ## Flags of earlier versions
 

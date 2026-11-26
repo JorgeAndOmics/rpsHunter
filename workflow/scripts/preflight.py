@@ -23,6 +23,7 @@ import yamale
 import yaml
 
 import domain_families
+import query_config
 import species_config
 import stages
 
@@ -37,6 +38,7 @@ run writes about 3 GB)."""
 _FAMILIES = "replaced by the `domains:` block (docs/configuration.md)"
 _GONE = "no longer used; delete it"
 RETIRED_KEYS: dict[tuple[str, ...], str] = {
+    ("query",): "replaced by `queries:` (accession: label), which also takes one query",
     ("orf",): "the ORF stage was retired (docs/adr/ADR-011); delete the section",
     ("hit_domain_inventory",): "replaced by `loci.gap`",
     ("rpsblast", "target_domains"): _FAMILIES,
@@ -46,6 +48,10 @@ RETIRED_KEYS: dict[tuple[str, ...], str] = {
         "random_id_length",
     ): "Tags are now derived from the hit (docs/adr/ADR-004); delete it",
     ("use_species_list",): _GONE,
+    (
+        "display",
+        "display_snakemake_info",
+    ): "replaced by `display.verbosity` (quiet, normal, verbose)",
     ("display", "display_requests_warning"): _GONE,
     ("display", "display_operation_info"): _GONE,
 }
@@ -118,6 +124,10 @@ def content_problems(config: Mapping[str, Any]) -> list[str]:
     try:
         species_config.parse_species(config.get("species"))
     except species_config.SpeciesConfigError as error:
+        problems.append(str(error))
+    try:
+        query_config.parse_queries(config.get("queries"))
+    except query_config.QueryConfigError as error:
         problems.append(str(error))
     return problems
 
@@ -249,7 +259,7 @@ def _layout(config_file: Path) -> tuple[Layout, Path]:
     paths = defaults.PATH_DICT
     layout = Layout(
         genomes={key: paths["SPECIES_DB"] / f"{key}.fa" for key in defaults.SPECIES},
-        queries={acc: defaults.query_file_path(acc) for acc in defaults.QUERY_DICT},
+        queries={acc: defaults.query_file_path(acc) for acc in defaults.QUERIES},
         cdd_models={
             accession: paths["SMP_DIR"] / f"{accession}.smp"
             for accession in domain_families.cdd_accessions(defaults.FAMILIES)

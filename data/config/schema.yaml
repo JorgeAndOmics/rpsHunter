@@ -4,10 +4,9 @@ databases: include('databases_schema')
 domains: map(include('family_schema'), key=str())
 hmmer: include('hmmer_schema')
 programs: include('programs_schema', required=False)
-query: include('query_schema', required=False)
-queries: map(str(), key=str(), required=False)
+queries: map(str(), key=str())
 execution: include('execution_schema')
-display: include('display_schema')
+display: include('display_schema', required=False)
 root: include('root_schema')
 loci: include('loci_schema', required=False)
 species: include('species_schema')
@@ -51,16 +50,12 @@ hmmer_schema:
   bias_filter: bool()
   seed: int(min=0)
 
-query_schema:
-  format: str()
-  accession: str(matches='[A-Z]{2,}_?[0-9]+\\.[0-9]{1,2}')
-
 execution_schema:
   num_cores: int(min=1)
   entrez_email: str()
 
 display_schema:
-  display_snakemake_info: bool()
+  verbosity: enum('quiet', 'normal', 'verbose', required=False)
 
 root_schema:
   db_root_folder: str()

@@ -146,6 +146,8 @@ RETIRED: dict[str, str] = {
 }
 """Flags of earlier versions, each with what to do instead."""
 
+VERBOSITIES = ("quiet", "normal", "verbose")
+
 FORBIDDEN_SNAKEMAKE = ("--forceall", "-F")
 """Would rebuild databases and download genomes again; never passed on."""
 
@@ -170,6 +172,7 @@ class Request:
     cores: int | None
     config: str | None
     allow_heavy: bool
+    verbosity: str | None
     snakemake_args: tuple[str, ...]
 
     @property
@@ -215,6 +218,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--cores", type=int, help="Cores to use (default: execution.num_cores)."
     )
     run.add_argument("--config", help="Config file for this run.")
+    run.add_argument(
+        "--verbosity",
+        choices=VERBOSITIES,
+        help="What the screen shows (default: display.verbosity, else normal).",
+    )
     run.add_argument(
         "--allow-heavy",
         action="store_true",
@@ -276,5 +284,6 @@ def parse(argv: Sequence[str]) -> Request:
         cores=args.cores,
         config=args.config,
         allow_heavy=args.allow_heavy,
+        verbosity=args.verbosity,
         snakemake_args=passed_on,
     )

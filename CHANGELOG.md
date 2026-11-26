@@ -37,6 +37,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Query proteins are fetched exactly.** `--download-queries` takes the versioned accession from the
+  config and checks that NCBI returned that record; it no longer falls back to a search by name and
+  the first match. Each download is recorded with its checksum.
+- **A run is shown, not dumped.** The launcher prints a banner, one line per finished job, a
+  progress line on a terminal and a summary naming any failed rule and its log;
+  `--verbosity` / `display.verbosity` (`quiet`, `normal`, `verbose`) replaces
+  `display.display_snakemake_info`. Everything a run printed is kept in `logs/runs/`
+  ([console_style.md](docs/console_style.md)).
+- **Every job writes lines of one shape**, `HH:MM:SS LEVEL step scope | message`, with one `OK`
+  headline per finished job and one `ERROR` line when it fails (the traceback follows in its log).
+- **Hit tables are fully typed.** `Mismatches`, `Gap Openings`, `Q. Start` and `Q. End` were stored as
+  text; a search without hits wrote a table of untyped columns. Values and Tags are unchanged.
 - **New command line** ([ADR-013](docs/adr/ADR-013-launcher-stage-table-and-guard.md)). Several stages
   run in one call and `--all` runs the analysis; flags are renamed (`--search`, `--domains`,
   `--download-queries`, `--download-databases`) and an old flag stops with its replacement;
@@ -103,6 +115,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The single-query config form `query: {format, accession}`. Use `queries:`, which also takes one
+  query; a config still using `query:` stops with that advice. Two queries with the same label
+  are now refused instead of silently overwriting each other's folders.
+- Dependencies no longer used: `biopython`, `tqdm`, `coloredlogs`.
 - **The ORF stage** ([ADR-011](docs/adr/ADR-011-retire-orf-gate.md)): `orf_analyser.R`, the `orf`
   config section, the `--orf-analyser` flag and the ORFik dependency. It demanded an open reading
   frame with a start codon inside every hit, and a hit covers one exon; its minimum length was

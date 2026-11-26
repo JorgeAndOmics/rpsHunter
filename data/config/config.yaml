@@ -85,7 +85,7 @@ execution:
   entrez_email: 'your_email@example.com'
 
 display:
-  display_snakemake_info: true
+  verbosity: normal   # quiet | normal | verbose (what the screen shows; logs keep everything)
 
 root:
   db_root_folder: '/mnt/v/databases/bat-experimental'

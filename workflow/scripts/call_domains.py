@@ -21,6 +21,7 @@ import pandas as pd
 import defaults
 import domain_calls
 import domain_families
+import log
 
 CALL_COLUMNS = (
     "Species",
@@ -103,7 +104,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--alignments", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    log.add_scope_argument(parser)
     args = parser.parse_args(argv)
+    log.job_logging("call_domains", args.scope)
 
     alignments = pd.read_parquet(args.alignments)
     calls = build(
@@ -113,9 +116,9 @@ def main(argv: list[str] | None = None) -> int:
     calls["Species_Name"] = defaults.SPECIES_DICT[args.species]
     calls["Query_Accession"] = args.query_accession
     calls[list(CALL_COLUMNS)].to_parquet(args.output, index=False)
-    print(f"{args.species}: {len(calls)} domain calls")
+    log.ok(f"{log.count(len(calls))} domain calls")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(log.run_main(main))

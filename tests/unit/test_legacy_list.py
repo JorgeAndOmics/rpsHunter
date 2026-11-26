@@ -18,10 +18,7 @@ SCRIPTS = "workflow/scripts/"
 # pyproject.toml and .lintr.R as files are rewritten; nothing is ever added here.
 ORIGINAL_PYTHON = frozenset(
     {
-        "aggregate.py",
-        "blast.py",
         "cdd_subset.py",
-        "colored_logging.py",
         "concordance.py",
         "defaults.py",
         "hit_domain_inventory.py",
@@ -61,8 +58,10 @@ def _coverage_legacy() -> set[str]:
 
 def _mypy_legacy() -> set[str]:
     patterns = _pyproject()["tool"]["mypy"]["exclude"]
-    (legacy,) = [p for p in patterns if p.startswith(SCRIPTS)]
-    alternatives = re.search(r"\((.*)\)", legacy)
+    legacy = [p for p in patterns if p.startswith(SCRIPTS)]
+    if not legacy:
+        return set()
+    alternatives = re.search(r"\((.*)\)", legacy[0])
     assert alternatives is not None
     return {f"{stem}.py" for stem in alternatives.group(1).split("|")}
 
@@ -84,3 +83,8 @@ def test_legacy_entries_still_exist():
 def test_legacy_lists_never_grow():
     assert _ruff_legacy() <= ORIGINAL_PYTHON
     assert _lintr_legacy() <= ORIGINAL_R
+
+
+def test_every_python_script_is_under_the_gate():
+    # The Python legacy list reached zero on 2026-11-27 and stays there.
+    assert _ruff_legacy() == set()

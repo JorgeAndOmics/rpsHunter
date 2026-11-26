@@ -158,3 +158,10 @@ def test_an_unknown_flag_is_an_error():
         stages.parse(["--loci", "--nonsense"])
 
     assert stopped.value.code == 2
+
+
+def test_verbosity_is_one_of_three_words_or_left_to_the_config():
+    assert stages.parse(["--loci"]).verbosity is None
+    assert stages.parse(["--loci", "--verbosity", "quiet"]).verbosity == "quiet"
+    with pytest.raises(SystemExit):
+        stages.parse(["--loci", "--verbosity", "loud"])

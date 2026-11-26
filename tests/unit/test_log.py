@@ -1,5 +1,6 @@
 """Every message of every job is one line of one shape."""
 
+import argparse
 import io
 import logging
 
@@ -123,3 +124,14 @@ def test_a_main_that_succeeds_passes_its_status_on():
     _capture()
 
     assert log.run_main(lambda: 0) == 0
+
+
+def test_a_script_takes_its_scope_from_its_rule_and_defaults_to_the_whole_run():
+    parser = argparse.ArgumentParser()
+    log.add_scope_argument(parser)
+
+    assert parser.parse_args([]).scope == "all"
+    assert (
+        parser.parse_args(["--scope", "query_1/Homo_sapiens"]).scope
+        == "query_1/Homo_sapiens"
+    )

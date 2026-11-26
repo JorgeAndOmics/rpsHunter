@@ -1,64 +1,52 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Download one query protein from NCBI by its versioned accession.
+#
+# The accession is a key of `queries:` in the config. It is fetched exactly:
+# no search by name and no "best match", so the same config always gets the
+# same sequence.
+#
+# Usage: query_downloader.sh <accession> <output_dir> <record_file>
+# Writes: <output_dir>/<accession>.fa
+# Appends to <record_file>, tab-separated:
+#   accession, sha256 of the FASTA, UTC time
+# Needs: efetch (entrez-direct), sha256sum. ENTREZ_EMAIL, if set, is sent to
+#   NCBI as its usage policy asks; NCBI_API_KEY is used by efetch if set.
+# Fails on: wrong arguments, an accession without a version, a failed download,
+#   or a reply that is not the FASTA record of that accession.
+set -euo pipefail
 
-# Ensure correct usage
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
-    echo "Usage: $0 <AccessionCode_or_SearchTerm> <OutputDirectory> <LogFile>"
-    exit 1
+if (($# != 3)); then
+    echo "usage: $0 <accession> <output_dir> <record_file>" >&2
+    exit 64
+fi
+accession="$1"
+output_dir="$2"
+record_file="$3"
+
+if [[ ! "$accession" =~ ^[A-Z]{1,3}_?[0-9]+\.[0-9]+$ ]]; then
+    echo "'$accession' is not a versioned protein accession (for example NP_000000.1)" >&2
+    exit 65
 fi
 
-QUERY="$1"       # Protein Accession, Gene name, or Search Term
-OUTDIR="$(realpath -m "$2")"  # Normalize and clean output directory
-LOGFILE="$(realpath -m "$3")" # Log file to store results
+fasta="$output_dir/$accession.fa"
+partial="$(mktemp --tmpdir="$output_dir" ".download_${accession}.XXXXXX")"
+trap 'rm -f -- "$partial"' EXIT
 
-# Check if an Entrez email is provided
-if [ -z "$ENTREZ_EMAIL" ]; then
-    echo "⚠ Warning: No Entrez email found. Consider setting it with: export ENTREZ_EMAIL='your_email@example.com'"
-    EMAIL_FLAG=""
-else
-    EMAIL_FLAG="-email $ENTREZ_EMAIL"
-    echo "Found Entrez email in environment: $ENTREZ_EMAIL"
+email=()
+if [[ -n "${ENTREZ_EMAIL:-}" ]]; then
+    email=(-email "$ENTREZ_EMAIL")
 fi
 
-echo "Fetching protein for: $QUERY"
+efetch -db protein -id "$accession" -format fasta "${email[@]}" > "$partial"
 
-################################################################################
-# Check if input is a Protein Accession (e.g. ADK09900)
-################################################################################
-if [[ "$QUERY" =~ ^[A-Z]{3}[0-9]{5}(\.[0-9]+)?$ ]]; then
-    echo "Detected Protein Accession: $QUERY"
-    BEST_ACCESSION="$QUERY"
-    LEVEL="Direct_Accession"
-    QUERY_SAFE="$QUERY"
-else
-    ################################################################################
-    # Use Entrez Direct to search for the protein accession using the search term
-    ################################################################################
-    BEST_ACCESSION=$(esearch -db protein -query "$QUERY" $EMAIL_FLAG | efetch -format acc $EMAIL_FLAG | head -n 1)
-    if [ -z "$BEST_ACCESSION" ]; then
-        echo "❌ No valid protein accession found for: $QUERY"
-        exit 1
-    fi
-    echo "✅ Found protein accession: $BEST_ACCESSION"
-    LEVEL="Searched"
-    QUERY_SAFE="$QUERY"
+# efetch can exit 0 with an empty reply or an error page: check what came back.
+header="$(head -n 1 "$partial")"
+if [[ "$header" != ">$accession"* ]]; then
+    echo "$accession: NCBI did not return its FASTA record (first line: '${header:0:80}')" >&2
+    exit 66
 fi
 
-# Convert spaces in the level to underscores for a filename-safe string
-LEVEL_SAFE="${LEVEL// /_}"
-
-# Normalize filename using realpath -m
-FASTA_FILE="$(realpath -m "$OUTDIR/${QUERY_SAFE}.fa")"
-
-echo "Downloading protein accession: $BEST_ACCESSION"
-efetch -db protein -id "$BEST_ACCESSION" -format fasta $EMAIL_FLAG > "$FASTA_FILE"
-
-if [ $? -ne 0 ] || [ ! -s "$FASTA_FILE" ]; then
-    echo "❌ Download failed for protein accession: $BEST_ACCESSION"
-    exit 1
-fi
-
-echo "✅ Download complete: $FASTA_FILE (Accession: $BEST_ACCESSION, Source: $LEVEL)"
-
-# Append download info to the log file
-echo -e "$QUERY\t$BEST_ACCESSION\t$LEVEL" >> "$LOGFILE"
-echo "✅ Download logged: $LOGFILE"
+mv -- "$partial" "$fasta"
+checksum="$(sha256sum "$fasta" | cut -d' ' -f1)"
+printf '%s\t%s\t%s\n' "$accession" "$checksum" "$(date -u +%FT%TZ)" >> "$record_file"
+echo "$accession: downloaded, sha256 $checksum"

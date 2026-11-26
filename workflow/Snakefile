@@ -142,7 +142,7 @@ rule genome_downloader_setup:
         (
         bash scripts/genome_downloader.sh {wildcards.genome:q} {params.assembly:q} \
             {params.SPECIES_DB:q} {params.DOWNLOAD_LOG:q}
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         '''
 
 rule genome_downloader:
@@ -170,7 +170,7 @@ rule query_downloader_setup:
         (
         export ENTREZ_EMAIL={params.entrez_email:q} && \
         bash scripts/query_downloader.sh {wildcards.query_acc:q} {params.query_dir:q} {params.download_log:q}
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         '''
 
 rule query_downloader:
@@ -208,7 +208,7 @@ rule pfam_hmm_downloader:
         grep "Pfam-A.hmm.gz" {output.md5:q} | md5sum -c - && \
         echo "MD5 checksum for HMM profile is correct. Decompressing..." && \
         gunzip -d -f -v -k {params.hmm_profile_dir:q}/Pfam-A.hmm.gz
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         """
 
 rule cdd_database_downloader:
@@ -234,7 +234,7 @@ rule cdd_database_downloader:
         tar -xzf Cdd_LE.tar.gz && \
         rm -f Cdd_LE.tar.gz && \
         echo "CDD database download complete."
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         """
 
 rule rpsbproc_data_downloader:
@@ -269,7 +269,7 @@ rule rpsbproc_data_downloader:
         gunzip -f cddannot.dat.gz && \
         gunzip -f cddannot_generic.dat.gz && \
         echo "rpsbproc data download complete."
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         """
 
 rule cdd_smp_downloader:
@@ -296,7 +296,7 @@ rule cdd_smp_downloader:
         rm -f cdd.tar.gz && \
         touch {output.done:q} && \
         echo "CDD SMP extraction complete."
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         """
 
 rule setup_databases:
@@ -332,7 +332,7 @@ rule cdd_subset_builder:
         python scripts/cdd_subset.py \
             --smp-dir {params.smp_dir:q} \
             --output-db {params.db_path:q}
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         '''
 
 # =============================================================================
@@ -360,10 +360,11 @@ rule blast_db_generator_setup:
     shell:
         """
         (
-        python scripts/genome_check.py --species {wildcards.genome:q} --fasta {input.fa:q} && \
+        python scripts/genome_check.py --scope {wildcards.genome:q} \
+            --species {wildcards.genome:q} --fasta {input.fa:q} && \
         {params.makeblastdb_cmd} -in {input.fa:q} -dbtype nucl \
         -out {params.db_dir:q}/{wildcards.genome:q}/{wildcards.genome:q}
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         """
 
 rule blast_db_generator:
@@ -395,14 +396,15 @@ rule blast_species:
     shell:
         '''
         (
-        python scripts/blast.py \
+        python scripts/tblastn.py \
+            --scope {wildcards.query_label}/{wildcards.species} \
             --species {wildcards.species} \
             --query-file {input.query:q} \
             --query-accession {params.query_acc} \
             --output-parquet {output.parquet:q} \
             --output-csv {output.csv:q} \
             --output-asn {output.asn:q}
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         '''
 
 # =============================================================================
@@ -429,11 +431,12 @@ rule select_hits_species:
         '''
         (
         python scripts/select_hits.py \
+            --scope {wildcards.query_label}/{wildcards.species} \
             --input {input.parquet:q} \
             --output-fasta {output.fasta:q} \
             --output-audit {output.audit:q} \
             --output-selected {output.selected:q}
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         '''
 
 # =============================================================================
@@ -459,7 +462,7 @@ if HMMER_ACTIVE:
             python scripts/pfam_subset.py \
                 --library {input.library:q} \
                 --output {output.subset:q}
-            ) > {log:q} 2>&1
+            ) 2>&1 | tee {log:q}
             '''
 
     rule hmmer_species:
@@ -482,13 +485,14 @@ if HMMER_ACTIVE:
             '''
             (
             python scripts/hmmer.py \
+                --scope {wildcards.query_label}/{wildcards.species} \
                 --species {wildcards.species} \
                 --query-accession {params.query_acc} \
                 --threads {threads} \
                 --fasta {input.fasta:q} \
                 --profiles {input.profiles:q} \
                 --output {output.parquet:q}
-            ) > {log:q} 2>&1
+            ) 2>&1 | tee {log:q}
             '''
 
 # =============================================================================
@@ -515,13 +519,14 @@ rule rpsblast_species:
         '''
         (
         python scripts/rpsblast.py \
+            --scope {wildcards.query_label}/{wildcards.species} \
             --species {wildcards.species} \
             --query-accession {params.query_acc} \
             --fasta-input {input.fasta:q} \
             --output-parquet {output.parquet:q} \
             --output-asn {output.asn:q} \
             --db {params.db:q}
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         '''
 
 # =============================================================================
@@ -545,9 +550,10 @@ rule rpsbproc_species:
         '''
         (
         python scripts/rpsbproc.py \
+            --scope {wildcards.query_label}/{wildcards.species} \
             --input-asn {input.asn:q} \
             --output-txt {output.txt:q}
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         '''
 
 # =============================================================================
@@ -573,12 +579,13 @@ rule call_domains_species:
         '''
         (
         python scripts/call_domains.py \
+            --scope {wildcards.query_label}/{wildcards.species} \
             --species {wildcards.species} \
             --query-accession {params.query_acc} \
             --report {input.report:q} \
             --alignments {input.alignments:q} \
             --output {output.parquet:q}
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         '''
 
 # =============================================================================
@@ -597,7 +604,7 @@ rule aggregate_blast:
     benchmark:
         job_benchmark('aggregate_blast', 'query_label')
     shell:
-        'python scripts/aggregate.py blast {output.parquet:q} {input} > {log:q} 2>&1'
+        'python scripts/aggregate.py --scope {wildcards.query_label} --output {output.parquet:q} {input:q} 2>&1 | tee {log:q}'
 
 rule aggregate_rpsblast:
     input:
@@ -610,7 +617,7 @@ rule aggregate_rpsblast:
     benchmark:
         job_benchmark('aggregate_rpsblast', 'query_label')
     shell:
-        'python scripts/aggregate.py rpsblast {output.parquet:q} {input} > {log:q} 2>&1'
+        'python scripts/aggregate.py --scope {wildcards.query_label} --output {output.parquet:q} {input:q} 2>&1 | tee {log:q}'
 
 # =============================================================================
 # Cross-Query Merge Rules
@@ -628,7 +635,7 @@ rule merge_blast:
     benchmark:
         job_benchmark('merge_blast')
     shell:
-        'python scripts/aggregate.py blast {output.parquet:q} {input} > {log:q} 2>&1'
+        'python scripts/aggregate.py --output {output.parquet:q} {input:q} 2>&1 | tee {log:q}'
 
 rule merge_rpsblast:
     """Concatenate per-query rpsblast aggregates."""
@@ -642,7 +649,7 @@ rule merge_rpsblast:
     benchmark:
         job_benchmark('merge_rpsblast')
     shell:
-        'python scripts/aggregate.py rpsblast {output.parquet:q} {input} > {log:q} 2>&1'
+        'python scripts/aggregate.py --output {output.parquet:q} {input:q} 2>&1 | tee {log:q}'
 
 rule domain_tables:
     """All domain calls, the domain instances they merge into, and a GFF3 per species."""
@@ -673,7 +680,7 @@ rule domain_tables:
             --gff-dir {params.gff_dir:q} \
             --calls {input.calls:q} \
             {params.hmmer} {input.hmmer:q}
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         '''
 
 # =============================================================================
@@ -704,7 +711,7 @@ rule locus_tables:
             --families-out {output.families:q} \
             --hits {input.hits:q} \
             --calls {input.calls:q}
-        ) > {log:q} 2>&1
+        ) 2>&1 | tee {log:q}
         '''
 
 # =============================================================================

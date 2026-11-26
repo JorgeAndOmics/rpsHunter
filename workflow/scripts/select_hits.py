@@ -26,6 +26,7 @@ import pandas as pd
 
 import defaults
 import hit_table
+import log
 
 SEQUENCE = "Subject Sequence"
 MASKED_STOP = "X"
@@ -89,7 +90,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-fasta", type=Path, required=True)
     parser.add_argument("--output-audit", type=Path, required=True)
     parser.add_argument("--output-selected", type=Path, required=True)
+    log.add_scope_argument(parser)
     args = parser.parse_args(argv)
+    log.job_logging("select_hits", args.scope)
 
     hits = pd.read_parquet(args.input)
     hits["Quality_Pass"] = quality_pass(hits, configured_thresholds())
@@ -99,9 +102,9 @@ def main(argv: list[str] | None = None) -> int:
     selected.to_parquet(args.output_selected, index=False)
     selected.to_csv(args.output_selected.with_suffix(".csv"), index=False)
     args.output_fasta.write_text(fasta_text(selected))
-    print(f"{len(selected)} of {len(hits)} hits selected")
+    log.ok(f"{log.count(len(selected))} of {log.count(len(hits))} hits selected")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(log.run_main(main))

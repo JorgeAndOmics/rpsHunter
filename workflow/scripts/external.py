@@ -10,7 +10,7 @@ species it failed for. Nothing may turn a failed search into an empty result:
 from __future__ import annotations
 
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any
 
 STDERR_TAIL_LINES = 20
@@ -73,3 +73,26 @@ def run_plain(
     go to subprocess.run (cwd, env, capture_output, text).
     """
     return subprocess.run(command, check=False, **options)
+
+
+def run_streaming(
+    command: Sequence[str], on_line: Callable[[str], None], **options: Any
+) -> int:
+    """Run a program, hand each line it prints to `on_line`, return its exit status.
+
+    Standard output and error are read as one stream, in the order written, so
+    a long run can be followed while it happens. `options` go to
+    subprocess.Popen (cwd, env).
+    """
+    with subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,  # line-buffered: a line is handed on as soon as it is complete
+        **options,
+    ) as process:
+        if process.stdout is not None:
+            for line in process.stdout:
+                on_line(line.rstrip("\n"))
+        return process.wait()

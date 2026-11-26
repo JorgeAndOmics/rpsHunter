@@ -28,6 +28,7 @@ import pandas as pd
 
 import defaults
 import external
+import log
 import tags
 
 QUERY_ID = "Query ID"
@@ -160,7 +161,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-parquet", type=Path, required=True)
     parser.add_argument("--output-asn", type=Path, required=True)
     parser.add_argument("--db", type=Path, required=True)
+    log.add_scope_argument(parser)
     args = parser.parse_args(argv)
+    log.job_logging("rpsblast", args.scope)
 
     table = search(args.fasta_input, args.db, args.output_asn)
     table["Species"] = args.species
@@ -168,11 +171,9 @@ def main(argv: list[str] | None = None) -> int:
     table["Query_Accession"] = args.query_accession
     table = table[[*TABLE_COLUMNS, "Species", "Species_Name", "Tag", "Query_Accession"]]
     table.to_parquet(args.output_parquet, index=False)
-    print(
-        f"{args.species}: {len(table)} alignments at E <= {defaults.RPSBLAST_E_VALUE}"
-    )
+    log.ok(f"{log.count(len(table))} alignments at E <= {defaults.RPSBLAST_E_VALUE:g}")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(log.run_main(main))
