@@ -552,8 +552,8 @@ rule rpsblast_species:
         parquet=RPSBLAST_PQ,
         asn=ASN_RPSBLAST
     params:
-        settings=tracked('rpsblast', 'programs'),
-        db_flag='--db ' + str(RPSBLAST_DB),
+        settings=tracked('rpsblast', 'databases', 'programs'),
+        db=str(RPSBLAST_DB),
         query_acc=query_acc_for_label
     threads: 1
     log:
@@ -569,7 +569,7 @@ rule rpsblast_species:
             --fasta-input {input.fasta:q} \
             --output-parquet {output.parquet:q} \
             --output-asn {output.asn:q} \
-            {params.db_flag}
+            --db {params.db:q}
         ) > {log:q} 2>&1
         '''
 
@@ -585,7 +585,7 @@ rule rpsbproc_species:
         txt=RPSBPROC_TXT
     threads: 1
     params:
-        settings=tracked('programs')
+        settings=tracked('rpsblast.e_value', 'programs')
     log:
         job_log('rpsbproc_species', 'query_label', 'species')
     benchmark:
@@ -609,7 +609,7 @@ rule rpsbproc_parser_species:
     output:
         parquet=DOMAINS_PQ
     params:
-        settings=tracked('domains'),
+        settings=tracked('domains', 'rpsblast.e_value'),
         query_acc=query_acc_for_label
     threads: 1
     log:

@@ -35,3 +35,21 @@ def test_main_stops_before_building_when_a_model_is_missing(tmp_path, monkeypatc
         )
 
     assert not (tmp_path / "smp_list.txt").exists()
+
+
+def test_main_builds_the_database_from_the_listed_profiles(tmp_path, monkeypatch):
+    (tmp_path / "cd00001.smp").write_text("profile")
+    families = cdd_subset.domain_families.parse_families({"F": {"cdd": ["cd00001"]}})
+    monkeypatch.setattr(cdd_subset.defaults, "FAMILIES", families)
+    seen = {}
+    monkeypatch.setattr(
+        cdd_subset.external, "run_tool", lambda command, *, tool: seen.update(tool=tool)
+    )
+
+    status = cdd_subset.main(
+        ["--smp-dir", str(tmp_path), "--output-db", str(tmp_path / "db")]
+    )
+
+    assert status == 0
+    assert seen["tool"] == "makeprofiledb"
+    assert (tmp_path / "smp_list.txt").read_text() == f"{tmp_path / 'cd00001.smp'}\n"

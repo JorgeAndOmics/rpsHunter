@@ -39,6 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The config key `execution.random_id_length` is removed.
 - License is MIT ([ADR-003](docs/adr/ADR-003-mit-licence.md)). The `LICENSE` file previously held
   the GPL v2 text while the README said MIT.
+- **RPS-BLAST E-values are on NCBI's scale, with a cut-off of 1**
+  ([ADR-006](docs/adr/ADR-006-rpsblast-evalue-scale-and-cutoff.md)). The search is told the size of
+  the full CDD (`databases.cdd.residues`), `rpsblast.e_value` defaults to 1 instead of 1000, the same
+  cut-off goes to rpsbproc, and each call carries an `Evidence` tier (`standard`, `borderline`,
+  `rescue`). The previous 1000 against the subset database was about a million on NCBI's scale: in
+  human, 9,863 SET calls of which 31 lay on an annotated SET domain. No annotated domain is lost.
 - **Domain families are defined by accession** ([ADR-012](docs/adr/ADR-012-domain-families-by-accession.md)):
   one `domains:` block lists, per family, the CDD and Pfam accessions that evidence it, replacing
   `rpsblast.target_domains` and `hmmer.profiles` (lists of names, one of which CDD had renamed).

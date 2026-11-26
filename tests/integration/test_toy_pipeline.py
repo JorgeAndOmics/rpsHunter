@@ -350,6 +350,15 @@ def test_every_call_carries_the_family_of_its_model(toy_run: ToyRun):
     assert by_model["cd19193"] == "SET"
 
 
+# Fixed by ADR-006 (E-values on NCBI's scale, cut-off 1): chance matches used to be
+# reported as domains.
+def test_no_family_is_reported_that_the_copy_lacks(toy_run: ToyRun):
+    for _, plant in toy_run.truth.iterrows():
+        found = _found_families(_domains_over(toy_run, plant))
+
+        assert found <= _families_touched(toy_run, plant), _describe(plant)
+
+
 # --- behaviour that should hold and does not yet ------------------------------
 # Each test states the correct behaviour and is expected to fail on the current
 # code. `strict=True` turns an unexpected pass into a failure, so the marker has
@@ -357,18 +366,6 @@ def test_every_call_carries_the_family_of_its_model(toy_run: ToyRun):
 # record that will settle each one.
 
 AWAITING_SCIENCE_AUDIT = "result-affecting; to be settled by an ADR after the audit"
-
-
-@pytest.mark.xfail(
-    strict=True,
-    reason=f"chance matches are reported as domains at the loose RPS-BLAST "
-    f"E-value: {AWAITING_SCIENCE_AUDIT}",
-)
-def test_no_family_is_reported_that_the_copy_lacks(toy_run: ToyRun):
-    for _, plant in toy_run.truth.iterrows():
-        found = _found_families(_domains_over(toy_run, plant))
-
-        assert found <= _families_touched(toy_run, plant), _describe(plant)
 
 
 @pytest.mark.xfail(

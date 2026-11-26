@@ -1,5 +1,6 @@
 blast: include('blast_schema')
 rpsblast: include('rpsblast_schema')
+databases: include('databases_schema')
 domains: map(include('family_schema'), key=str())
 orf: include('orf_schema')
 hmmer: include('hmmer_schema')
@@ -23,6 +24,13 @@ rpsblast_schema:
   comp_based_stats: int(min=0, max=4)
   seg: str(matches='^(yes|no)$')
   window_size: int(min=0, required=False)
+
+databases_schema:
+  cdd: include('cdd_release_schema')
+
+cdd_release_schema:
+  version: str()
+  residues: int(min=1)
 
 # One domain family: the CDD and Pfam accessions that evidence it. At least one
 # list is required and no accession may belong to two families; those rules live
