@@ -1,0 +1,19 @@
+# Hygiene-only pre-commit hooks. Linting, type checking and tests run through
+# `make check`; they are kept out of the hooks so that commits stay fast.
+# Install once with `pre-commit install` inside the conda env.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        # yamale schemas are legitimately multi-document (`---` separates the
+        # top-level map from the per-section schemas).
+        args: ["--allow-multiple-documents"]
+      - id: check-json
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
