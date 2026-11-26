@@ -136,7 +136,7 @@ One row per locus and family present.
 | `Evidence`, `Best_Evalue` | Best tier and E-value among the family's calls in the locus |
 | `Coverage` | Largest fraction of one model covered by the locus's calls together (exons added up) |
 | `Best_Model` | The model that coverage refers to |
-| `Copies` | Largest number of separate places one model occurs at |
+| `Copies` | Largest number of separate places one model occurs at. For a repeat family this is the size of the array; for a domain split across exons each exon piece is a place, so a single SET domain in three exons gives 3 |
 | `N_Calls` | Calls of the family in the locus |
 
 ## Empty results
