@@ -150,6 +150,8 @@ table always means "searched, nothing found".
 | Path | Content |
 |------|---------|
 | `jobs/<rule>/<query>/<species>.log` | Everything one job printed. Per-query rules use `jobs/<rule>/<query>.log`; rules that run once use `jobs/<rule>/all.log` |
+| `runs/<date>_<time>.log` | Everything one launcher call printed, Snakemake's lines included; `.warnings.txt` beside it when there were warnings |
 | `benchmarks/<rule>/...tsv` | Snakemake's benchmark for the same job: wall-clock seconds, peak memory, I/O |
 
-When a job fails, its log is printed to the console and its outputs are removed.
+When a job fails, its error line is shown, the summary names its log, and its outputs are removed.
+The line format is described in [console_style.md](console_style.md).

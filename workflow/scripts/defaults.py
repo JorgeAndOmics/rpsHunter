@@ -67,6 +67,8 @@ PATH_DICT['DATA_DIR'] = Path(config['root'].get('data_root_folder', PATH_DICT['R
 PATH_DICT['RESULTS_DIR'] = Path(config['root'].get('results_root_folder', PATH_DICT['ROOT'] / 'results')).resolve()
 PATH_DICT['LOG_DIR'] = Path(config['root'].get('logs_root_folder', PATH_DICT['ROOT'] / 'logs')).resolve()
 PATH_DICT['WORKFLOW_DIR'] = Path(__file__).parent
+# The launcher's log of each run (everything printed) and its warnings.
+PATH_DICT['RUN_LOG_DIR'] = PATH_DICT['LOG_DIR'] / 'runs'
 
 # === Database Directories ===
 PATH_DICT['SPECIES_DB'] = PATH_DICT['ROOT']
@@ -227,9 +229,6 @@ BLAST_FORMATTER_CMD: str  = _programs.get('blast_formatter', 'blast_formatter')
 MAKEBLASTDB_CMD: str      = _programs.get('makeblastdb', 'makeblastdb')
 RPSBPROC_CMD: str         = _programs.get('rpsbproc', 'rpsbproc')
 MAKEPROFILEDB_CMD: str    = _programs.get('makeprofiledb', 'makeprofiledb')
-
-# Display
-DISPLAY_SNAKEMAKE_INFO: bool = config['display'].get('display_snakemake_info', False)
 
 # Genomes. Every species carries a display name and a pin (assembly accession
 # and/or checksum of a local FASTA); see species_config.py for the contract.

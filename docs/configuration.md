@@ -168,13 +168,11 @@ Controls parallelism and NCBI identification. An NCBI API key is never written i
 | `num_cores` | `int` | `16` | `int(min=1)` | Maximum number of CPU cores for Snakemake. Per-species rules run in parallel up to this limit; HMMER consumes all cores per job (serialized). |
 | `entrez_email` | `str` | -- | `str()` | Email address for NCBI Entrez API identification. Required by NCBI usage policies. |
 
-### `display` -- Output Verbosity
-
-Controls informational messages during pipeline execution.
+### `display` -- What the Screen Shows (Optional)
 
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|
-| `display_snakemake_info` | `bool` | `true` | `bool()` | Show Snakemake execution details in console output. |
+| `verbosity` | `str` | `normal` | `quiet`, `normal` or `verbose` | `quiet`: errors, warnings, progress and the summary. `normal`: also one line per finished job. `verbose`: every line, Snakemake's included. `--verbosity` overrides it for one run. The logs always keep everything; see [console_style.md](console_style.md). |
 
 ### `root` -- Directory Paths
 

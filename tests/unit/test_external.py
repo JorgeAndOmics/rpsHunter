@@ -72,3 +72,13 @@ def test_a_plain_run_hands_back_the_result_even_when_the_program_fails():
 
     assert done.returncode == 4
     assert done.stdout == "out\n"
+
+
+def test_a_streamed_run_hands_over_each_line_of_both_streams_and_the_status():
+    seen: list[str] = []
+    code = "import sys; print('one'); print('two', file=sys.stderr); sys.exit(3)"
+
+    status = external.run_streaming([sys.executable, "-u", "-c", code], seen.append)
+
+    assert status == 3
+    assert sorted(seen) == ["one", "two"]

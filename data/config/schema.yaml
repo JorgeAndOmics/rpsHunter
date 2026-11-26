@@ -7,7 +7,7 @@ programs: include('programs_schema', required=False)
 query: include('query_schema', required=False)
 queries: map(str(), key=str(), required=False)
 execution: include('execution_schema')
-display: include('display_schema')
+display: include('display_schema', required=False)
 root: include('root_schema')
 loci: include('loci_schema', required=False)
 species: include('species_schema')
@@ -60,7 +60,7 @@ execution_schema:
   entrez_email: str()
 
 display_schema:
-  display_snakemake_info: bool()
+  verbosity: enum('quiet', 'normal', 'verbose', required=False)
 
 root_schema:
   db_root_folder: str()

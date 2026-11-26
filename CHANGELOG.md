@@ -37,6 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A run is shown, not dumped.** The launcher prints a banner, one line per finished job, a
+  progress line on a terminal and a summary naming any failed rule and its log;
+  `--verbosity` / `display.verbosity` (`quiet`, `normal`, `verbose`) replaces
+  `display.display_snakemake_info`. Everything a run printed is kept in `logs/runs/`
+  ([console_style.md](docs/console_style.md)).
 - **Every job writes lines of one shape**, `HH:MM:SS LEVEL step scope | message`, with one `OK`
   headline per finished job and one `ERROR` line when it fails (the traceback follows in its log).
 - **Hit tables are fully typed.** `Mismatches`, `Gap Openings`, `Q. Start` and `Q. End` were stored as

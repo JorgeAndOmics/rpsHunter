@@ -46,6 +46,10 @@ RETIRED_KEYS: dict[tuple[str, ...], str] = {
         "random_id_length",
     ): "Tags are now derived from the hit (docs/adr/ADR-004); delete it",
     ("use_species_list",): _GONE,
+    (
+        "display",
+        "display_snakemake_info",
+    ): "replaced by `display.verbosity` (quiet, normal, verbose)",
     ("display", "display_requests_warning"): _GONE,
     ("display", "display_operation_info"): _GONE,
 }
