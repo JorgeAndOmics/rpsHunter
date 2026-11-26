@@ -1,0 +1,23 @@
+Assuming unrestricted shared filesystem usage.
+
+SNAKEMAKE
+=========
+  Date: 2026-11-27 00:27:21
+  Workflow ID: 3b9e91a8-d36f-4d49-abf2-367699ad9bc8
+  Platform: Linux-7.0.0-42-generic-x86_64-with-glibc2.39
+  Host: example-host
+  User: user
+  Snakemake version: 9.27.2
+  Python version: 3.12.16 (main, Oct 26 2026, 11:37:43) [GCC 15.3.0]
+  Command: /work/path loci --cores 16 --rerun-incomplete --show-failed-logs -n
+  Snakefile: /work/path
+  Base directory: /work/path
+  Run directory: /work/path
+  Working directory: /work/path
+  Config file(s): ['/work/path
+  Config MD5: 8a51cf9faa5e8c6a66fff34e5a553b3d
+
+Building DAG of jobs...
+Nothing to be done (all requested files are present and up to date).
+22 jobs have missing provenance/metadata so that it in part cannot be used to trigger re-runs.
+Rules with missing metadata: cdd_smp_downloader genome_downloader_setup rpsbproc_data_downloader select_hits_species

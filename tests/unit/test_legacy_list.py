@@ -25,11 +25,9 @@ ORIGINAL_PYTHON = frozenset(
         "concordance.py",
         "defaults.py",
         "hit_domain_inventory.py",
-        "rpsHunter.py",
         "rpsblast.py",
         "rpsbproc.py",
         "rpsbproc_parser.py",
-        "validator.py",
     }
 )
 ORIGINAL_R = frozenset(

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import subprocess
 from collections.abc import Sequence
+from typing import Any
 
 STDERR_TAIL_LINES = 20
 """Lines of the tool's error output kept in the message: the end is where
@@ -60,3 +61,15 @@ def run_tool(command: Sequence[str], *, tool: str | None = None) -> str:
         tail = "\n".join(done.stderr.strip().splitlines()[-STDERR_TAIL_LINES:])
         raise ToolError(name, done.returncode, tail)
     return done.stdout
+
+
+def run_plain(
+    command: Sequence[str], **options: Any
+) -> subprocess.CompletedProcess[str]:
+    """Run a program and hand back its result untouched, whatever its exit status.
+
+    For the launcher's Snakemake calls, which either stream to the terminal or
+    are read as text, and whose exit status the launcher passes on. `options`
+    go to subprocess.run (cwd, env, capture_output, text).
+    """
+    return subprocess.run(command, check=False, **options)

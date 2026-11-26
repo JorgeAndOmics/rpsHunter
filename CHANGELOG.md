@@ -37,6 +37,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **New command line** ([ADR-013](docs/adr/ADR-013-launcher-stage-table-and-guard.md)). Several stages
+  run in one call and `--all` runs the analysis; flags are renamed (`--search`, `--domains`,
+  `--download-queries`, `--download-databases`) and an old flag stops with its replacement;
+  `--config FILE`, `--cores N`, `-n`; Snakemake options go after `--`. Checks of the config, the
+  tools and the input files run before every launch, offline and without prompts, and replace
+  `--skip-validation`. A dry run is made first and a download, a BLAST database build or a tBLASTn
+  search starts only when its own stage is requested (`--allow-heavy` overrides). Exit status 2 for
+  usage and check problems, 3 when the guard stops a run.
 - **Tags are derived from the hit instead of being random**
   ([ADR-004](docs/adr/ADR-004-content-derived-tags.md)): 12 characters, identical on every run.
   Random 6-character Tags collided (5 to 10 pairs per 166,167 hits), and each collision attached

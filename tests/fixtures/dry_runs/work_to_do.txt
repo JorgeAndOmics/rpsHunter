@@ -1,0 +1,89 @@
+Assuming unrestricted shared filesystem usage.
+
+SNAKEMAKE
+=========
+  Date: 2026-11-27 00:27:33
+  Workflow ID: 3e38d4ef-a3ce-40cf-97f1-28a7a92c9410
+  Platform: Linux-7.0.0-42-generic-x86_64-with-glibc2.39
+  Host: example-host
+  User: user
+  Snakemake version: 9.27.2
+  Python version: 3.12.16 (main, Oct 26 2026, 11:37:43) [GCC 15.3.0]
+  Command: /work/path loci --cores 16 --rerun-incomplete --show-failed-logs -n
+  Snakefile: /work/path
+  Base directory: /work/path
+  Run directory: /work/path
+  Working directory: /work/path
+  Config file(s): ['/work/path
+  Config MD5: 6b3f58b9cce2c311e5fa120005d16110
+
+Building DAG of jobs...
+Job stats:
+job                     count
+--------------------  -------
+blast_species              15
+select_hits_species        15
+rpsblast_species           15
+rpsbproc_species           15
+call_domains_species       15
+locus_tables                1
+loci                        1
+total                      77
+
+
+[Fri Nov 27 00:27:34 2026]
+rule blast_species:
+    input: /work/rpsHunter-dev-genomes/Molossus_molossus/Molossus_molossus.ndb, /work/data/input/fastas/NP_001306826.3.fa
+    output: /work/none/blast/Cow_PRDM9/Molossus_molossus.parquet, /work/none/blast/Cow_PRDM9/Molossus_molossus.csv, /work/none/asn/tblastn/Cow_PRDM9/Molossus_molossus.asn
+    log: /work/logs/jobs/blast_species/Cow_PRDM9/Molossus_molossus.log
+    jobid: 40
+    benchmark: /work/logs/benchmarks/blast_species/Cow_PRDM9/Molossus_molossus.tsv
+    reason: Missing output files: /work/none/blast/Cow_PRDM9/Molossus_molossus.parquet
+    wildcards: query_label=Cow_PRDM9, species=Molossus_molossus
+    resources: tmpdir=/tmp
+[Fri Nov 27 00:27:34 2026]
+rule blast_species:
+    input: /work/rpsHunter-dev-genomes/Antrozous_pallidus/Antrozous_pallidus.ndb, /work/data/input/fastas/NP_001306826.3.fa
+    output: /work/none/blast/Cow_PRDM9/Antrozous_pallidus.parquet, /work/none/blast/Cow_PRDM9/Antrozous_pallidus.csv, /work/none/asn/tblastn/Cow_PRDM9/Antrozous_pallidus.asn
+    log: /work/logs/jobs/blast_species/Cow_PRDM9/Antrozous_pallidus.log
+    jobid: 38
+    benchmark: /work/logs/benchmarks/blast_species/Cow_PRDM9/Antrozous_pallidus.tsv
+    reason: Missing output files: /work/none/blast/Cow_PRDM9/Antrozous_pallidus.parquet
+    wildcards: query_label=Cow_PRDM9, species=Antrozous_pallidus
+    resources: tmpdir=/tmp
+[Fri Nov 27 00:27:34 2026]
+rule blast_species:
+    input: /work/rpsHunter-dev-genomes/Homo_sapiens/Homo_sapiens.ndb, /work/data/input/fastas/NP_659058.3.fa
+    output: /work/none/blast/Mouse_PRDM9/Homo_sapiens.parquet, /work/none/blast/Mouse_PRDM9/Homo_sapiens.csv, /work/none/asn/tblastn/Mouse_PRDM9/Homo_sapiens.asn
+    log: /work/logs/jobs/blast_species/Mouse_PRDM9/Homo_sapiens.log
+    jobid: 16
+    benchmark: /work/logs/benchmarks/blast_species/Mouse_PRDM9/Homo_sapiens.tsv
+    reason: Missing output files: /work/none/blast/Mouse_PRDM9/Homo_sapiens.parquet
+    wildcards: query_label=Mouse_PRDM9, species=Homo_sapiens
+    resources: tmpdir=/tmp
+[Fri Nov 27 00:27:34 2026]
+rule blast_species:
+    input: /work/rpsHunter-dev-genomes/Mus_musculus/Mus_musculus.ndb, /work/data/input/fastas/NP_001306826.3.fa
+...
+Job stats:
+job                     count
+--------------------  -------
+blast_species              15
+select_hits_species        15
+rpsblast_species           15
+rpsbproc_species           15
+call_domains_species       15
+locus_tables                1
+loci                        1
+total                      77
+
+Reasons:
+    (check individual jobs above for details)
+    input files updated by another job:
+        call_domains_species, loci, locus_tables, rpsblast_species, rpsbproc_species, select_hits_species
+    output files have to be generated:
+        blast_species, call_domains_species, locus_tables, rpsblast_species, rpsbproc_species, select_hits_species
+7 jobs have missing provenance/metadata so that it in part cannot be used to trigger re-runs.
+Rules with missing metadata: cdd_smp_downloader genome_downloader_setup rpsbproc_data_downloader
+This was a dry-run (flag -n). The order of jobs does not reflect the order of execution.
+2026-11-27 00:27:34 - Finished execution.

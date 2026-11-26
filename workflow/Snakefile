@@ -708,15 +708,9 @@ rule locus_tables:
         '''
 
 # =============================================================================
-# Target Rules (CLI entry points — one per pipeline stage)
-# Each triggers only its own per-species jobs.  Snakemake resolves upstream
-# dependencies automatically.
+# Target rules: what the launcher's stages ask for (workflow/scripts/stages.py).
+# Snakemake builds whatever a target needs upstream.
 # =============================================================================
-
-rule blaster:
-    """Per-query per-species BLAST."""
-    input:
-        expand(BLAST_PQ, query_label=QUERY_LABELS, species=SPECIES)
 
 rule hmmer:
     """HMMER domains of the selected hits (nothing to do if HMMER is off)."""
@@ -729,16 +723,6 @@ rule blast_parser:
         expand(FASTA_OUT, query_label=QUERY_LABELS, species=SPECIES),
         expand(AGG_BLAST_PQ, query_label=QUERY_LABELS),
         MERGED_BLAST_PQ
-
-rule rpsblaster:
-    """Per-query RPSBLAST."""
-    input:
-        expand(RPSBLAST_PQ, query_label=QUERY_LABELS, species=SPECIES)
-
-rule rpsbproc:
-    """Per-query rpsbproc annotation."""
-    input:
-        expand(RPSBPROC_TXT, query_label=QUERY_LABELS, species=SPECIES)
 
 rule rpsbproc_parser:
     """Domain calls, domain instances and GFF3 tracks."""

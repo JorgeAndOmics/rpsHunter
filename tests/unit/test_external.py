@@ -61,3 +61,14 @@ def test_the_tool_name_defaults_to_the_program():
 def test_an_empty_command_is_a_programming_error():
     with pytest.raises(ValueError, match="empty command"):
         external.run_tool([])
+
+
+def test_a_plain_run_hands_back_the_result_even_when_the_program_fails():
+    done = external.run_plain(
+        [sys.executable, "-c", "import sys; print('out'); sys.exit(4)"],
+        capture_output=True,
+        text=True,
+    )
+
+    assert done.returncode == 4
+    assert done.stdout == "out\n"

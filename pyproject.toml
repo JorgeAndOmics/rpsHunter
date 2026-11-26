@@ -22,8 +22,6 @@ extend-exclude = [
     "workflow/scripts/blast.py",
     "workflow/scripts/colored_logging.py",
     "workflow/scripts/defaults.py",
-    "workflow/scripts/rpsHunter.py",
-    "workflow/scripts/validator.py",
 ]
 
 [tool.ruff.lint]
@@ -85,7 +83,7 @@ files = ["workflow/scripts"]
 # The second alternative is the legacy list (see the top of this file).
 exclude = [
     '(^|/)tests/',
-    'workflow/scripts/(aggregate|blast|colored_logging|defaults|rpsHunter|validator)\.py$',
+    'workflow/scripts/(aggregate|blast|colored_logging|defaults)\.py$',
 ]
 enable_error_code = [
     "ignore-without-code",
@@ -120,8 +118,6 @@ omit = [
     "workflow/scripts/blast.py",
     "workflow/scripts/colored_logging.py",
     "workflow/scripts/defaults.py",
-    "workflow/scripts/rpsHunter.py",
-    "workflow/scripts/validator.py",
 ]
 
 [tool.coverage.report]

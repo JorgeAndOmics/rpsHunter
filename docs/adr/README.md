@@ -25,3 +25,4 @@ cite its number.
 | 010 | [State what the tool finds; HMMER as evidence, not a gate](ADR-010-scope-and-hmmer-evidence.md) | Accepted | yes |
 | 011 | [Retire the ORF gate; flag internal stop codons](ADR-011-retire-orf-gate.md) | Accepted | no |
 | 012 | [Domain families defined by CDD and Pfam accession](ADR-012-domain-families-by-accession.md) | Accepted | yes |
+| 013 | [One stage table, checks that always run, a guard on heavy rules](ADR-013-launcher-stage-table-and-guard.md) | Accepted | no |

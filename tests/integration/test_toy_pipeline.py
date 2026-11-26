@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
-import os
 import shutil
 import subprocess
 import sys
@@ -48,17 +47,6 @@ DOMAINS = {
         "repeat": True,
     },
 }
-
-# Launcher flags in pipeline order (the v0.9.0 launcher runs one stage per call).
-STAGES = (
-    "blast-dbs",
-    "hmmer",
-    "blast",
-    "rpsblast",
-    "rpsbproc",
-    "rpsbproc-parser",
-    "loci",
-)
 
 
 @dataclass(frozen=True)
@@ -128,21 +116,19 @@ def _prepare_workspace(work: Path) -> Path:
     return truth
 
 
-def _run_stage(stage: str, config: Path) -> None:
-    """Run one launcher stage; fail the test with the output tail if it fails."""
+def _run_pipeline(config: Path) -> None:
+    """Run every stage after Setup; fail the test with the output tail on failure."""
     command = [
         sys.executable,
         str(REPO / "rpsHunter"),
-        f"--{stage}",
-        "--skip-validation",
+        "--all",
+        "--config",
+        str(config),
     ]
-    environment = {**os.environ, "RPSHUNTER_CONFIG": str(config)}
-    done = subprocess.run(
-        command, env=environment, capture_output=True, text=True, check=False
-    )
+    done = subprocess.run(command, capture_output=True, text=True, check=False)
     if done.returncode != 0:
         tail = "\n".join((done.stdout + done.stderr).splitlines()[-40:])
-        pytest.fail(f"stage --{stage} exited {done.returncode}:\n{tail}")
+        pytest.fail(f"the run exited {done.returncode}:\n{tail}")
 
 
 @pytest.fixture(scope="module")
@@ -150,8 +136,7 @@ def toy_run(tmp_path_factory: pytest.TempPathFactory) -> ToyRun:
     work = tmp_path_factory.mktemp("toy")
     truth_path = _prepare_workspace(work)
     config = _write_config(work)
-    for stage in STAGES:
-        _run_stage(stage, config)
+    _run_pipeline(config)
     return ToyRun(
         results=work / "results",
         config=config,
@@ -289,10 +274,9 @@ def _jobs_planned_after_changing(run: ToyRun, section: str, key: str, value) -> 
     config[section][key] = value
     changed = run.config.with_name(f"config_{section}_{key}.yaml")
     changed.write_text(yaml.safe_dump(config, sort_keys=False))
-    command = [sys.executable, str(REPO / "rpsHunter"), "--blast", "--skip-validation"]
+    command = [sys.executable, str(REPO / "rpsHunter"), "--search", "--allow-heavy"]
     done = subprocess.run(
-        [*command, "-n"],
-        env={**os.environ, "RPSHUNTER_CONFIG": str(changed)},
+        [*command, "-n", "--config", str(changed)],
         capture_output=True,
         text=True,
         check=True,
