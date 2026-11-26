@@ -18,3 +18,10 @@ cite its number.
 | 003 | [MIT licence](ADR-003-mit-licence.md) | Accepted | no |
 | 004 | [Tags derived from the hit, not random](ADR-004-content-derived-tags.md) | Accepted | yes |
 | 005 | [Genomes pinned by assembly accession or checksum](ADR-005-genomes-pinned-by-assembly.md) | Accepted | no |
+| 006 | [RPS-BLAST E-values on the full-CDD scale, with a cut-off of 1](ADR-006-rpsblast-evalue-scale-and-cutoff.md) | Proposed | yes |
+| 007 | [Report each domain at its own genomic position](ADR-007-domain-coordinates.md) | Proposed | yes |
+| 008 | [Loci from gate-passing hits, chained within 20 kb](ADR-008-loci.md) | Proposed | yes |
+| 009 | [Completeness measured per locus across exons](ADR-009-completeness-across-exons.md) | Proposed | yes |
+| 010 | [State what the tool finds; HMMER as evidence, not a gate](ADR-010-scope-and-hmmer-evidence.md) | Proposed | yes |
+| 011 | [Retire the ORF gate; flag internal stop codons](ADR-011-retire-orf-gate.md) | Proposed | no |
+| 012 | [Domain families defined by CDD and Pfam accession](ADR-012-domain-families-by-accession.md) | Proposed | yes |
