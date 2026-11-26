@@ -10,7 +10,7 @@ queries: map(str(), key=str(), required=False)
 execution: include('execution_schema')
 display: include('display_schema')
 root: include('root_schema')
-hit_domain_inventory: include('hit_domain_inventory_schema', required=False)
+loci: include('loci_schema', required=False)
 species: include('species_schema')
 ---
 blast_schema:
@@ -75,8 +75,8 @@ root_schema:
   results_root_folder: str()
   logs_root_folder: str()
 
-hit_domain_inventory_schema:
-  locus_gap: int(min=0, required=False)
+loci_schema:
+  gap: int(min=0, required=False)
 
 # A species key maps to its display name and a pin naming exactly which genome is
 # meant. At least one of `assembly` and `sha256` is required; that rule, and the

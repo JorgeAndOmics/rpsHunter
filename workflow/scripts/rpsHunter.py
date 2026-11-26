@@ -165,6 +165,9 @@ def cli_entry() -> None:
     parser.add_argument('--rpsbproc-parser', action='store_true',
                         help='Parse rpsbproc output into tabular format.')
 
+    parser.add_argument('--loci', action='store_true',
+                        help='Chain gated hits into loci and report the families each carries.')
+
     parser.add_argument('--skip-validation', '-skp', action='store_true',
                         help='Skip input validation checks.')
 
@@ -272,6 +275,14 @@ def cli_entry() -> None:
     if args.rpsbproc_parser:
         run_snakemake_rule(
             rule='rpsbproc_parser',
+            num_cores=defaults.NUM_CORES,
+            display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
+            snakemake_flags=unknown
+        )
+
+    if args.loci:
+        run_snakemake_rule(
+            rule='loci',
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown

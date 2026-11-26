@@ -78,8 +78,8 @@ hmmer:
 #  makeblastdb: 'makeblastdb'
 #  rpsbproc: 'rpsbproc'
 
-hit_domain_inventory:
-  locus_gap: 50000  # Max gap (bp) between BLAST hits to cluster into one locus
+loci:
+  gap: 20000  # Largest gap (bp) between gated hits chained into one locus
 
 queries:
   'NP_659058.3': 'Mouse PRDM9'

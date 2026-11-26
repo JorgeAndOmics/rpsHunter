@@ -107,13 +107,16 @@ Controls hmmsearch against the Pfam database. When enabled, sequences are enrich
 | `bias_filter` | `bool` | `true` | `bool()` | Enable the bias composition filter. Disabling (`false`) increases sensitivity for biased-composition sequences at the cost of more false positives. |
 | `seed` | `int` | `67` | `int(min=0)` | Random seed for hmmsearch reproducibility. |
 
-### `hit_domain_inventory` -- Hit–Domain Inventory (Optional)
-
-Controls the locus-level aggregation in the hit–domain inventory stage. This section is optional; when omitted, the default locus gap of 50,000 bp is used.
+### `loci` -- Locus Definition
 
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|
-| `locus_gap` | `int` | `50000` | `int(min=0)`, optional | Maximum gap in base pairs between BLAST hits on the same chromosome to cluster them into a single genomic locus. Hits within this distance are merged, and their domains are unioned to assess completeness. The default (50 kb) accommodates typical mammalian introns between PRDM9-like exons. |
+| `gap` | `int` | `20000` | `int(min=0)`, optional | Largest distance in bases between hits for them to be chained into one locus. Only hits that passed the gates are chained, on either strand. 20 kb keeps the exons of a gene together (the domain-bearing exons of human PRDM9 are up to 11 kb apart) without fusing tandem copies (40 kb apart in *Desmodus*); raise it for a gene family with longer introns. See [ADR-008](adr/ADR-008-loci.md). |
+
+A locus reports which families it carries, each with its evidence tier, the fraction of a model
+covered when the locus's exon fragments are put together, and the number of separate places the
+family occurs at ([ADR-009](adr/ADR-009-completeness-across-exons.md)). It gives no verdict of
+"complete": which families make a whole gene depends on the protein family studied.
 
 ### `programs` -- External Program Names (Optional)
 

@@ -85,6 +85,12 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
+        '--loci',
+        action='store_true',
+        help="Chains gated hits into loci and reports the families each carries."
+    )
+
+    parser.add_argument(
         '--skip-validation', '-skp',
         action='store_true',
         help='Skip input validation.'
@@ -134,6 +140,9 @@ if __name__ == '__main__':
 
     if args.rpsbproc_parser:
         main_cmd.append('--rpsbproc-parser')
+
+    if args.loci:
+        main_cmd.append('--loci')
 
     if unknown:
         main_cmd.extend(unknown)

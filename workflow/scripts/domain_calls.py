@@ -166,7 +166,8 @@ def add_model_coordinates(
         model_lengths: PSSM id to model length, from CDD's cddid.tbl.
 
     Returns:
-        The calls with Model_From, Model_To and Model_Length.
+        The calls with Aligned_PSSM (the PSSM id of the model the coordinates
+        refer to), Model_From, Model_To and Model_Length.
 
     Raises:
         ValueError: A call has no alignment with its Tag and residue range.
@@ -201,6 +202,7 @@ def add_model_coordinates(
             f"{unmatched.iloc[0]['Residue_To']}"
         )
     return calls.assign(
+        Aligned_PSSM=chosen["Aligned_PSSM"].astype("int64").to_numpy(),
         Model_From=chosen["S. Start"].astype("int64").to_numpy(),
         Model_To=chosen["S. End"].astype("int64").to_numpy(),
         Model_Length=chosen["Aligned_PSSM"]

@@ -39,6 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The config key `execution.random_id_length` is removed.
 - License is MIT ([ADR-003](docs/adr/ADR-003-mit-licence.md)). The `LICENSE` file previously held
   the GPL v2 text while the README said MIT.
+- **Loci are chained from gate-passing hits within 20 kb and report what they carry**
+  ([ADR-008](docs/adr/ADR-008-loci.md), [ADR-009](docs/adr/ADR-009-completeness-across-exons.md)).
+  `tables/loci/loci.*` lists each locus with the families present; `tables/loci/locus_families.*`
+  gives, per locus and family, the evidence tier, the fraction of a model covered when the locus's
+  exon fragments are put together, and the number of copies. There is no "complete" flag: loci used
+  to pool neighbouring genes over 50 kb (one false complete locus in mouse, four tandem genes
+  counted as one in *Desmodus*), and completeness was read from per-hit flags that follow exon
+  boundaries. Config key `hit_domain_inventory.locus_gap` is replaced by `loci.gap` (default 20000);
+  launcher flag `--loci`.
 - **Each domain is reported at its own genomic position**
   ([ADR-007](docs/adr/ADR-007-domain-coordinates.md)), computed from where it lies in the translated
   hit; the hit's span is kept in `Hit_Start` and `Hit_End`. Positions used to be those of the whole
