@@ -93,7 +93,7 @@ Raw tBLASTn results for a single species. One row per alignment hit.
 | Species | str | Species key (file-friendly, from config key) |
 | Species_Name | str | Species display name (from config value, e.g. `Desmodus rotundus`) |
 | Query_Accession | str | Query protein accession used for this tBLASTn search |
-| Tag | str | 6-character random alphanumeric identifier for traceability |
+| Tag | str | 12-character identifier derived from the hit itself (see [Tags](architecture.md#tag-system)); identical on every run |
 
 **Produced by:** `blast_species` rule (`blast.py`)
 
@@ -225,7 +225,7 @@ RPSBLAST results from searching filtered sequences against the NCBI Conserved Do
 | Species | str | Species key (file-friendly) |
 | Species_Name | str | Species display name (e.g. `Desmodus rotundus`) |
 | Query_Accession | str | Query protein accession |
-| Tag | str | 6-character tag extracted from the FASTA header |
+| Tag | str | Tag of the BLAST hit, read back from the FASTA header |
 
 **Produced by:** `rpsblast_species` rule (`rpsblast.py`)
 
@@ -283,7 +283,7 @@ Parsed domain annotations from rpsbproc output. One row per domain annotation on
 | Domain | str | Domain short name (e.g. `zf-C2H2`, `COG5048`, `KRAB_A-box`) |
 | Incomplete | str | Completeness flag: `N` (N-terminal truncated), `C` (C-terminal truncated), `NC` (both), or empty (complete) |
 | Superfamily_PSSM_ID | str | PSSM ID of the parent superfamily |
-| Tag | str | 6-character alphanumeric tag extracted from Definition via regex `\|tag:(\w+)` |
+| Tag | str | Tag of the BLAST hit, read from Definition (`\|tag:<Tag>`) |
 
 **Produced by:** `rpsbproc_parser_species` rule (`rpsbproc_parser.py`)
 
@@ -474,7 +474,7 @@ Per-sequence (Tag) concordance summary.
 
 | Column | Type | Description |
 |--------|------|-------------|
-| Tag | str | 6-character sequence identifier |
+| Tag | str | Tag of the BLAST hit |
 | Species | str | Species key |
 | Species_Name | str | Species display name |
 | Query_Accession | str | Query protein accession |
@@ -515,7 +515,7 @@ One row per BLAST hit (Tag), enriched with all CDD domains found within that hit
 
 | Column | Type | Description |
 |--------|------|-------------|
-| Tag | str | 6-character sequence identifier |
+| Tag | str | Tag of the BLAST hit |
 | Species | str | Species key (file-friendly) |
 | Species_Name | str | Species display name |
 | Query_Accession | str | Query protein accession |

@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Tags are derived from the hit instead of being random**
+  ([ADR-004](docs/adr/ADR-004-content-derived-tags.md)): 12 characters, identical on every run.
+  Random 6-character Tags collided (5 to 10 pairs per 166,167 hits), and each collision attached
+  another hit's domains and scores to a hit in the inventory and concordance tables.
+  The config key `execution.random_id_length` is removed.
 - License is MIT ([ADR-003](docs/adr/ADR-003-mit-licence.md)). The `LICENSE` file previously held
   the GPL v2 text while the README said MIT.
 - All text files are stored with LF line endings.

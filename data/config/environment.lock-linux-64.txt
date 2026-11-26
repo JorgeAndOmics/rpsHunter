@@ -504,7 +504,6 @@ https://conda.anaconda.org/conda-forge/noarch/r-tidyselect-1.2.1-r44hc72bb7e_2.c
 https://conda.anaconda.org/bioconda/noarch/snakemake-minimal-9.27.2-pyhdfd78af_0.conda#855bad7abbf06adac9d8320888584847
 https://conda.anaconda.org/bioconda/linux-64/bioconductor-sparsearray-1.6.0-r44h3df3fcb_1.tar.bz2#143242d9cf4199b8f26c2552b61d2049
 https://conda.anaconda.org/bioconda/linux-64/bioconductor-ucsc.utils-1.2.0-r44h9ee0642_1.tar.bz2#1653b8e9eb24949cc045e21ad21927b6
-https://conda.anaconda.org/conda-forge/noarch/import-linter-2.17-pyhd8ed1ab_0.conda#16e0c27e3a4408a7934fb1d704c4e079
 https://conda.anaconda.org/conda-forge/linux-64/pyarrow-17.0.0-py312h9cebb41_2.conda#5f7d505626cb057e1320bbd46dd02ef2
 https://conda.anaconda.org/conda-forge/linux-64/r-arrow-17.0.0-r44he02047a_1.conda#d102d193bda0605941ba92c95de96128
 https://conda.anaconda.org/conda-forge/noarch/r-bslib-0.12.0-r44hc72bb7e_0.conda#d82c065ec3320a539f5f4a202471fb6c

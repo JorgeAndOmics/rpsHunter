@@ -43,14 +43,8 @@ format: ## Auto-format Python and apply ruff fixes
 format-check: ## Verify formatting without modifying
 	ruff format --check $(PY_SRC) $(PY_TESTS)
 
-# TEMPORARY: while every script is on the legacy list mypy finds no file and exits 2.
-# That one case is reported and allowed; any other mypy failure fails the target.
-# Replace the recipe with a bare `mypy` when the first rewritten module lands.
-typecheck: ## mypy strict on Python sources
-	@out=$$(mypy 2>&1); status=$$?; echo "$$out"; \
-	if [ $$status -ne 0 ] && echo "$$out" | grep -q 'There are no .py'; then \
-		echo "typecheck: EVERY SCRIPT IS STILL ON THE LEGACY LIST"; exit 0; fi; \
-	exit $$status
+typecheck: ## mypy strict on Python sources outside the legacy list
+	mypy
 
 # -- testing ---------------------------------------------
 test: test-py test-r ## Run Python and R tests

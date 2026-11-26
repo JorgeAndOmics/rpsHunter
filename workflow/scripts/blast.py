@@ -9,8 +9,6 @@
 
 import argparse
 import logging
-import random
-import string
 import subprocess
 from pathlib import Path
 from typing import Optional, Tuple
@@ -18,6 +16,7 @@ from typing import Optional, Tuple
 import pandas as pd
 
 import defaults
+import tags
 from colored_logging import colored_logging
 
 
@@ -101,22 +100,6 @@ def blaster(
 # -----------------------------------------------------------------------------
 # BLAST Output Parser
 # -----------------------------------------------------------------------------
-
-def random_string_generator(length: int) -> str:
-    """
-    Generates a random string of the specified length.
-
-        Parameters
-        ----------
-        :param length: The length of the string to generate.
-
-        Returns
-        -------
-        :returns: The generated random string.
-
-    """
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
-
 
 def parse_blast_output(blast_output: str) -> pd.DataFrame:
     """
@@ -223,11 +206,10 @@ def process_species(species: str, query_file: Path = None, query_accession: str 
     blast_df['Species_Name'] = defaults.SPECIES_DICT.get(species, species)
     blast_df['Query_Accession'] = query_accession
 
-    # Add a random string column for each row
-    blast_df['Tag'] = [random_string_generator(defaults.RANDOM_ID_LENGTH) for _ in range(len(blast_df))]
-
-    # Remove duplicates
+    # Duplicate rows are removed before tagging: a Tag identifies one hit, and
+    # tag_hits refuses a table in which a hit appears twice.
     blast_df = blast_df.drop_duplicates().reset_index(drop=True)
+    blast_df['Tag'] = tags.tag_hits(blast_df)
 
     return blast_df
 

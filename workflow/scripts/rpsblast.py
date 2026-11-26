@@ -14,6 +14,7 @@ from typing import List, Optional, Tuple
 import pandas as pd
 
 import defaults
+import tags
 from colored_logging import colored_logging
 
 
@@ -194,8 +195,8 @@ def process_rps_species(species: str, fasta_input_dir: Path = None, asn_output_d
     blast_df['Species'] = species
     blast_df['Species_Name'] = defaults.SPECIES_DICT.get(species, species)
 
-    blast_df['Tag'] = blast_df['Query ID'].str.extract(rf'\|tag:(\w{{{defaults.RANDOM_ID_LENGTH}}})', expand=False)
-    blast_df['Query ID'] = blast_df['Query ID'].str.replace(rf'\|tag:\w{{{defaults.RANDOM_ID_LENGTH}}}', '', regex=True)
+    blast_df['Tag'] = blast_df['Query ID'].str.extract(tags.TAG_IN_IDENTIFIER, expand=False)
+    blast_df['Query ID'] = blast_df['Query ID'].str.replace(tags.TAG_IN_IDENTIFIER, '', regex=True)
 
     return blast_df
 

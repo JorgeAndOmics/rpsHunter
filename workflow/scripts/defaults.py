@@ -218,7 +218,6 @@ def query_file_path(accession: str) -> Path:
 
 # Execution and requests
 NUM_CORES: int = config['execution'].get('num_cores', 1)
-RANDOM_ID_LENGTH: int = config['execution'].get('random_id_length', 6)
 USE_SPECIES_DICT: bool = config['execution'].get('use_species_list', True)
 RETRIEVAL_TIME_LAG: float = config['execution'].get('retrieval_time_lag', 0.3)
 MAX_RETRIEVAL_ATTEMPTS: int = config['execution'].get('max_retrieval_attempts', 3)

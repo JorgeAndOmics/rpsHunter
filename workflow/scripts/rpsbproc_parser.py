@@ -10,7 +10,6 @@
 # -----------------------------------------------------------------------------
 
 import logging
-import re
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -19,6 +18,7 @@ import pandas as pd
 
 import defaults
 import colored_logging
+import tags
 
 
 # -----------------------------------------------------------------------------
@@ -192,8 +192,7 @@ def parse_rpsbproc_output(
     # Write Parquet Output
     # -------------------------------------------------------------------------
     df = pd.DataFrame(domain_hits, columns=fieldnames)
-    tag_pattern = re.compile(r'\|tag:(\w+)')
-    df['Tag'] = df['Definition'].str.extract(tag_pattern, expand=False)
+    df['Tag'] = df['Definition'].str.extract(tags.TAG_IN_IDENTIFIER, expand=False)
     df.to_parquet(output_parquet, index=False)
     logging.info(f'Parquet output written to {output_parquet} ({len(domain_hits)} domain hits)')
 
