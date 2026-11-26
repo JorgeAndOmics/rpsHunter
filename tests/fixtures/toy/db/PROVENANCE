@@ -1,0 +1,5 @@
+Miniature databases for the end-to-end test. Built by tests/fixtures/toy/make_mini_db.sh.
+CDD version: 3.22 (https://ftp.ncbi.nih.gov/pub/mmdb/cdd/)
+Pfam release: 38.2 (https://ftp.ebi.ac.uk/pub/databases/Pfam/)
+CDD models: pfam01352 pfam09514 cd19193 cd08161 pfam00096 pfam13465 COG5048
+Pfam profiles: KRAB SET SSXRD zf-C2H2
