@@ -97,3 +97,12 @@ file_patterns = ["workflow/Snakefile"]
 [[exclude]]
 plugins = ["bandit"]
 file_patterns = ["tests/**", "workflow/tests/**"]
+
+# external.py is the one module whose job is to start external programs, so
+# bandit's two subprocess notes (B404 import, B603 call) are its purpose, not a
+# finding. Commands reach it as argument lists built by the pipeline; no shell is
+# involved. Every other module stays under bandit, which is how a new subprocess
+# call elsewhere gets noticed.
+[[exclude]]
+plugins = ["bandit"]
+file_patterns = ["workflow/scripts/external.py"]
