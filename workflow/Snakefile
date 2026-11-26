@@ -69,16 +69,12 @@ PRE_HMMER_PATTERN = (
 )
 
 # RPSBLAST database path
-RPSBLAST_DB = (
-    defaults.PATH_DICT['CDD_SUBSET_DB'] / 'target_domains_db'
-    if defaults.RPSBLAST_TARGET_DOMAINS
-    else defaults.PATH_DICT['RPS_DB']
-)
+RPSBLAST_DB = defaults.PATH_DICT['CDD_SUBSET_DB'] / 'families_db'
 
 # Pre-built HMMER subset HMM path
 HMMER_SUBSET_HMM = (
     defaults.PATH_DICT['HMM_OUTPUT_DIR'] / 'subset.hmm'
-    if defaults.HMMER_PROFILES
+    if defaults.PFAM_ACCESSIONS
     else None
 )
 
@@ -322,40 +318,37 @@ rule setup_databases:
         'echo "All databases have been downloaded and configured."'
 
 # =============================================================================
-# CDD Subset Database (conditional: rpsblast.target_domains set)
+# RPS-BLAST database of the configured families' CDD models
 # =============================================================================
 
-if defaults.RPSBLAST_TARGET_DOMAINS:
-    rule cdd_subset_builder:
-        """Build a subset RPSBLAST database from target domain SMP files."""
-        input:
-            smp_done=rules.cdd_smp_downloader.output.done,
-            cddid=str(defaults.PATH_DICT['RPSBPROC_DB'] / 'cddid.tbl')
-        output:
-            db=str(RPSBLAST_DB) + '.rps'
-        params:
-            settings=tracked('rpsblast.target_domains', 'programs'),
-            smp_dir=str(defaults.PATH_DICT['SMP_DIR']),
-            db_path=str(RPSBLAST_DB)
-        log:
-            job_log('cdd_subset_builder')
-        benchmark:
-            job_benchmark('cdd_subset_builder')
-        shell:
-            '''
-            (
-            python scripts/cdd_subset.py \
-                --cddid {input.cddid:q} \
-                --smp-dir {params.smp_dir:q} \
-                --output-db {params.db_path:q}
-            ) > {log:q} 2>&1
-            '''
+rule cdd_subset_builder:
+    """Build the RPS-BLAST database from the CDD models listed under `domains:`."""
+    input:
+        smp_done=rules.cdd_smp_downloader.output.done
+    output:
+        db=str(RPSBLAST_DB) + '.rps'
+    params:
+        settings=tracked('domains', 'programs'),
+        smp_dir=str(defaults.PATH_DICT['SMP_DIR']),
+        db_path=str(RPSBLAST_DB)
+    log:
+        job_log('cdd_subset_builder')
+    benchmark:
+        job_benchmark('cdd_subset_builder')
+    shell:
+        '''
+        (
+        python scripts/cdd_subset.py \
+            --smp-dir {params.smp_dir:q} \
+            --output-db {params.db_path:q}
+        ) > {log:q} 2>&1
+        '''
 
 # =============================================================================
-# HMMER Profile Extraction (conditional: hmmer.profiles set)
+# HMMER profile extraction (when families list Pfam accessions)
 # =============================================================================
 
-if defaults.HMMER_ENABLED and defaults.HMMER_PROFILES:
+if defaults.HMMER_ENABLED and defaults.PFAM_ACCESSIONS:
     rule hmmer_extract_profiles:
         """Extract and press HMMER subset profiles once for all species."""
         input:
@@ -363,7 +356,7 @@ if defaults.HMMER_ENABLED and defaults.HMMER_PROFILES:
         output:
             subset_hmm=str(HMMER_SUBSET_HMM)
         params:
-            settings=tracked('hmmer.profiles')
+            settings=tracked('domains')
         log:
             job_log('hmmer_extract_profiles')
         benchmark:
@@ -487,14 +480,14 @@ if defaults.HMMER_ENABLED:
             parquet=PRE_HMMER_PATTERN,
             pfam_hmm=str(defaults.PATH_DICT['HMM_DB'] / 'Pfam-A.hmm'),
             subset_hmm=(str(HMMER_SUBSET_HMM)
-                        if defaults.HMMER_PROFILES
+                        if defaults.PFAM_ACCESSIONS
                         else [])
         output:
             parquet=HMM_PQ
         params:
             settings=tracked('hmmer'),
             hmm_db_flag=('--hmm-db ' + str(HMMER_SUBSET_HMM)
-                         if defaults.HMMER_PROFILES
+                         if defaults.PFAM_ACCESSIONS
                          else '')
         threads:
             workflow.cores
@@ -554,17 +547,13 @@ rule blast_parser_species:
 rule rpsblast_species:
     input:
         fasta=FASTA_OUT,
-        cdd_db=(str(RPSBLAST_DB) + '.rps'
-                if defaults.RPSBLAST_TARGET_DOMAINS
-                else str(defaults.PATH_DICT['RPS_DB']) + '.pal')
+        cdd_db=str(RPSBLAST_DB) + '.rps'
     output:
         parquet=RPSBLAST_PQ,
         asn=ASN_RPSBLAST
     params:
         settings=tracked('rpsblast', 'programs'),
-        db_flag=('--db ' + str(RPSBLAST_DB)
-                 if defaults.RPSBLAST_TARGET_DOMAINS
-                 else ''),
+        db_flag='--db ' + str(RPSBLAST_DB),
         query_acc=query_acc_for_label
     threads: 1
     log:
@@ -620,6 +609,7 @@ rule rpsbproc_parser_species:
     output:
         parquet=DOMAINS_PQ
     params:
+        settings=tracked('domains'),
         query_acc=query_acc_for_label
     threads: 1
     log:

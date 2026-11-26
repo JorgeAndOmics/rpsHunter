@@ -43,7 +43,34 @@ Controls the RPSBLAST search against the NCBI Conserved Domain Database (CDD). T
 | `comp_based_stats` | `int` | `0` | `int(min=0, max=4)` | Composition-based statistics mode. `0` disables (more sensitive); `1`-`4` enable progressive correction. See BLAST+ documentation. |
 | `seg` | `str` | `'no'` | `str(matches='^(yes\|no)$')` | SEG low-complexity filtering. `'no'` disables, allowing short/repetitive domains through. `'yes'` masks low-complexity regions. |
 | `window_size` | `int` | `40` | `int(min=0)`, optional | Window size for multi-hit algorithm. `0` switches to single-hit mode (more sensitive, slower). Omit or set to `40` for default behavior. |
-| `target_domains` | `list[str]` | `[]` | `list(str())`, optional | CDD ShortName list for subset database construction. Uses prefix matching with `_` (e.g., `'KRAB'` matches `'KRAB'` and `'KRAB_A-box'`). When non-empty, `cdd_subset.py` builds a targeted database from `cddid.tbl`. When empty or omitted, RPSBLAST searches the full CDD. |
+
+### `domains` -- Domain Families
+
+What to look for inside the hits. Each family is a name of your choosing and the accessions of the
+models that count as evidence for it ([ADR-012](adr/ADR-012-domain-families-by-accession.md)).
+
+```yaml
+domains:
+  KRAB:
+    cdd: [pfam01352, smart00349, cd07765]
+    pfam: [PF01352]
+  zinc_finger:
+    cdd: [pfam00096, smart00355, pfam13465, COG5048]
+    pfam: [PF00096]
+    repeat: true
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `cdd` | list of `str` | one of the two | CDD accessions (`pfam01352`, `cd19193`, `smart00349`, `COG5048`, ...). The RPS-BLAST database is built from exactly these models; an accession without a profile in the CDD release stops the run. |
+| `pfam` | list of `str` | one of the two | Pfam accessions without version (`PF01352`). Searched with HMMER when `hmmer.enabled` is true. |
+| `repeat` | `bool` | no | `true` for a domain that occurs in tandem copies. |
+
+Accessions are used because databases rename models between releases: CDD's `COG5048` changed its
+short name, and a config that listed names stopped working. To find accessions, look the protein up
+in NCBI's Conserved Domain Database or in InterPro. A model may belong to one family only. Calls
+reported at superfamily level are assigned to the family whose models belong to that superfamily.
+Every domain table carries a `Family` column beside the model.
 
 ### `orf` -- Open Reading Frame Analysis
 
@@ -63,7 +90,6 @@ Controls hmmsearch against the Pfam database. When enabled, sequences are enrich
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|
 | `enabled` | `bool` | `true` | `bool()` | Master toggle. When `false`, the HMMER stage is skipped and no `HMM_*` columns are added. |
-| `profiles` | `list[str]` | `[]` | `list(str())`, optional | Pfam profile names to search. When non-empty, `hmmfetch` extracts a subset HMM before searching. When empty, the full Pfam database is searched. |
 | `use_gathering_threshold` | `bool` | `false` | `bool()` | Use Pfam's curated `--cut_ga` thresholds instead of manual E-value thresholds. When `true`, `evalue` and `dom_evalue` are ignored. |
 | `evalue` | `float` | `1e-5` | `num(min=0)`, optional | Sequence-level E-value threshold for hmmsearch. Ignored when `use_gathering_threshold` is `true`. |
 | `dom_evalue` | `float` | `1e-3` | `num(min=0)`, optional | Per-domain E-value threshold. Controls sensitivity for individual domain hits within multi-domain sequences. Ignored when `use_gathering_threshold` is `true`. |

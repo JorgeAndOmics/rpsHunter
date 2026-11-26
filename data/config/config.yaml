@@ -9,7 +9,28 @@ rpsblast:
   comp_based_stats: 0  # Disable composition-based statistics (more sensitive)
   seg: 'no'            # Disable low-complexity filtering
   window_size: 0       # 1-hit algorithm (default: 40) - more sensitive
-  target_domains: ['KRAB', 'SET', 'SSXRD', 'zf-C2H2', 'COG5048', 'zf-H2C2', 'ZnF_C2H2']
+
+# Domain families: what to look for inside the hits. Each family is a name of your
+# choosing and the accessions of the models that count as evidence for it:
+#   cdd:    CDD accessions, searched with RPS-BLAST (the search database is built
+#           from exactly these models)
+#   pfam:   Pfam accessions without version, searched with HMMER
+#   repeat: true for a domain that occurs in tandem copies
+# Accessions are used because names change between database releases.
+domains:
+  KRAB:
+    cdd: [pfam01352, smart00349, cd07765]
+    pfam: [PF01352]
+  SSXRD:
+    cdd: [pfam09514]
+    pfam: [PF09514]
+  SET:
+    cdd: [cd19193, pfam00856, smart00317, cd08161]
+    pfam: [PF00856]
+  zinc_finger:
+    cdd: [pfam00096, smart00355, pfam13465, COG5048]
+    pfam: [PF00096]
+    repeat: true
 
 orf:
   enabled: false           # Toggle ORF analysis on/off (DISABLED to capture KRAB/SET/SSXRD)
@@ -19,9 +40,6 @@ orf:
 
 hmmer:
   enabled: true            # Toggle HMMER on/off
-
-  # Profile selection
-  profiles: ['KRAB', 'SET', 'SSXRD', 'zf-C2H2']
 
   # Threshold strategy
   use_gathering_threshold: false  # Use Pfam's curated --cut_ga

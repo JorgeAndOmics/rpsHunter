@@ -1,5 +1,6 @@
 blast: include('blast_schema')
 rpsblast: include('rpsblast_schema')
+domains: map(include('family_schema'), key=str())
 orf: include('orf_schema')
 hmmer: include('hmmer_schema')
 programs: include('programs_schema', required=False)
@@ -22,7 +23,14 @@ rpsblast_schema:
   comp_based_stats: int(min=0, max=4)
   seg: str(matches='^(yes|no)$')
   window_size: int(min=0, required=False)
-  target_domains: list(str(), required=False)
+
+# One domain family: the CDD and Pfam accessions that evidence it. At least one
+# list is required and no accession may belong to two families; those rules live
+# in workflow/scripts/domain_families.py.
+family_schema:
+  cdd: list(str(), required=False)
+  pfam: list(str(matches='^PF[0-9]{5}$'), required=False)
+  repeat: bool(required=False)
 
 orf_schema:
   enabled: bool()
@@ -32,7 +40,6 @@ orf_schema:
 
 hmmer_schema:
   enabled: bool()
-  profiles: list(str(), required=False)
   use_gathering_threshold: bool()
   evalue: num(min=0, required=False)
   dom_evalue: num(min=0, required=False)
