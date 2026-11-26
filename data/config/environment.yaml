@@ -1,76 +1,65 @@
+# rpsHunter conda environment: what the pipeline needs, and why each part is here.
+# The exact builds that were tested are in environment.lock-linux-64.txt, which is
+# what `make env` installs. Changing a version under "analysis" can change results:
+# record it in an ADR (docs/adr/) and regenerate the lock.
 name: rpsHunter
 channels:
   - conda-forge
   - bioconda
 dependencies:
-  - python=3.12
-  - snakemake-minimal>=7.0
-  - beautifulsoup4=4.12.3
-  - bioconductor-biostrings
-  - bioconductor-genomicranges
-  - bioconductor-ggbio
-  - bioconductor-orfik
-  - bioconductor-plyranges
-  - bioconductor-regioner
-  - bioconductor-rtracklayer
+  # --- workflow engine and language runtimes ---
+  - python=3.12.16
+  - r-base=4.4.3
+  - snakemake-minimal=9.27.2
+  # --- analysis: search tools (versions affect results) ---
+  - blast=2.17.0
+  - hmmer=3.4
+  - rpsbproc=0.5.1
+  # --- analysis: Python libraries ---
   - biopython=1.83
-  - certifi=2025.8.3
-  - charset-normalizer=3.3.2
-  - cloudpickle=3.0.0
-  - colorama=0.4.6
-  - coloredlogs=15.0.1
-  - blast
-  - diamond
-  - dill=0.3.9
-  - entrez-direct
-  - hmmer
-  - humanfriendly=10.0
-  - idna=3.8
-  - jq
-  - ncbi-datasets-cli
-  - numpy
-  - pandoc
+  - numpy=2.5.5
   - pandas=2.2.2
-  - pandera
-  - pv
   - pyarrow=17.0.0
-  - python-dateutil=2.9.0.post0
-  - pytz=2024.1
-  - r-argparse
-  - r-arrow
-  - r-docopt
-  - r-ggalluvial
-  - r-ggdist
-  - r-ggfittext
-  - r-ggnewscale
-  - r-ggsci
-  - r-plotly
-  - r-reticulate
-  - r-tidyverse
-  - r-waffle
-  - r-yaml
-  - ratelimit=2.2.1
-  - requests=2.32.3
-  - rpsbproc
-  - samtools
-  - six=1.16.0
-  - taxonkit
+  # --- analysis: R and Bioconductor ---
+  - bioconductor-biostrings=2.74.0
+  - bioconductor-genomicranges=1.58.0
+  - bioconductor-iranges=2.40.0
+  - bioconductor-orfik=1.26.0
+  - bioconductor-plyranges=1.26.0
+  - bioconductor-rtracklayer=1.66.0
+  - r-arrow=17.0.0
+  - r-tidyverse=2.0.0
+  # --- figures ---
+  - pandoc=3.14
+  - r-ggsci=5.2.0
+  - r-htmlwidgets=1.6.4
+  - r-plotly=4.12.1
+  - r-scales=1.4.0
+  # --- data acquisition (download stages only) ---
+  - entrez-direct=26.0
+  - jq=1.8.2
+  - ncbi-datasets-cli=18.41.1
+  - pv=1.12.7
+  - unzip=6.0
+  - wget=1.25.0
+  # --- configuration, command line and logging ---
+  - coloredlogs=15.0.1
+  - pyyaml=6.0.3
+  - r-argparse=2.3.3
+  - r-yaml=2.3.12
   - tqdm=4.67.1
-  - unzip
-  - urllib3=2.2.2
-  - wget
-  - yamale
+  - yamale=6.1.0
   # --- development tooling (make check); never affects results ---
-  - deptry
-  - import-linter
-  - mypy
-  - pandas-stubs
-  - pre-commit
-  - pytest
-  - pytest-cov
-  - pytest-mock
-  - r-cyclocomp
-  - r-lintr
-  - r-testthat
-  - ruff
-  - types-pyyaml
+  - deptry=0.25.1
+  - import-linter=2.17
+  - mypy=2.4.1
+  - pandas-stubs=3.1.0.261029
+  - pre-commit=4.7.0
+  - pytest=9.2.0
+  - pytest-cov=7.1.0
+  - pytest-mock=3.17.0
+  - r-cyclocomp=1.1.2
+  - r-lintr=3.4.0
+  - r-testthat=3.3.2
+  - ruff=0.17.6
+  - types-pyyaml=6.0.12.20261122
