@@ -20,9 +20,11 @@ Usage:
 
 import os
 from pathlib import Path
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List
 
 import yaml
+
+import species_config
 
 # Configuration file path. RPSHUNTER_CONFIG selects another complete config (for
 # example a machine-local one); it is an environment variable because this module
@@ -45,7 +47,7 @@ RPSBLAST_E_VALUE: float = config.get('rpsblast', {}).get('e_value', 10)
 RPSBLAST_COMP_BASED_STATS: int = config.get('rpsblast', {}).get('comp_based_stats', 0)
 RPSBLAST_SEG: str = config.get('rpsblast', {}).get('seg', 'no')
 RPSBLAST_WINDOW_SIZE: int = config.get('rpsblast', {}).get('window_size', 40)
-RPSBLAST_TARGET_DOMAINS: list = config.get('rpsblast', {}).get('target_domains', [])
+RPSBLAST_TARGET_DOMAINS: List[str] = config.get('rpsblast', {}).get('target_domains', [])
 
 # Directories - using pathlib.Path
 PATH_DICT: Dict[str, Path] = {
@@ -113,21 +115,20 @@ def _make_label_safe(label: str) -> str:
 
 
 # Normalize both config formats to QUERY_DICT: Dict[str, str]  {accession: display_label}
-_queries_raw: Union[dict, None] = config.get('queries', None)
-_query_raw: Union[dict, None] = config.get('query', None)
+def _query_dict(queries: Any, query: Any) -> Dict[str, str]:
+    """Return {accession: display label} from either config form."""
+    if queries and isinstance(queries, dict):
+        # Multi-query format: queries: {'NP_064612.2': 'human PRDM9', ...}
+        return dict(queries)
+    if query and isinstance(query, dict):
+        # Legacy single-query format: query: {format: 'fa', accession: 'NP_659058.3'}
+        accession = query.get('accession', '')
+        return {accession: accession}
+    return {}
 
-if _queries_raw and isinstance(_queries_raw, dict):
-    # New multi-query format: queries: {'NP_064612.2': 'human PRDM9', ...}
-    QUERY_DICT: Dict[str, str] = _queries_raw
-    MULTI_QUERY: bool = len(QUERY_DICT) > 1
-elif _query_raw and isinstance(_query_raw, dict):
-    # Legacy single-query format: query: {format: 'fa', accession: 'NP_659058.3'}
-    _acc = _query_raw.get('accession', '')
-    QUERY_DICT: Dict[str, str] = {_acc: _acc}
-    MULTI_QUERY: bool = False
-else:
-    QUERY_DICT: Dict[str, str] = {}
-    MULTI_QUERY: bool = False
+
+QUERY_DICT: Dict[str, str] = _query_dict(config.get('queries'), config.get('query'))
+MULTI_QUERY: bool = len(QUERY_DICT) > 1
 
 # Ordered lists derived from QUERY_DICT
 QUERIES: List[str] = list(QUERY_DICT.keys())                           # accessions
@@ -218,11 +219,7 @@ def query_file_path(accession: str) -> Path:
 
 # Execution and requests
 NUM_CORES: int = config['execution'].get('num_cores', 1)
-USE_SPECIES_DICT: bool = config['execution'].get('use_species_list', True)
-RETRIEVAL_TIME_LAG: float = config['execution'].get('retrieval_time_lag', 0.3)
-MAX_RETRIEVAL_ATTEMPTS: int = config['execution'].get('max_retrieval_attempts', 3)
 ENTREZ_EMAIL: str = config['execution'].get('entrez_email', '')
-NCBI_API_TOKEN: str = config['execution'].get('ncbi_api_token', '')
 
 # === ORF Configuration ===
 ORF_ENABLED: bool = config.get('orf', {}).get('enabled', False)
@@ -230,7 +227,7 @@ MIN_ORF_LENGTH: int = config.get('orf', {}).get('min_orf_length', 200)
 
 # === HMMER Configuration ===
 HMMER_ENABLED: bool       = config.get('hmmer', {}).get('enabled', False)
-HMMER_PROFILES: list      = config.get('hmmer', {}).get('profiles', [])
+HMMER_PROFILES: List[str] = config.get('hmmer', {}).get('profiles', [])
 HMMER_USE_GA: bool        = config.get('hmmer', {}).get('use_gathering_threshold', False)
 HMMER_EVALUE: float       = config.get('hmmer', {}).get('evalue', 1e-5)
 HMMER_DOM_EVALUE: float   = config.get('hmmer', {}).get('dom_evalue', 1e-3)
@@ -255,23 +252,14 @@ MAKEPROFILEDB_CMD: str    = _programs.get('makeprofiledb', 'makeprofiledb')
 
 # Display
 DISPLAY_SNAKEMAKE_INFO: bool = config['display'].get('display_snakemake_info', False)
-DISPLAY_REQUESTS_WARNING: bool = config['display'].get('display_requests_warning', False)
-DISPLAY_OPERATION_INFO: bool = config['display'].get('display_operation_info', False)
 
-# Genomes
-_species_raw: Union[dict, list, None] = config.get('species', {})
-
-if isinstance(_species_raw, dict):
-    SPECIES_DICT: Dict[str, str] = _species_raw
-elif isinstance(_species_raw, list):
-    SPECIES_DICT: Dict[str, str] = {name: name for name in _species_raw}
-else:
-    SPECIES_DICT: Dict[str, str] = {}
-
-if not USE_SPECIES_DICT:
-    SPECIES: List[str] = [f.stem for f in PATH_DICT['SPECIES_DB'].glob('*.fa')]
-else:
-    SPECIES: List[str] = list(SPECIES_DICT.keys())
+# Genomes. Every species carries a display name and a pin (assembly accession
+# and/or checksum of a local FASTA); see species_config.py for the contract.
+SPECIES_ENTRIES: Dict[str, species_config.SpeciesEntry] = species_config.parse_species(
+    config.get('species')
+)
+SPECIES_DICT: Dict[str, str] = {key: entry.name for key, entry in SPECIES_ENTRIES.items()}
+SPECIES: List[str] = list(SPECIES_ENTRIES)
 
 
 # =============================================================================

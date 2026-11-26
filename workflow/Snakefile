@@ -1,5 +1,11 @@
+import sys
 from pathlib import Path
-from scripts import defaults
+
+# The scripts import one another as flat modules (they are run as files), so the
+# Snakefile imports them the same way; importing through a 'scripts' package
+# would leave their sibling imports unresolved.
+sys.path.insert(0, str(Path(workflow.basedir) / 'scripts'))
+import defaults
 
 # The one place directories are created for a run (see defaults.ensure_dirs).
 defaults.ensure_dirs()
@@ -139,6 +145,13 @@ def query_acc_for_label(wildcards):
     """Resolve the query accession from a {query_label} wildcard."""
     return defaults.LABEL_TO_ACC[wildcards.query_label]
 
+def assembly_for_genome(wildcards):
+    """Assembly accession to download for a {genome}, or '' if the config pins that
+    species by checksum only. Snakemake evaluates this while planning, also for
+    genomes that are already present, so it must not raise: the downloader itself
+    refuses an empty accession, which only happens if a download is really needed."""
+    return defaults.SPECIES_ENTRIES[wildcards.genome].assembly or ''
+
 def tracked(*keys):
     """Config values a rule depends on, as one stable string for its `params`.
 
@@ -178,7 +191,7 @@ rule genome_downloader_setup:
     params:
         SPECIES_DB=str(defaults.PATH_DICT['SPECIES_DB']),
         DOWNLOAD_LOG=str(defaults.PATH_DICT['CONFIG_DIR'] / 'download.txt'),
-        API_KEY=defaults.NCBI_API_TOKEN
+        assembly=assembly_for_genome
     threads:
         workflow.cores / 3
     log:
@@ -188,8 +201,8 @@ rule genome_downloader_setup:
     shell:
         '''
         (
-        export NCBI_API_KEY={params.API_KEY:q} && \
-        bash scripts/genome_downloader.sh {wildcards.genome:q} {params.SPECIES_DB:q} {params.DOWNLOAD_LOG:q}
+        bash scripts/genome_downloader.sh {wildcards.genome:q} {params.assembly:q} \
+            {params.SPECIES_DB:q} {params.DOWNLOAD_LOG:q}
         ) > {log:q} 2>&1
         '''
 
@@ -438,6 +451,7 @@ rule blast_db_generator_setup:
     shell:
         """
         (
+        python scripts/genome_check.py --species {wildcards.genome:q} --fasta {input.fa:q} && \
         {params.makeblastdb_cmd} -in {input.fa:q} -dbtype nucl \
         -out {params.db_dir:q}/{wildcards.genome:q}/{wildcards.genome:q}
         ) > {log:q} 2>&1

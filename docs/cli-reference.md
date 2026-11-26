@@ -146,9 +146,9 @@ before dispatching any Snakemake rule. The suite checks (in order):
    `data/config/schema.yaml` using Yamale.
 2. **Query accession** -- confirms the configured protein accession exists in
    NCBI's protein database via Entrez.
-3. **Genome FASTAs** -- verifies that `.fa` files exist and contain valid FASTA
-   records for each configured species (skipped when `use_species_list: true`
-   and species are defined in config).
+3. **Genomes** -- not re-read at launch: each species is pinned in the config by
+   its assembly accession or the checksum of its FASTA (see
+   [configuration.md](configuration.md#species----target-genomes)).
 4. **External programs** -- checks that all required programs are on PATH:
    - Always checked: `tblastn`, `rpsblast`, `blast_formatter`, `makeblastdb`,
      `rpsbproc`, `datasets`

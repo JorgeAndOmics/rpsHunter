@@ -11,6 +11,7 @@ tests carry the `integration` marker.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import os
 import shutil
@@ -82,11 +83,22 @@ def _load_generator():
     return module
 
 
+def _species_block(db_root: Path) -> dict:
+    """The toy species for the config, each pinned by the checksum of its FASTA."""
+    return {
+        key: {
+            "name": name,
+            "sha256": hashlib.sha256((db_root / f"{key}.fa").read_bytes()).hexdigest(),
+        }
+        for key, name in SPECIES.items()
+    }
+
+
 def _write_config(work: Path) -> Path:
     """Write a complete config for the toy run, derived from the shipped one."""
     config = yaml.safe_load((REPO / "data" / "config" / "config.yaml").read_text())
     config["queries"] = QUERIES
-    config["species"] = SPECIES
+    config["species"] = _species_block(work / "db")
     config["rpsblast"]["target_domains"] = TARGET_DOMAINS
     config["execution"]["num_cores"] = 2
     config["root"] = {

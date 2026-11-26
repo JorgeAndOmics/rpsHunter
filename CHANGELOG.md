@@ -39,6 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The config key `execution.random_id_length` is removed.
 - License is MIT ([ADR-003](docs/adr/ADR-003-mit-licence.md)). The `LICENSE` file previously held
   the GPL v2 text while the README said MIT.
+- **Species entries name their genome** ([ADR-005](docs/adr/ADR-005-genomes-pinned-by-assembly.md)):
+  each species is `name:` plus a versioned `assembly:` accession and/or a `sha256:` of its FASTA.
+  The genome downloader fetches exactly that assembly; taxon names and "latest" are gone. The
+  former `'Key': 'Display name'` form is refused with a message showing the new one.
+- An NCBI API key is read from the `NCBI_API_KEY` environment variable only, and is no longer
+  placed on a job's command line.
 - All text files are stored with LF line endings.
 - The environment no longer references Anaconda's `pkgs/main` and `pkgs/r` channels and now lists
   the tools the scripts call: `entrez-direct`, `jq`, `pandoc`, `unzip`, `wget`.
@@ -46,6 +52,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Config keys that nothing read: the `logging` section, `execution.retrieval_time_lag`,
+  `execution.max_retrieval_attempts`, `display.display_requests_warning`,
+  `display.display_operation_info`; and `execution.use_species_list`, whose "discover genomes from
+  the folder" mode cannot be pinned.
 - IDE settings (`.idea/`) and two scratch R scripts under `workflow/scripts/tests/` that held
   machine-specific paths and no assertions.
 

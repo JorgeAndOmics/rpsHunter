@@ -61,15 +61,10 @@ queries:
 
 execution:
   num_cores: 16
-  use_species_list: true
-  retrieval_time_lag: 0.3
-  max_retrieval_attempts: 9
   entrez_email: 'your_email@example.com'
 
 display:
   display_snakemake_info: true
-  display_requests_warning: false
-  display_operation_info: false
 
 root:
   db_root_folder: '/mnt/v/databases/bat-experimental'
@@ -77,21 +72,24 @@ root:
   results_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/results'
   logs_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/logs'
 
-logging:
-  level_styles:
-    debug: { color: 'white' }
-    info: { color: 'cyan', bold: 'yes' }
-    warning: { color: 'yellow' }
-    error: { color: 'red', bold: 'yes' }
-    critical: { color: 'black', bold: 'yes', background: 'red' }
-  field_styles:
-    asctime: { color: 'green' }
-    levelname: { color: 'green' }
-    name: { color: 'green' }
-
 species:
-  'Desmodus_rotundus': 'Desmodus rotundus'
-  'Antrozous_pallidus': 'Antrozous pallidus'
-  'Molossus_molossus': 'Molossus molossus'
-  'Homo_sapiens': 'Homo sapiens'
-  'Mus_musculus': 'Mus musculus'
+  # key (used in file names):
+  #   name:     display name for tables and figures
+  #   assembly: versioned NCBI assembly accession (GCA_/GCF_ with .N), fetched exactly
+  #   sha256:   optional checksum of the genome FASTA; required instead of `assembly`
+  #             for a genome that is provided locally and not downloaded
+  Desmodus_rotundus:
+    name: Desmodus rotundus
+    assembly: GCA_022682495.2
+  Antrozous_pallidus:
+    name: Antrozous pallidus
+    assembly: GCA_027563665.1
+  Molossus_molossus:
+    name: Molossus molossus
+    assembly: GCA_014108415.2
+  Homo_sapiens:
+    name: Homo sapiens
+    assembly: GCA_000001405.29
+  Mus_musculus:
+    name: Mus musculus
+    assembly: GCA_000001635.9

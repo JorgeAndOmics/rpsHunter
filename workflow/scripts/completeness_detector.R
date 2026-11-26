@@ -29,7 +29,8 @@ print("Parsing domain data...")
 config <- yaml::read_yaml(args.config_path)
 species_raw <- config$species
 if (is.list(species_raw) && !is.null(names(species_raw))) {
-  species_map <- unlist(species_raw)
+  # Each species entry is a mapping with a display name and its genome pin.
+  species_map <- vapply(species_raw, function(entry) entry$name, character(1))
 } else {
   species_map <- setNames(unlist(species_raw), unlist(species_raw))
 }

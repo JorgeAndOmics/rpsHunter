@@ -238,11 +238,9 @@ def main_validator(fasta_files: Optional[List[Path]]) -> bool:
         for acc in defaults.QUERIES
     ) if defaults.QUERIES else False
 
-    if not defaults.USE_SPECIES_DICT and fasta_files:
-        fasta_results = [fasta_validator(f) for f in fasta_files]
-        fasta_ok = all(fasta_results)
-    else:
-        fasta_ok = True
+    # Genomes are pinned by assembly accession or checksum in the config, so their
+    # content is not re-parsed here on every launch.
+    fasta_ok = True
 
     programs_ok = validate_programs()
     validate_ncbi_key()

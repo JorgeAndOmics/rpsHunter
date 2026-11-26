@@ -127,14 +127,11 @@ When `queries` is present, it takes precedence over `query`. Both formats are su
 
 ### `execution` -- Runtime Parameters
 
-Controls parallelism, NCBI data retrieval behavior, and internal identifiers.
+Controls parallelism and NCBI identification. An NCBI API key is never written in the config: export it as `NCBI_API_KEY` and the download tools pick it up.
 
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|
 | `num_cores` | `int` | `16` | `int(min=1)` | Maximum number of CPU cores for Snakemake. Per-species rules run in parallel up to this limit; HMMER consumes all cores per job (serialized). |
-| `use_species_list` | `bool` | `true` | `bool()` | When `true`, species are read from the `species:` section of this config. When `false`, species are inferred from `.fa` files in the database root directory. |
-| `retrieval_time_lag` | `float` | `0.3` | `num(min=0)` | Delay in seconds between NCBI Entrez requests to avoid rate limiting. |
-| `max_retrieval_attempts` | `int` | `9` | `int(min=1)` | Maximum retry attempts for failed NCBI data retrievals. |
 | `entrez_email` | `str` | -- | `str()` | Email address for NCBI Entrez API identification. Required by NCBI usage policies. |
 
 ### `display` -- Output Verbosity
@@ -144,8 +141,6 @@ Controls informational messages during pipeline execution.
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|
 | `display_snakemake_info` | `bool` | `true` | `bool()` | Show Snakemake execution details in console output. |
-| `display_requests_warning` | `bool` | `false` | `bool()` | Show HTTP request warnings (e.g., SSL verification). |
-| `display_operation_info` | `bool` | `false` | `bool()` | Show detailed per-operation progress messages. |
 
 ### `root` -- Directory Paths
 
@@ -153,44 +148,39 @@ Absolute paths to the four root directories used by the pipeline. All intermedia
 
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|
-| `db_root_folder` | `str` | -- | `str()` | Root directory for all databases: BLAST nucleotide DBs, Pfam HMMs, CDD files, and rpsbproc data. Species genome `.fa` files are also located here when `use_species_list` is `false`. |
+| `db_root_folder` | `str` | -- | `str()` | Root directory for all databases: BLAST nucleotide DBs, Pfam HMMs, CDD files, and rpsbproc data. Genome FASTA files (`<key>.fa`) are stored here as well. |
 | `data_root_folder` | `str` | -- | `str()` | Root for pipeline input data. Contains `config/` (this config file, schema, environment spec) and `input/fastas/` (query protein files). |
 | `results_root_folder` | `str` | -- | `str()` | Root for all pipeline outputs: per-species intermediates, aggregated tables, plots, GFF3 ranges, ASN archives. |
 | `logs_root_folder` | `str` | -- | `str()` | Root for execution logs. Each pipeline stage writes timestamped logs here. |
 
-### `logging` -- Console Log Styling
-
-Configures `coloredlogs` styling for console output. Two sub-sections control level-based and field-based styling respectively.
-
-**`logging.level_styles`** -- per-severity colors:
-
-| Level | Properties | Validation |
-|-------|-----------|------------|
-| `debug` | `color` | `str()` |
-| `info` | `color`, `bold` | `str()`, `str(matches='^(yes\|no)$')` |
-| `warning` | `color` | `str()` |
-| `error` | `color`, `bold` | `str()`, `str(matches='^(yes\|no)$')` |
-| `critical` | `color`, `bold`, `background` | `str()`, `str(matches='^(yes\|no)$')`, `str()` |
-
-**`logging.field_styles`** -- per-field colors:
-
-| Field | Properties | Validation |
-|-------|-----------|------------|
-| `asctime` | `color` | `str()` |
-| `levelname` | `color` | `str()` |
-| `name` | `color` | `str()` |
-
 ### `species` -- Target Genomes
 
-A YAML mapping of species identifiers to display names. Keys use underscore-separated binomial names (used as filenames and Snakemake wildcards); values are human-readable names with spaces.
+Each species is a key (underscore-separated, used in file names and as the Snakemake wildcard)
+with a display name and a pin that states exactly which genome is meant.
 
 ```yaml
 species:
-  'Desmodus_rotundus': 'Desmodus rotundus'
-  'Antrozous_pallidus': 'Antrozous pallidus'
+  Desmodus_rotundus:
+    name: Desmodus rotundus
+    assembly: GCA_022682495.2
+  My_isolate:
+    name: My isolate
+    sha256: 3f1c...   # 64 hexadecimal characters
 ```
 
-**Validation:** `map(str(), key=str())` -- any number of string key-value pairs.
+| Parameter | Type | Required | Validation | Description |
+|-----------|------|----------|------------|-------------|
+| `name` | `str` | yes | `str()` | Display name used in tables and figures. |
+| `assembly` | `str` | one of the two | `GCA_`/`GCF_` + 9 digits + `.N` | Versioned NCBI assembly accession. `--download-genomes` fetches exactly this version; a taxon name or an accession without a version is refused. |
+| `sha256` | `str` | one of the two | 64 hex characters | SHA-256 of the genome FASTA. Use it alone for a genome you provide yourself as `<db_root_folder>/<key>.fa`, or together with `assembly` to state exactly which file was used. |
+
+A `sha256` is checked against the FASTA immediately before that genome's BLAST database is built,
+and the run stops if they differ; for a species without one, the checksum is printed in the job's
+log so that it can be added. At least one of `assembly` and `sha256` is required
+([ADR-005](adr/ADR-005-genomes-pinned-by-assembly.md)). The former form, `'Key': 'Display name'`,
+is refused with a message showing the new one. Each download appends a line to
+`<data_root_folder>/config/download.txt`: species key, accession, SHA-256 of the FASTA, UTC time
+and the `datasets` version.
 
 The species list drives the entire pipeline DAG. Each species generates an independent parallel track through all per-species rules. Adding or removing entries here is the primary way to scale the analysis.
 
@@ -283,14 +273,18 @@ The pipeline creates per-query subdirectories for all intermediate files, then m
 
 ### Minimal Configuration for a New Species
 
-To add a new species to an existing analysis, append an entry to the `species:` map using the underscore-separated binomial name as the key. Ensure the genome `.fna` file exists in the database root directory (downloaded via `--download-genomes` or placed manually). No other configuration changes are required -- the new species inherits all threshold and filtering settings.
+To add a new species to an existing analysis, append an entry to the `species:` map with its
+display name and its versioned assembly accession (find it on the assembly's NCBI page). To use a
+genome you already have, place it at `<db_root_folder>/<key>.fa` and pin it with `sha256` instead.
 
 ```yaml
 species:
-  'Desmodus_rotundus': 'Desmodus rotundus'
-  'Antrozous_pallidus': 'Antrozous pallidus'
-  'Molossus_molossus': 'Molossus molossus'
-  'Myotis_lucifugus': 'Myotis lucifugus'        # New species added
+  Desmodus_rotundus:
+    name: Desmodus rotundus
+    assembly: GCA_022682495.2
+  Myotis_lucifugus:               # new species
+    name: Myotis lucifugus
+    assembly: GCF_000147115.1
 ```
 
 Then run the full pipeline starting from genome download:

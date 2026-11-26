@@ -1,112 +1,72 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Download one genome assembly from NCBI, exactly the version asked for.
+#
+# The assembly is named by a versioned accession (GCA_/GCF_ with .N) taken from
+# the species entry of the config. Nothing is resolved here: no taxon lookup and
+# no "latest", so the same config always fetches the same sequences.
+#
+# Usage: genome_downloader.sh <species_key> <assembly_accession> <output_dir> <record_file>
+# Writes: <output_dir>/<species_key>.fa
+# Appends to <record_file>, tab-separated:
+#   species key, accession, sha256 of the FASTA, UTC time, datasets version
+# Needs: datasets (ncbi-datasets-cli), unzip, sha256sum. NCBI_API_KEY is used by
+#   datasets if it is set in the environment.
+# Fails on: wrong arguments, an accession without a version, a download or
+#   archive error, or an archive that holds a different assembly.
+set -euo pipefail
 
-# Ensure correct usage
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
-    echo "Usage: $0 <AccessionCode_or_TaxonID_or_ScientificName> <OutputDirectory> <LogFile>"
+if (($# != 4)); then
+    echo "usage: $0 <species_key> <assembly_accession> <output_dir> <record_file>" >&2
+    exit 64
+fi
+species="$1"
+accession="$2"
+output_dir="$3"
+record_file="$4"
+
+if [[ -z "$accession" ]]; then
+    echo "$species: the config gives no assembly accession, so it cannot be downloaded;" \
+        "place its FASTA at $3/$species.fa" >&2
+    exit 65
+fi
+if [[ ! "$accession" =~ ^GC[AF]_[0-9]{9}\.[0-9]+$ ]]; then
+    echo "$species: '$accession' is not a versioned assembly accession (GCA_/GCF_ with .N)" >&2
+    exit 65
+fi
+
+fasta="$output_dir/$species.fa"
+work="$(mktemp --directory --tmpdir="$output_dir" ".download_${species}.XXXXXX")"
+trap 'rm -rf -- "$work"' EXIT
+
+echo "$species: downloading assembly $accession"
+datasets download genome accession "$accession" \
+    --include genome --no-progressbar --filename "$work/genome.zip"
+
+# The archive names its sequence files by assembly; a different accession inside
+# means NCBI answered with another version than the one requested.
+# Listed into a variable first, so that an unreadable archive stops the script
+# here (a command inside a process substitution does not).
+listing="$(unzip -Z -1 "$work/genome.zip" 'ncbi_dataset/data/*/*.fna')"
+mapfile -t members <<< "$listing"
+if [[ -z "$listing" ]]; then
+    echo "$species: no sequence file in the archive for $accession" >&2
     exit 1
 fi
-
-QUERY="$1"       # Accession Code, BioProject, Taxon ID, or Scientific/Common Name
-OUTDIR="$(realpath -m "$2")"  # Normalize and clean output directory
-LOGFILE="$(realpath -m "$3")" # Log file to store results
-
-# Check if an NCBI API key is provided
-if [ -z "$NCBI_API_KEY" ]; then
-    echo "⚠ Warning: No NCBI API key found. Consider setting it with: export NCBI_API_KEY='your_api_key'"
-    API_KEY_FLAG=""
-else
-    API_KEY_FLAG="--api-key $NCBI_API_KEY"
-    echo "Found NCBI API key in environment"
-fi
-
-echo "Fetching genome for: $QUERY"
-
-################################################################################
-# Check if input is an Accession Code (GCF_ or GCA_)
-################################################################################
-if [[ "$QUERY" =~ ^GC[AF]_[0-9]+(\.[0-9]+)?$ ]]; then
-    echo "Detected Accession Code: $QUERY"
-    BEST_ASSEMBLY="$QUERY"
-    BEST_LEVEL="Direct_Accession"
-    QUERY_SAFE="$QUERY"
-    # Replace "." with "_" in filenames if needed
-    # QUERY_SAFE="${QUERY//./_}"
-else
-    ################################################################################
-    # Try multiple assembly levels in descending order of completeness
-    #   Complete Genome -> Chromosome -> Scaffold -> Contig
-    ################################################################################
-
-    BEST_ASSEMBLY=""
-    BEST_LEVEL=""
-
-    for LEVEL in "Complete" "Chromosome" "Scaffold" "Contig"; do
-
-        # Capture datasets command output, including warnings
-        DATASETS_OUTPUT="$(datasets summary genome taxon "$QUERY" $API_KEY_FLAG 2>&1)"
-
-        # Remove the “New version...” first line if present
-        FILTERED_OUTPUT="$(echo "$DATASETS_OUTPUT" | sed '/^New version of client (/d')"
-
-        # Check if output contains an error message about an ambiguous name
-        if echo "$FILTERED_OUTPUT" | grep -q "The taxonomy name"; then
-            echo "⚠ Warning: Ambiguous or invalid name '$QUERY'."
-            echo "$FILTERED_OUTPUT"
-            exit 1
-        fi
-
-        # Extract candidate genome accession using the filtered JSON
-        CANDIDATE="$(echo "$FILTERED_OUTPUT" \
-                     | jq -r "[.reports[] | select(.assembly_info.assembly_level==\"$LEVEL\")][0].accession")"
-
-        if [ -n "$CANDIDATE" ] && [ "$CANDIDATE" != "null" ]; then
-            BEST_ASSEMBLY="$CANDIDATE"
-            BEST_LEVEL="$LEVEL"
-            echo "✅ Found a $LEVEL assembly: $BEST_ASSEMBLY"
-            break
-        fi
-    done
-
-    # If nothing found, exit with a message
-    if [ -z "$BEST_ASSEMBLY" ] || [ "$BEST_ASSEMBLY" == "null" ]; then
-        echo "❌ No valid genome assembly (Complete/Chromosome/Scaffold/Contig) found for: $QUERY"
+for member in "${members[@]}"; do
+    if [[ "$member" != "ncbi_dataset/data/$accession/"* ]]; then
+        echo "$species: archive holds '$member', not assembly $accession" >&2
         exit 1
     fi
+done
 
-    # If not an accession code, keep QUERY as is
-    QUERY_SAFE="$QUERY"
-fi
+# Write beside the destination and rename, so an interrupted download never
+# leaves a truncated genome under the final name.
+unzip -p "$work/genome.zip" "${members[@]}" > "$work/genome.fa"
+checksum="$(sha256sum "$work/genome.fa" | cut -d' ' -f1)"
+mv -- "$work/genome.fa" "$fasta"
 
-# Convert spaces in the level to underscores for a filename-safe string
-LEVEL_SAFE="${BEST_LEVEL// /_}"
-
-# Normalize all filenames using `realpath -m`
-ZIPFILE="$(realpath -m "$OUTDIR/genome_${LEVEL_SAFE}_${QUERY_SAFE}.zip")"
-FASTA_FILE="$(realpath -m "$OUTDIR/${QUERY_SAFE}.fa")"
-
-echo "Downloading accession: $BEST_ASSEMBLY"
-datasets download genome accession "$BEST_ASSEMBLY" $API_KEY_FLAG \
---include genome \
---assembly-version latest \
---exclude-atypical \
---filename "$ZIPFILE"
-
-# Get the actual uncompressed size of the FASTA file (sum sizes of extracted files)
-UNCOMPRESSED_SIZE=$(unzip -Z -1 "$ZIPFILE" ncbi_dataset/data/*/*.fna \
-    | xargs -I{} unzip -p "$ZIPFILE" {} \
-    | wc -c)
-
-# Extract the FASTA file with an accurate progress bar
-echo "Extracting FASTA file for $QUERY..."
-unzip -p "$ZIPFILE" ncbi_dataset/data/*/*.fna \
-    | pv -s "$UNCOMPRESSED_SIZE" > "$FASTA_FILE"
-
-# Remove the ZIP file with a progress bar
-echo "Removing ZIP file: $ZIPFILE"
-echo "$ZIPFILE" | pv -l -s 1 | xargs -d '\n' rm
-
-echo "✅ Download complete: $FASTA_FILE (Assembly: $BEST_ASSEMBLY, Level: $BEST_LEVEL)"
-
-# Append download info to the log file
-echo -e "$QUERY\t$BEST_ASSEMBLY\t$BEST_LEVEL" >> "$LOGFILE"
-echo "✅ Download logged: $LOGFILE"
+datasets_version="$(datasets --version | awk '{print $NF}')"
+printf '%s\t%s\t%s\t%s\t%s\n' \
+    "$species" "$accession" "$checksum" "$(date --utc '+%Y-%m-%dT%H:%M:%SZ')" \
+    "$datasets_version" >> "$record_file"
+echo "$species: wrote $fasta (sha256 $checksum)"
