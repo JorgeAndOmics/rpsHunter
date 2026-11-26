@@ -1,0 +1,13 @@
+# Domain positions on the query proteins, as annotated by NCBI in the RefSeq
+# protein records (GenPept "Region" features, fetched 2026-11-26). Residues are
+# 1-based and inclusive. "family" is the name the tests use; cdd_id is the
+# record's db_xref. zinc_fingers spans the first to the last annotated C2H2 finger.
+accession	family	aa_start	aa_end	cdd_id	region_name
+NP_064612.2	KRAB	27	85	CDD:214630	KRAB
+NP_064612.2	SSXRD	171	201	CDD:430657	SSXRD
+NP_064612.2	SET	240	368	CDD:380970	PR-SET_PRDM7_9
+NP_064612.2	zinc_fingers	528	882	CDD:275368	C2H2 Zn finger (13 fingers)
+NP_659058.3	KRAB	28	85	CDD:214630	KRAB
+NP_659058.3	SSXRD	171	201	CDD:430657	SSXRD
+NP_659058.3	SET	240	368	CDD:380970	PR-SET_PRDM7_9
+NP_659058.3	zinc_fingers	512	839	CDD:275368	C2H2 Zn finger (12 fingers)
