@@ -8,7 +8,6 @@ queries: map(str(), key=str(), required=False)
 execution: include('execution_schema')
 display: include('display_schema')
 root: include('root_schema')
-logging: include('logging_schema')
 hit_domain_inventory: include('hit_domain_inventory_schema', required=False)
 species: include('species_schema')
 ---
@@ -50,15 +49,10 @@ query_schema:
 
 execution_schema:
   num_cores: int(min=1)
-  use_species_list: bool()
-  retrieval_time_lag: num(min=0)
-  max_retrieval_attempts: int(min=1)
   entrez_email: str()
 
 display_schema:
   display_snakemake_info: bool()
-  display_requests_warning: bool()
-  display_operation_info: bool()
 
 root_schema:
   db_root_folder: str()
@@ -66,38 +60,18 @@ root_schema:
   results_root_folder: str()
   logs_root_folder: str()
 
-logging_schema:
-  level_styles: include('level_styles_schema')
-  field_styles: include('field_styles_schema')
-
-level_styles_schema:
-  debug: include('color_only_schema')
-  info: include('color_bold_schema')
-  warning: include('color_only_schema')
-  error: include('color_bold_schema')
-  critical: include('color_bold_bg_schema')
-
-field_styles_schema:
-  asctime: include('color_only_schema')
-  levelname: include('color_only_schema')
-  name: include('color_only_schema')
-
-color_only_schema:
-  color: str()
-
-color_bold_schema:
-  color: str()
-  bold: str(matches='^(yes|no)$')
-
-color_bold_bg_schema:
-  color: str()
-  bold: str(matches='^(yes|no)$')
-  background: str()
-
 hit_domain_inventory_schema:
   locus_gap: int(min=0, required=False)
 
-species_schema: map(str(), key=str())
+# A species key maps to its display name and a pin naming exactly which genome is
+# meant. At least one of `assembly` and `sha256` is required; that rule, and the
+# message for the retired name-only form, live in workflow/scripts/species_config.py.
+species_schema: map(include('species_entry_schema'), key=str())
+
+species_entry_schema:
+  name: str()
+  assembly: str(matches='^GC[AF]_[0-9]{9}\\.[0-9]+$', required=False)
+  sha256: str(matches='^[0-9a-f]{64}$', required=False)
 
 programs_schema:
   tblastn: str(required=False)

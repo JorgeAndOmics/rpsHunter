@@ -11,7 +11,7 @@ PY_TESTS := tests
 R_TESTS  := workflow/tests/testthat
 # Legacy shell scripts (see the legacy list in pyproject.toml): left out of
 # ShellCheck as whole files until rewritten. This list only shrinks.
-SH_LEGACY := workflow/scripts/genome_downloader.sh workflow/scripts/query_downloader.sh
+SH_LEGACY := workflow/scripts/query_downloader.sh
 SH_SRC   := $(filter-out $(SH_LEGACY),$(wildcard workflow/scripts/*.sh))
 
 help: ## Show this help

@@ -39,7 +39,6 @@ dependencies:
   - entrez-direct=26.0
   - jq=1.8.2
   - ncbi-datasets-cli=18.41.1
-  - pv=1.12.7
   - unzip=6.0
   - wget=1.25.0
   # --- configuration, command line and logging ---

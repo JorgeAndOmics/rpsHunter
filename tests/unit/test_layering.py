@@ -16,7 +16,7 @@ import pytest
 
 SCRIPTS = Path(__file__).resolve().parents[2] / "workflow" / "scripts"
 
-PURE_MODULES = ("tags",)
+PURE_MODULES = ("tags", "species_config")
 
 FORBIDDEN = frozenset(
     {

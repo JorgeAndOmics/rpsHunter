@@ -100,3 +100,26 @@ def test_a_failed_rpsblast_fails_the_job_and_writes_no_table(tmp_path):
     assert done.returncode != 0
     assert "rpsblast exited with status 1" in done.stderr
     assert not table.exists()
+
+
+def test_a_genome_that_is_not_the_pinned_one_is_refused(tmp_path):
+    fasta = tmp_path / "Toyus_plenus.fa"
+    fasta.write_text(">scaffold\nACGTACGT\n")
+    config = yaml.safe_load((REPO / "data" / "config" / "config.yaml").read_text())
+    config["root"] = {
+        f"{name}_root_folder": str(tmp_path / name)
+        for name in ("db", "data", "results", "logs")
+    }
+    config["species"] = {"Toyus_plenus": {"name": "Toyus plenus", "sha256": "0" * 64}}
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(yaml.safe_dump(config))
+
+    done = _run_script(
+        "genome_check.py",
+        ["--species", "Toyus_plenus", "--fasta", str(fasta)],
+        config_path,
+    )
+
+    assert done.returncode == 1
+    assert "not the one the config pins" in done.stderr
+    assert "0" * 64 in done.stderr

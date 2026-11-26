@@ -17,3 +17,4 @@ cite its number.
 | 002 | [Quality gate with a whole-file legacy list](ADR-002-quality-gate-legacy-list.md) | Accepted | no |
 | 003 | [MIT licence](ADR-003-mit-licence.md) | Accepted | no |
 | 004 | [Tags derived from the hit, not random](ADR-004-content-derived-tags.md) | Accepted | yes |
+| 005 | [Genomes pinned by assembly accession or checksum](ADR-005-genomes-pinned-by-assembly.md) | Accepted | no |
