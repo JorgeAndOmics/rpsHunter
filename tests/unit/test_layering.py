@@ -31,7 +31,6 @@ PURE_MODULES = (
 FORBIDDEN = frozenset(
     {
         "defaults",
-        "colored_logging",
         "subprocess",
         "os",
         "pathlib",

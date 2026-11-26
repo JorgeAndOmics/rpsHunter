@@ -16,7 +16,6 @@ dependencies:
   - hmmer=3.4
   - rpsbproc=0.5.1
   # --- analysis: Python libraries ---
-  - biopython=1.83
   - numpy=2.5.5
   - pandas=2.2.2
   - pyarrow=17.0.0
@@ -41,11 +40,9 @@ dependencies:
   - unzip=6.0
   - wget=1.25.0
   # --- configuration, command line and logging ---
-  - coloredlogs=15.0.1
   - pyyaml=6.0.3
   - r-argparse=2.3.3
   - r-yaml=2.3.12
-  - tqdm=4.67.1
   - yamale=6.1.0
   # --- development tooling (make check); never affects results ---
   - deptry=0.25.1

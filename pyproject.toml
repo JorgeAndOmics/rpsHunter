@@ -18,9 +18,6 @@ extend-exclude = [
     ".snakemake",
     "results",
     # --- legacy list (see the top of this file) ---
-    "workflow/scripts/aggregate.py",
-    "workflow/scripts/blast.py",
-    "workflow/scripts/colored_logging.py",
     "workflow/scripts/defaults.py",
 ]
 
@@ -83,7 +80,7 @@ files = ["workflow/scripts"]
 # The second alternative is the legacy list (see the top of this file).
 exclude = [
     '(^|/)tests/',
-    'workflow/scripts/(aggregate|blast|colored_logging|defaults)\.py$',
+    'workflow/scripts/(defaults)\.py$',
 ]
 enable_error_code = [
     "ignore-without-code",
@@ -93,7 +90,7 @@ enable_error_code = [
 
 # Third-party libraries without type stubs. Keep this list narrow.
 [[tool.mypy.overrides]]
-module = ["Bio.*", "pyarrow.*", "yamale.*", "snakemake.*"]
+module = ["pyarrow.*", "yamale.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -114,9 +111,6 @@ source = ["workflow/scripts"]
 branch = true
 # Coverage is measured on rewritten code only: the legacy list above, as a glob.
 omit = [
-    "workflow/scripts/aggregate.py",
-    "workflow/scripts/blast.py",
-    "workflow/scripts/colored_logging.py",
     "workflow/scripts/defaults.py",
 ]
 

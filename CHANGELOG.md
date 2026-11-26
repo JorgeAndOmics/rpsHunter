@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Every job writes lines of one shape**, `HH:MM:SS LEVEL step scope | message`, with one `OK`
+  headline per finished job and one `ERROR` line when it fails (the traceback follows in its log).
+- **Hit tables are fully typed.** `Mismatches`, `Gap Openings`, `Q. Start` and `Q. End` were stored as
+  text; a search without hits wrote a table of untyped columns. Values and Tags are unchanged.
 - **New command line** ([ADR-013](docs/adr/ADR-013-launcher-stage-table-and-guard.md)). Several stages
   run in one call and `--all` runs the analysis; flags are renamed (`--search`, `--domains`,
   `--download-queries`, `--download-databases`) and an old flag stops with its replacement;
@@ -103,6 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Dependencies no longer used: `biopython`, `tqdm`, `coloredlogs`.
 - **The ORF stage** ([ADR-011](docs/adr/ADR-011-retire-orf-gate.md)): `orf_analyser.R`, the `orf`
   config section, the `--orf-analyser` flag and the ORFik dependency. It demanded an open reading
   frame with a start codon inside every hit, and a hit covers one exon; its minimum length was

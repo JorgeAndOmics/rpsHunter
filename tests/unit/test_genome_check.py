@@ -52,7 +52,7 @@ def test_a_genome_differing_from_its_pin_fails_and_says_why(
     status = genome_check.main(["--species", "X", "--fasta", str(fasta)])
 
     assert status == 1
-    assert "not the one the config pins" in capsys.readouterr().err
+    assert "not the one the config pins" in capsys.readouterr().out
 
 
 def test_a_species_pinned_by_accession_only_gets_its_checksum_printed(

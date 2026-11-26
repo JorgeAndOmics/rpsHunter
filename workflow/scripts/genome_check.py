@@ -14,10 +14,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import logging
 import sys
 from pathlib import Path
 
 import defaults
+import log
 import species_config
 
 _BLOCK_BYTES = 1 << 20  # read in 1 MiB blocks: genomes are several gigabytes
@@ -37,18 +39,20 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("--species", required=True)
     parser.add_argument("--fasta", type=Path, required=True)
+    log.add_scope_argument(parser)
     args = parser.parse_args(argv)
+    log.job_logging("genome_check", args.scope)
 
     entry = defaults.SPECIES_ENTRIES[args.species]
     actual = file_sha256(args.fasta)
     problem = species_config.checksum_problem(args.species, entry, actual)
     if problem is not None:
-        print(problem, file=sys.stderr)
+        logging.getLogger().error(problem)
         return 1
     pinned = "matches the config" if entry.sha256 else "not pinned in the config"
-    print(f"{args.species}: sha256 {actual} ({pinned})")
+    log.ok(f"sha256 {actual} ({pinned})")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(log.run_main(main))

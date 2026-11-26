@@ -22,6 +22,7 @@ from pathlib import Path
 import defaults
 import domain_families
 import external
+import log
 
 
 def library_index(lines: Iterable[str]) -> Iterator[tuple[str, str]]:
@@ -54,12 +55,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("--library", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    log.add_scope_argument(parser)
     args = parser.parse_args(argv)
+    log.job_logging("pfam_subset", args.scope)
 
     names = build(args.library, args.output)
-    print(f"{len(names)} Pfam profiles: {', '.join(names)}")
+    log.ok(f"{len(names)} Pfam profiles: {', '.join(names)}")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(log.run_main(main))

@@ -22,6 +22,7 @@ from typing import NamedTuple
 
 import defaults
 import external
+import log
 
 
 class Tool(NamedTuple):
@@ -58,7 +59,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("--input-asn", type=Path, required=True)
     parser.add_argument("--output-txt", type=Path, required=True)
+    log.add_scope_argument(parser)
     args = parser.parse_args(argv)
+    log.job_logging("rpsbproc", args.scope)
 
     tool = Tool(
         program=defaults.RPSBPROC_CMD,
@@ -67,9 +70,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     ran = process(tool, args.input_asn, args.output_txt)
     outcome = "processed" if ran else "empty archive, empty report"
-    print(f"{args.input_asn.name}: {outcome}")
+    log.ok(outcome)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(log.run_main(main))

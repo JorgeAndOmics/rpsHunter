@@ -19,6 +19,7 @@ from pathlib import Path
 import defaults
 import domain_families
 import external
+import log
 
 
 def profile_files(accessions: list[str], smp_dir: Path) -> list[Path]:
@@ -43,7 +44,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("--smp-dir", type=Path, required=True)
     parser.add_argument("--output-db", type=Path, required=True)
+    log.add_scope_argument(parser)
     args = parser.parse_args(argv)
+    log.job_logging("cdd_subset", args.scope)
 
     accessions = domain_families.cdd_accessions(defaults.FAMILIES)
     files = profile_files(accessions, args.smp_dir)
@@ -56,9 +59,9 @@ def main(argv: list[str] | None = None) -> int:
         "-title", "rpsHunter domain families",
     ]  # fmt: skip
     external.run_tool(command, tool="makeprofiledb")
-    print(f"built {args.output_db} from {len(files)} CDD models")
+    log.ok(f"database of {len(files)} CDD models: {args.output_db}")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(log.run_main(main))

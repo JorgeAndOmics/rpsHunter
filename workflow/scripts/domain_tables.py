@@ -27,6 +27,7 @@ import pandas as pd
 import defaults
 import domain_instances
 import gff3
+import log
 import method_agreement
 
 
@@ -59,7 +60,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--hmmer-out", type=Path)
     parser.add_argument("--hmmer", type=Path, nargs="*", default=[])
     parser.add_argument("--calls", type=Path, nargs="+", required=True)
+    log.add_scope_argument(parser)
     args = parser.parse_args(argv)
+    log.job_logging("domain_tables", args.scope)
 
     calls = read_all(args.calls)
     hmmer_domains = read_all(args.hmmer)
@@ -79,11 +82,12 @@ def main(argv: list[str] | None = None) -> int:
         of_species = instances[instances["Species"] == species]
         text = "\n".join(gff3.lines(of_species)) + "\n"
         (args.gff_dir / f"{species}.gff3").write_text(text)
-    print(
-        f"{len(calls)} calls, {len(instances)} domain instances, {len(defaults.SPECIES)} GFF3 files"
+    log.ok(
+        f"{log.count(len(calls))} calls, {log.count(len(instances))} domain instances, "
+        f"{len(defaults.SPECIES)} GFF3 files"
     )
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(log.run_main(main))

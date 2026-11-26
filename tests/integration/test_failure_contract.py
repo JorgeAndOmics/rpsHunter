@@ -3,7 +3,8 @@
 Before this contract, a crashed tBLASTn or RPS-BLAST was logged and then
 replaced by an empty table, so a species whose search had failed looked exactly
 like a species with no hits. These tests run the real scripts with the search
-program swapped for one that always fails (`false`).
+program swapped for one that always fails (`false`). The failure is one ERROR line
+in the job's output, followed by the traceback for the log.
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ def _config(tmp_path: Path, failing_program: str) -> Path:
         for name in ("db", "data", "results", "logs")
     }
     config["programs"] = {failing_program: "false"}
+    config["species"] = {"Toyus_plenus": {"name": "Toyus plenus", "sha256": "0" * 64}}
     path = tmp_path / "config.yaml"
     path.write_text(yaml.safe_dump(config))
     return path
@@ -54,6 +56,12 @@ def _run_script(script: str, arguments: list[str], config: Path):
     )
 
 
+def _error_lines(output: str) -> list[str]:
+    """The ERROR lines of a job's output, without their time."""
+    lines = [line.split(" ", 1)[1] for line in output.splitlines() if " " in line]
+    return [line for line in lines if line.startswith("ERROR ")]
+
+
 def test_a_failed_tblastn_fails_the_job_and_writes_no_table(tmp_path):
     config = _config(tmp_path, "tblastn")
     query = tmp_path / "query.fa"
@@ -61,7 +69,7 @@ def test_a_failed_tblastn_fails_the_job_and_writes_no_table(tmp_path):
     table = tmp_path / "hits.parquet"
 
     done = _run_script(
-        "blast.py",
+        "tblastn.py",
         [
             "--species", "Toyus_plenus",
             "--query-file", str(query),
@@ -74,7 +82,8 @@ def test_a_failed_tblastn_fails_the_job_and_writes_no_table(tmp_path):
     )  # fmt: skip
 
     assert done.returncode != 0
-    assert "tblastn exited with status 1" in done.stderr
+    assert "tblastn exited with status 1" in done.stdout
+    assert _error_lines(done.stdout)[0].startswith("ERROR tblastn all | ToolError")
     assert not table.exists()
 
 
@@ -98,7 +107,7 @@ def test_a_failed_rpsblast_fails_the_job_and_writes_no_table(tmp_path):
     )  # fmt: skip
 
     assert done.returncode != 0
-    assert "rpsblast exited with status 1" in done.stderr
+    assert "rpsblast exited with status 1" in done.stdout
     assert not table.exists()
 
 
@@ -121,5 +130,6 @@ def test_a_genome_that_is_not_the_pinned_one_is_refused(tmp_path):
     )
 
     assert done.returncode == 1
-    assert "not the one the config pins" in done.stderr
-    assert "0" * 64 in done.stderr
+    assert "not the one the config pins" in done.stdout
+    assert "0" * 64 in done.stdout
+    assert len(_error_lines(done.stdout)) == 1

@@ -29,6 +29,7 @@ import defaults
 import domain_calls
 import domain_families
 import external
+import log
 
 RAW_COLUMNS = (
     "Tag",
@@ -253,7 +254,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--profiles", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--threads", type=int, default=1)
+    log.add_scope_argument(parser)
     args = parser.parse_args(argv)
+    log.job_logging("hmmer", args.scope)
 
     found = search(args.fasta, args.profiles, configured_settings(args.threads))
     kept = keep_substantial(
@@ -263,9 +266,11 @@ def main(argv: list[str] | None = None) -> int:
     table = describe(kept, family_of, gathering_thresholds(args.profiles.read_text()))
     table = table.assign(Species=args.species, Query_Accession=args.query_accession)
     table[list(DOMAIN_COLUMNS)].to_parquet(args.output, index=False)
-    print(f"{args.species}: {len(table)} HMMER domains ({len(found)} before filters)")
+    log.ok(
+        f"{log.count(len(table))} HMMER domains ({log.count(len(found))} before filters)"
+    )
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(log.run_main(main))

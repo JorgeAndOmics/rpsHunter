@@ -18,10 +18,7 @@ SCRIPTS = "workflow/scripts/"
 # pyproject.toml and .lintr.R as files are rewritten; nothing is ever added here.
 ORIGINAL_PYTHON = frozenset(
     {
-        "aggregate.py",
-        "blast.py",
         "cdd_subset.py",
-        "colored_logging.py",
         "concordance.py",
         "defaults.py",
         "hit_domain_inventory.py",

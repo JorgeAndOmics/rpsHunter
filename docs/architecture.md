@@ -47,7 +47,7 @@ enforces the split.
 | `tags.py` | pure | A hit's Tag: a hash of its identity, stable across runs ([ADR-004](adr/ADR-004-content-derived-tags.md)) |
 | `external.py` | I/O | Runs an external tool; a non-zero exit raises `ToolError` |
 | `genome_check.py` | script | Verifies a genome's checksum before its BLAST database is built |
-| `blast.py` | script (legacy) | tBLASTn per query and species |
+| `tblastn.py` | script | tBLASTn per query and species |
 | `hit_table.py` | pure | `Internal_Stop` |
 | `select_hits.py` | script | Quality gate; selected table, audit table, FASTA |
 | `cdd_subset.py`, `pfam_subset.py` | script | Build the families' model libraries |
@@ -59,9 +59,12 @@ enforces the split.
 | `domain_tables.py` | script | Run-level domain tables and GFF3 files |
 | `loci.py` | pure | Chain hits into loci; family evidence per locus |
 | `locus_tables.py` | script | Run-level locus tables |
-| `aggregate.py` | script (legacy) | Concatenate per-species tables |
+| `aggregate.py` | script | Concatenate per-species tables |
+| `log.py` | I/O | The one line shape every job writes |
+| `stages.py`, `guard.py` | pure | The launcher's stage table; the heavy-rule guard |
+| `preflight.py`, `launcher.py` | script | Checks before a run; the one Snakemake call |
 
-"Legacy" modules predate the quality gate and are exempt from it by name
+`defaults.py` and one shell script predate the quality gate and are still exempt from it by name
 ([ADR-002](adr/ADR-002-quality-gate-legacy-list.md)); the list only shrinks.
 
 ## Contracts
