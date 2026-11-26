@@ -57,7 +57,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--hmmer',
         action='store_true',
-        help="Runs HMMER domain filtering on BLAST hits."
+        help="Searches the selected hits with the families' Pfam profiles (independent evidence)."
     )
 
     parser.add_argument(

@@ -20,13 +20,11 @@ ORIGINAL_PYTHON = frozenset(
     {
         "aggregate.py",
         "blast.py",
-        "blast_parser.py",
         "cdd_subset.py",
         "colored_logging.py",
         "concordance.py",
         "defaults.py",
         "hit_domain_inventory.py",
-        "hmmer.py",
         "rpsHunter.py",
         "rpsblast.py",
         "rpsbproc.py",

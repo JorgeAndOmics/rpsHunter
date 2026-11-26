@@ -30,6 +30,15 @@ Compute each call's genomic start and end from its position in the translated hi
 strand, and report those as the domain's coordinates. Keep the hit's coordinates in separate columns.
 Range merging, GFF3 export and counts use the domain coordinates.
 
+### Implementation note (2026-11-27)
+
+Placing a domain from its residue range assumes residue *n* of the searched sequence lies
+3(*n*-1) bases from the hit's start. The sequences were exported with stop codons deleted, which
+breaks that for every residue after a stop (22 to 39% of gated hits in the model genomes contain
+one). Stop codons are therefore masked with `X` instead of deleted. Alignment gaps are still
+dropped: they stand for query residues with no bases in the genome. A domain can no longer be
+aligned across a deleted stop as if the sequence were continuous.
+
 ## Consequences
 
 - Positive: positions are those of the domain; overlapping-range merges stop fusing different

@@ -172,7 +172,6 @@ def validate_programs() -> bool:
         checks.update({
             'hmmsearch': check_version('hmmsearch', '-h'),
             'hmmfetch':  check_version('hmmfetch',  '-h'),
-            'hmmpress':  check_version('hmmpress',  '-h'),
         })
 
     for tool, status in checks.items():
