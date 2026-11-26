@@ -23,9 +23,7 @@ extend-exclude = [
     "workflow/scripts/blast_parser.py",
     "workflow/scripts/cdd_subset.py",
     "workflow/scripts/colored_logging.py",
-    "workflow/scripts/concordance.py",
     "workflow/scripts/defaults.py",
-    "workflow/scripts/hit_domain_inventory.py",
     "workflow/scripts/hmmer.py",
     "workflow/scripts/rpsHunter.py",
     "workflow/scripts/rpsblast.py",
@@ -93,7 +91,7 @@ files = ["workflow/scripts"]
 # The second alternative is the legacy list (see the top of this file).
 exclude = [
     '(^|/)tests/',
-    'workflow/scripts/(aggregate|blast|blast_parser|cdd_subset|colored_logging|concordance|defaults|hit_domain_inventory|hmmer|rpsHunter|rpsblast|rpsbproc|rpsbproc_parser|validator)\.py$',
+    'workflow/scripts/(aggregate|blast|blast_parser|cdd_subset|colored_logging|defaults|hmmer|rpsHunter|rpsblast|rpsbproc|rpsbproc_parser|validator)\.py$',
 ]
 enable_error_code = [
     "ignore-without-code",
@@ -129,9 +127,7 @@ omit = [
     "workflow/scripts/blast_parser.py",
     "workflow/scripts/cdd_subset.py",
     "workflow/scripts/colored_logging.py",
-    "workflow/scripts/concordance.py",
     "workflow/scripts/defaults.py",
-    "workflow/scripts/hit_domain_inventory.py",
     "workflow/scripts/hmmer.py",
     "workflow/scripts/rpsHunter.py",
     "workflow/scripts/rpsblast.py",

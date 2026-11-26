@@ -165,21 +165,6 @@ def cli_entry() -> None:
     parser.add_argument('--rpsbproc-parser', action='store_true',
                         help='Parse rpsbproc output into tabular format.')
 
-    parser.add_argument('--completeness-detector', action='store_true',
-                        help='Generate tile plot with highest-completeness degree per domain.')
-
-    parser.add_argument('--contingency-parser', action='store_true',
-                        help='Generate contingency tables and visual plots.')
-
-    parser.add_argument('--hit-domain-inventory', action='store_true',
-                        help='Generate hit–domain inventory table (BLAST hits joined with CDD domains).')
-
-    parser.add_argument('--concordance', action='store_true',
-                        help='Run multi-method concordance analysis (HMMER vs CDD agreement).')
-
-    parser.add_argument('--extended-plots', action='store_true',
-                        help='Generate extended visualization suite (7 analytical plots) from merged outputs.')
-
     parser.add_argument('--skip-validation', '-skp', action='store_true',
                         help='Skip input validation checks.')
 
@@ -287,46 +272,6 @@ def cli_entry() -> None:
     if args.rpsbproc_parser:
         run_snakemake_rule(
             rule='rpsbproc_parser',
-            num_cores=defaults.NUM_CORES,
-            display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
-            snakemake_flags=unknown
-        )
-
-    if args.completeness_detector:
-        run_snakemake_rule(
-            rule='completeness_detector',
-            num_cores=defaults.NUM_CORES,
-            display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
-            snakemake_flags=unknown
-        )
-
-    if args.contingency_parser:
-        run_snakemake_rule(
-            rule='contingency_sorter',
-            num_cores=defaults.NUM_CORES,
-            display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
-            snakemake_flags=unknown
-        )
-
-    if args.hit_domain_inventory:
-        run_snakemake_rule(
-            rule='hit_domain_inventory',
-            num_cores=defaults.NUM_CORES,
-            display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
-            snakemake_flags=unknown
-        )
-
-    if args.concordance:
-        run_snakemake_rule(
-            rule='concordance',
-            num_cores=defaults.NUM_CORES,
-            display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
-            snakemake_flags=unknown
-        )
-
-    if args.extended_plots:
-        run_snakemake_rule(
-            rule='extended_plots',
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown

@@ -52,6 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The stages downstream of domain parsing, pending their rebuild on ADR-006 to ADR-012: the
+  contingency table and GFF3 export, the hit-domain and locus inventories, the HMMER-versus-CDD
+  concordance tables, and the tile, 3D and extended plots, with their launcher flags
+  (`--completeness-detector`, `--contingency-parser`, `--hit-domain-inventory`, `--concordance`,
+  `--extended-plots`).
 - Config keys that nothing read: the `logging` section, `execution.retrieval_time_lag`,
   `execution.max_retrieval_attempts`, `display.display_requests_warning`,
   `display.display_operation_info`; and `execution.use_species_list`, whose "discover genomes from

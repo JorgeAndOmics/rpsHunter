@@ -1,5 +1,10 @@
 # Filtering Logic
 
+> **Being rebuilt.** The stages after domain parsing (contingency tables, GFF3 ranges, hit-domain
+> inventory, concordance and every figure) were removed on 2026-11-27 and are being rebuilt on the
+> decisions in [ADR-006 to ADR-012](adr/README.md). Sections below that describe them are kept for
+> reference until the new stages land and this document is rewritten.
+
 This document describes the multi-stage filtering system that refines raw BLAST hits into a curated set of sequences for domain detection. For pipeline architecture and data flow, see [architecture.md](architecture.md). For threshold parameters, see [configuration](../data/config/config.yaml).
 
 ---

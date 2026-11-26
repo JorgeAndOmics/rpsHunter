@@ -19,9 +19,6 @@ linters <- linters_with_defaults(
   object_name_linter = object_name_linter(styles = c("snake_case", "SNAKE_CASE", "symbols"))
 )
 exclusions <- list(
-  "workflow/scripts/completeness_detector.R",
-  "workflow/scripts/contingency_sorter.R",
-  "workflow/scripts/extended_plots.R",
   "workflow/scripts/merge_queries.R",
   "workflow/scripts/orf_analyser.R"
 )
