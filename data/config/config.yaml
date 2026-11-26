@@ -5,10 +5,19 @@ blast:
   bitscore: 20         # Very relaxed
 
 rpsblast:
-  e_value: 1000        # Raised to capture mouse SSXRD (rpsbproc re-scores raw hits)
+  e_value: 1           # On NCBI's scale (see databases.cdd). CD-Search's default is 0.01;
+                       # NCBI treats 0.01 to 1 as borderline and above 1 as likely false.
   comp_based_stats: 0  # Disable composition-based statistics (more sensitive)
   seg: 'no'            # Disable low-complexity filtering
   window_size: 0       # 1-hit algorithm (default: 40) - more sensitive
+
+# Reference database releases in use. `residues` is the total size of the full CDD
+# release; RPS-BLAST is told this size so that E-values match NCBI's CD-Search even
+# though only the models under `domains:` are searched.
+databases:
+  cdd:
+    version: '3.22'
+    residues: 15821058
 
 # Domain families: what to look for inside the hits. Each family is a name of your
 # choosing and the accessions of the models that count as evidence for it:

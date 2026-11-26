@@ -1,270 +1,178 @@
-"""
-    Executes RPS-BLAST searches for multiple species, processes results, and saves them to disk.
+"""Search one species' hit sequences against the families' CDD models (RPS-BLAST).
 
-    This script runs `rpsblast` on species-specific FASTA files using a shared RPS database.
-    It formats and filters results, then writes the merged output to CSV and Parquet formats.
+The database holds only the models listed under `domains:`, so the search is
+told the size of the full CDD release (`-dbsize`). E-values are then on the
+scale NCBI's CD-Search and the literature use, and do not change when the list
+of families does (ADR-006). The archive (ASN.1) is kept for rpsbproc; the same
+alignments are also written as a table, one row per alignment, with the model
+coordinates that later steps need.
+
+Usage (called by the Snakefile):
+    python rpsblast.py --species KEY --query-accession ACC --fasta-input FASTA \
+        --output-parquet TABLE --output-asn ARCHIVE --db DATABASE_PREFIX
+
+A FASTA with no sequence (nothing passed the gates for this species) gives an
+empty table and an empty archive without running the search. A search that
+fails stops the job (external.ToolError).
 """
+
+from __future__ import annotations
 
 import argparse
-import logging
+import io
+import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import NamedTuple
 
 import pandas as pd
 
 import defaults
 import external
 import tags
-from colored_logging import colored_logging
+
+QUERY_ID = "Query ID"
+
+TABLE_COLUMNS = [
+    QUERY_ID,
+    "Subject ID",
+    "Pct Identity",
+    "Alignment Length",
+    "Mismatches",
+    "Gap Openings",
+    "Q. Start",
+    "Q. End",
+    "S. Start",
+    "S. End",
+    "E-value",
+    "Bit Score",
+    "Subject Title",
+]
+"""Columns of `blast_formatter -outfmt "6 std stitle"`. Q. is the hit's translated
+sequence (residues); S. is the CDD model."""
+
+_INTEGER = (
+    "Alignment Length",
+    "Mismatches",
+    "Gap Openings",
+    "Q. Start",
+    "Q. End",
+    "S. Start",
+    "S. End",
+)
+_FLOAT = ("Pct Identity", "E-value", "Bit Score")
+_PROVENANCE = ("Species", "Species_Name", "Query_Accession")
 
 
-# -----------------------------------------------------------------------------
-# RPS-BLAST Execution Function
-# -----------------------------------------------------------------------------
+class SearchSettings(NamedTuple):
+    """The RPS-BLAST options that come from the config."""
 
-def rpsblaster(
-    command: str,
-    input_database_path: Path,
-    query_file_path: Path,
-    species: str,
-    evalue: float,
-    asn_output_dir: Path = None
-) -> Tuple[Optional[str], Optional[Path]]:
+    max_evalue: float
+    database_residues: int
+    comp_based_stats: int
+    seg: str
+    window_size: int
+
+
+def search_command(
+    program: str, database: Path, query: Path, archive: Path, settings: SearchSettings
+) -> list[str]:
+    """Return the RPS-BLAST command that writes an archive of the search."""
+    return [
+        program,
+        "-db", str(database),
+        "-query", str(query),
+        "-evalue", str(settings.max_evalue),
+        "-dbsize", str(settings.database_residues),
+        "-comp_based_stats", str(settings.comp_based_stats),
+        "-seg", settings.seg,
+        "-window_size", str(settings.window_size),
+        "-outfmt", "11",
+        "-out", str(archive),
+    ]  # fmt: skip
+
+
+def parse_table(text: str) -> pd.DataFrame:
+    """Parse tabular RPS-BLAST output into a typed table with the Tag split off.
+
+    Args:
+        text: Output of `blast_formatter -outfmt "6 std stitle"`; may be empty.
+
+    Returns:
+        TABLE_COLUMNS plus "Tag". "Query ID" no longer carries the `|tag:` suffix.
+
+    Raises:
+        ValueError: A row does not have the 13 expected fields.
     """
-    Runs an RPS-BLAST search for given sequences against a given database.
-
-        Parameters
-        ----------
-            :param command: The RPS-BLAST command to execute (e.g., 'rpsblast').
-            :param input_database_path: Path to the RPS-BLAST database.
-            :param query_file_path: Path to the species-specific FASTA query file.
-            :param species: Name of the species being processed.
-            :param evalue: E-value threshold for filtering BLAST results.
-            :param asn_output_dir: ASN output directory. Defaults to ASN_RPSBLAST_DIR.
-
-        Returns
-        -------
-            :returns: A tuple containing (BLAST output as tabular string, ASN.1 file path).
-
-        Raises
-        ------
-            :raises external.ToolError: If rpsblast or blast_formatter fails.
-    """
-    if asn_output_dir is None:
-        asn_output_dir = defaults.PATH_DICT['ASN_RPSBLAST_DIR']
-    asn_file_path: Path = asn_output_dir / f'{species}.asn'
-
-    rpsblast_command: List[str] = [
-        command,
-        '-db', str(input_database_path),
-        '-query', str(query_file_path),
-        '-evalue', str(evalue),
-        '-comp_based_stats', str(defaults.RPSBLAST_COMP_BASED_STATS),
-        '-seg', defaults.RPSBLAST_SEG,
-        '-outfmt', '11',
-        '-out', str(asn_file_path)
-    ]
-
-    if defaults.RPSBLAST_WINDOW_SIZE and defaults.RPSBLAST_WINDOW_SIZE > 0:
-        rpsblast_command[6:6] = ['-window_size', str(defaults.RPSBLAST_WINDOW_SIZE)]
-
-    # A failing tool raises external.ToolError and is not caught here: the job must
-    # fail, so that a crashed search is never mistaken for sequences without domains.
-    external.run_tool(rpsblast_command, tool='rpsblast')
-    blast_output: str = external.run_tool(
-        [defaults.BLAST_FORMATTER_CMD, '-archive', str(asn_file_path), '-outfmt', '6 std stitle'],
-        tool='blast_formatter',
+    rows = [line.split("\t") for line in io.StringIO(text).read().splitlines() if line]
+    wrong = [row for row in rows if len(row) != len(TABLE_COLUMNS)]
+    if wrong:
+        raise ValueError(
+            f"expected {len(TABLE_COLUMNS)} tab-separated fields, got {len(wrong[0])}: {wrong[0]}"
+        )
+    table = pd.DataFrame(rows, columns=TABLE_COLUMNS)
+    table = table.astype(
+        dict.fromkeys(_INTEGER, "int64") | dict.fromkeys(_FLOAT, "float64")
     )
-    return blast_output, asn_file_path
+    identifier = table[QUERY_ID].astype("object")
+    table["Tag"] = identifier.str.extract(tags.TAG_IN_IDENTIFIER, expand=False)
+    table[QUERY_ID] = identifier.str.replace(tags.TAG_IN_IDENTIFIER, "", regex=True)
+    return table
 
 
-# -----------------------------------------------------------------------------
-# RPS-BLAST Output Parser
-# -----------------------------------------------------------------------------
-
-def parse_blast_output(blast_output: str) -> pd.DataFrame:
-    """
-    Parses the RPS-BLAST tabular output into a pandas DataFrame.
-
-        Parameters
-        ----------
-            :param blast_output: String containing tab-delimited BLAST results.
-
-        Returns
-        -------
-            :returns: DataFrame containing parsed BLAST result rows.
-
-        Raises
-        ------
-            :raises ValueError: If the output format is unexpected.
-    """
-    columns: List[str] = [
-        'Query ID', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches', 'Gap Openings',
-        'Q. Start', 'Q. End', 'S. Start', 'S. End', 'E-value', 'Bit Score', 'Subject Title'
-    ]
-
-    if not blast_output:
-        return pd.DataFrame(columns=columns)
-
-    rows: List[List[str]] = [line.split('\t') for line in blast_output.strip().split('\n')]
-    df: pd.DataFrame = pd.DataFrame(rows, columns=columns)
-    return df
-
-
-# -----------------------------------------------------------------------------
-# Per-Species RPS-BLAST Processing
-# -----------------------------------------------------------------------------
-
-def process_rps_species(species: str, fasta_input_dir: Path = None, asn_output_dir: Path = None, db_override: Path = None) -> Optional[pd.DataFrame]:
-    """
-    Processes a single species FASTA file with RPS-BLAST and returns filtered results.
-
-        Parameters
-        ----------
-            :param species: Species name whose sequences will be analyzed via RPS-BLAST.
-            :param fasta_input_dir: Directory containing input FASTA files. Defaults to FASTA_OUTPUT_DIR.
-            :param asn_output_dir: ASN output directory. Defaults to ASN_RPSBLAST_DIR.
-
-        Returns
-        -------
-            :returns: DataFrame of filtered BLAST results or None if no results found.
-
-        Raises
-        ------
-            :raises FileNotFoundError: If the FASTA file does not exist.
-            :raises Exception: If any unexpected error occurs.
-    """
-    if fasta_input_dir is None:
-        fasta_input_dir = defaults.PATH_DICT['FASTA_OUTPUT_DIR']
-    if asn_output_dir is None:
-        asn_output_dir = defaults.PATH_DICT['ASN_RPSBLAST_DIR']
-
-    fasta_file_path: Path = fasta_input_dir / f'{species}.fa'
-
-    if not fasta_file_path.exists():
-        logging.warning(f'FASTA file for species {species} does not exist at {fasta_file_path}.')
-        return None
-
-    # No sequence passed the gates for this species: there is nothing to search,
-    # and the empty result is genuine. (Searching an empty FASTA makes rpsblast
-    # write an archive that blast_formatter rejects.)
-    if fasta_file_path.stat().st_size == 0:
-        logging.info(f'No sequences to search for species {species}.')
-        return None
-
-    rps_db = db_override if db_override else defaults.PATH_DICT['RPS_DB']
-    blast_output, asn_file_name = rpsblaster(
-        command=defaults.RPSBLAST_CMD,
-        input_database_path=rps_db,
-        query_file_path=fasta_file_path,
-        species=species,
-        evalue=defaults.RPSBLAST_E_VALUE,
-        asn_output_dir=asn_output_dir
+def configured_settings() -> SearchSettings:
+    """The search settings of the current config."""
+    return SearchSettings(
+        max_evalue=defaults.RPSBLAST_E_VALUE,
+        database_residues=defaults.CDD_RESIDUES,
+        comp_based_stats=defaults.RPSBLAST_COMP_BASED_STATS,
+        seg=defaults.RPSBLAST_SEG,
+        window_size=defaults.RPSBLAST_WINDOW_SIZE,
     )
 
-    if not blast_output:
-        logging.warning(f'No RPS-BLAST output for species {species}.')
-        return None
 
-    blast_df: pd.DataFrame = parse_blast_output(blast_output)
-
-    if blast_df.empty:
-        logging.warning(f'No data returned from RPS-BLAST for species {species}.')
-        return None
-
-    # Convert numeric columns, coercing errors
-    numeric_columns: List[str] = ['Pct Identity', 'E-value', 'Alignment Length', 'S. Start', 'S. End', 'Bit Score']
-    for col in numeric_columns:
-        blast_df[col] = pd.to_numeric(blast_df[col], errors='coerce')
-
-    blast_df = blast_df.dropna(subset=numeric_columns)
-    blast_df['Species'] = species
-    blast_df['Species_Name'] = defaults.SPECIES_DICT.get(species, species)
-
-    blast_df['Tag'] = blast_df['Query ID'].str.extract(tags.TAG_IN_IDENTIFIER, expand=False)
-    blast_df['Query ID'] = blast_df['Query ID'].str.replace(tags.TAG_IN_IDENTIFIER, '', regex=True)
-
-    return blast_df
+def search(fasta: Path, database: Path, archive: Path) -> pd.DataFrame:
+    """Run the search for one FASTA and return its alignment table."""
+    if fasta.stat().st_size == 0:
+        # Nothing passed the gates: a genuine empty result, known before searching.
+        # (rpsblast on an empty FASTA writes an archive blast_formatter rejects.)
+        archive.touch()
+        return parse_table("")
+    command = search_command(
+        defaults.RPSBLAST_CMD, database, fasta, archive, configured_settings()
+    )
+    external.run_tool(command, tool="rpsblast")
+    formatter = [
+        defaults.BLAST_FORMATTER_CMD,
+        "-archive",
+        str(archive),
+        "-outfmt",
+        "6 std stitle",
+    ]
+    return parse_table(external.run_tool(formatter, tool="blast_formatter"))
 
 
-# -----------------------------------------------------------------------------
-# Main Workflow
-# -----------------------------------------------------------------------------
+def main(argv: list[str] | None = None) -> int:
+    """Command-line entry point; returns the process exit status."""
+    parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    parser.add_argument("--species", required=True)
+    parser.add_argument("--query-accession", required=True)
+    parser.add_argument("--fasta-input", type=Path, required=True)
+    parser.add_argument("--output-parquet", type=Path, required=True)
+    parser.add_argument("--output-asn", type=Path, required=True)
+    parser.add_argument("--db", type=Path, required=True)
+    args = parser.parse_args(argv)
 
-def main() -> None:
-    """
-    Executes RPS-BLAST for a single species and writes per-species output.
-    """
-    colored_logging(log_file_name='rpsblast.txt')
-
-    parser = argparse.ArgumentParser(description='Run RPS-BLAST for a single species.')
-    parser.add_argument('--species', type=str, required=True,
-                        help='Species name to process.')
-    parser.add_argument('--query-accession', type=str, default='',
-                        help='Query accession ID for provenance tracking.')
-    parser.add_argument('--fasta-input', type=str, default=None,
-                        help='Path to input FASTA file (default: from config).')
-    parser.add_argument('--output-parquet', type=str, default=None,
-                        help='Output parquet path.')
-    parser.add_argument('--output-asn', type=str, default=None,
-                        help='Output ASN path.')
-    parser.add_argument('--db', type=str, default=None,
-                        help='Path to RPS-BLAST database (default: full CDD).')
-    args = parser.parse_args()
-
-    db_path = Path(args.db) if args.db else None
-
-    # Resolve input/output paths
-    if args.fasta_input:
-        fasta_dir = Path(args.fasta_input).parent
-        # Override the fasta filename to match what process_rps_species expects
-        fasta_input_dir = fasta_dir
-    else:
-        fasta_input_dir = None
-
-    if args.output_asn:
-        asn_dir = Path(args.output_asn).parent
-    else:
-        asn_dir = None
-
-    result_df = process_rps_species(args.species, fasta_input_dir=fasta_input_dir,
-                                    asn_output_dir=asn_dir, db_override=db_path)
-
-    # Add Query_Accession if provided
-    if result_df is not None and not result_df.empty:
-        result_df['Query_Accession'] = args.query_accession
-
-    # Resolve output paths
-    if args.output_parquet:
-        parquet_path = Path(args.output_parquet)
-    else:
-        parquet_path = defaults.PATH_DICT['RPSBLAST_SPECIES_DIR'] / f'{args.species}.parquet'
-
-    if args.output_asn:
-        asn_path = Path(args.output_asn)
-    else:
-        asn_path = defaults.PATH_DICT['ASN_RPSBLAST_DIR'] / f'{args.species}.asn'
+    table = search(args.fasta_input, args.db, args.output_asn)
+    table["Species"] = args.species
+    table["Species_Name"] = defaults.SPECIES_DICT[args.species]
+    table["Query_Accession"] = args.query_accession
+    table = table[[*TABLE_COLUMNS, "Species", "Species_Name", "Tag", "Query_Accession"]]
+    table.to_parquet(args.output_parquet, index=False)
+    print(
+        f"{args.species}: {len(table)} alignments at E <= {defaults.RPSBLAST_E_VALUE}"
+    )
+    return 0
 
 
-    if result_df is not None and not result_df.empty:
-        result_df.to_parquet(parquet_path, index=False)
-        logging.info(f'Saved {len(result_df)} rows for {args.species}')
-    else:
-        # Write an empty parquet with the correct schema so downstream rules don't crash.
-        empty_columns = [
-            'Query ID', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches',
-            'Gap Openings', 'Q. Start', 'Q. End', 'S. Start', 'S. End', 'E-value',
-            'Bit Score', 'Subject Title', 'Species', 'Species_Name', 'Query_Accession', 'Tag'
-        ]
-        pd.DataFrame(columns=empty_columns).to_parquet(parquet_path, index=False)
-        # Touch the ASN file so rpsbproc_species input is satisfied.
-        asn_path.touch()
-        logging.warning(f'No RPS-BLAST results for {args.species} — empty outputs written.')
-
-
-# -----------------------------------------------------------------------------
-# Entry Point
-# -----------------------------------------------------------------------------
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    sys.exit(main())

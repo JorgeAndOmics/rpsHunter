@@ -44,7 +44,11 @@ BITSCORE_THRESHOLD: int = config['blast'].get('bitscore', 70)
 ACCESSION_ID_REGEX: str = r'[A-Z]{2,}_?[0-9]+\.[0-9]{1,2}'
 
 # RPSBLAST - Maximum sensitivity settings for short domain detection
-RPSBLAST_E_VALUE: float = config.get('rpsblast', {}).get('e_value', 10)
+# RPS-BLAST. E-values are on the scale of the full CDD release (ADR-006): the search
+# is told that release's size, CDD_RESIDUES, because the database it runs against
+# holds only the configured families' models.
+RPSBLAST_E_VALUE: float = config.get('rpsblast', {}).get('e_value', 1)
+CDD_RESIDUES: int = config['databases']['cdd']['residues']
 RPSBLAST_COMP_BASED_STATS: int = config.get('rpsblast', {}).get('comp_based_stats', 0)
 RPSBLAST_SEG: str = config.get('rpsblast', {}).get('seg', 'no')
 RPSBLAST_WINDOW_SIZE: int = config.get('rpsblast', {}).get('window_size', 40)

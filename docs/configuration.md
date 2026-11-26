@@ -39,10 +39,17 @@ Controls the RPSBLAST search against the NCBI Conserved Domain Database (CDD). T
 
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|
-| `e_value` | `float` | `10` | `num(min=0)` | Maximum E-value for RPSBLAST hits. Higher values capture borderline domain hits (e.g., SET at E~1.03). |
+| `e_value` | `float` | `1` | `num(min=0)` | Highest E-value kept, on NCBI's scale (the search is told the size of the full CDD, see `databases`). CD-Search's default is 0.01; NCBI treats 0.01 to 1 as borderline and 1 and above as putative false positives. Each call reports its tier in the `Evidence` column: `standard` (at most 0.01), `borderline` (up to 1) or `rescue` (above 1, only present if this value is raised). The same cut-off is given to rpsbproc. See [ADR-006](adr/ADR-006-rpsblast-evalue-scale-and-cutoff.md). |
 | `comp_based_stats` | `int` | `0` | `int(min=0, max=4)` | Composition-based statistics mode. `0` disables (more sensitive); `1`-`4` enable progressive correction. See BLAST+ documentation. |
 | `seg` | `str` | `'no'` | `str(matches='^(yes\|no)$')` | SEG low-complexity filtering. `'no'` disables, allowing short/repetitive domains through. `'yes'` masks low-complexity regions. |
 | `window_size` | `int` | `40` | `int(min=0)`, optional | Window size for multi-hit algorithm. `0` switches to single-hit mode (more sensitive, slower). Omit or set to `40` for default behavior. |
+
+### `databases` -- Reference Database Releases
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `cdd.version` | `str` | yes | CDD release the models come from, for the record (for example `'3.22'`). |
+| `cdd.residues` | `int` | yes | Total residues of that full CDD release (`15821058` for 3.22; `blastdbcmd -db Cdd -info` prints it). Passed to RPS-BLAST as `-dbsize`. The search runs against the configured families' models only, and an E-value depends on database size: without this, the same alignment would score about a thousand times better than in NCBI's CD-Search, and its E-value would change whenever a family was added or removed. |
 
 ### `domains` -- Domain Families
 

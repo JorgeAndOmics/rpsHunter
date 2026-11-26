@@ -18,6 +18,7 @@ import pandas as pd
 
 import defaults
 import colored_logging
+import domain_calls
 import domain_families
 import tags
 
@@ -221,6 +222,10 @@ def parse_rpsbproc_output(
     df = pd.DataFrame(domain_hits, columns=fieldnames)
     df['Tag'] = df['Definition'].str.extract(tags.TAG_IN_IDENTIFIER, expand=False)
     df['Family'] = family_of_each_call(df['Accession'])
+    # Strength of evidence on NCBI's scale; empty for a sequence without any call.
+    df['Evidence'] = df['Evalue'].map(
+        lambda value: domain_calls.evidence_tier(float(value)) if value != '' else ''
+    )
     df.to_parquet(output_parquet, index=False)
     logging.info(f'Parquet output written to {output_parquet} ({len(domain_hits)} domain hits)')
 
