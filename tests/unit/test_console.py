@@ -172,7 +172,7 @@ def test_the_banner_says_what_runs_with_what():
 
     screen.banner(
         version="0.9.0",
-        config=Path("/work/config.yaml"),
+        config="/work/config.yaml",
         cores=16,
         flags=["--search", "--loci"],
     )

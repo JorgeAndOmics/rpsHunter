@@ -4,8 +4,7 @@ databases: include('databases_schema')
 domains: map(include('family_schema'), key=str())
 hmmer: include('hmmer_schema')
 programs: include('programs_schema', required=False)
-query: include('query_schema', required=False)
-queries: map(str(), key=str(), required=False)
+queries: map(str(), key=str())
 execution: include('execution_schema')
 display: include('display_schema', required=False)
 root: include('root_schema')
@@ -50,10 +49,6 @@ hmmer_schema:
   max_sensitivity: bool()
   bias_filter: bool()
   seed: int(min=0)
-
-query_schema:
-  format: str()
-  accession: str(matches='[A-Z]{2,}_?[0-9]+\\.[0-9]{1,2}')
 
 execution_schema:
   num_cores: int(min=1)

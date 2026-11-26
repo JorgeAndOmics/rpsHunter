@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Query proteins are fetched exactly.** `--download-queries` takes the versioned accession from the
+  config and checks that NCBI returned that record; it no longer falls back to a search by name and
+  the first match. Each download is recorded with its checksum.
 - **A run is shown, not dumped.** The launcher prints a banner, one line per finished job, a
   progress line on a terminal and a summary naming any failed rule and its log;
   `--verbosity` / `display.verbosity` (`quiet`, `normal`, `verbose`) replaces
@@ -112,6 +115,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The single-query config form `query: {format, accession}`. Use `queries:`, which also takes one
+  query; a config still using `query:` stops with that advice. Two queries with the same label
+  are now refused instead of silently overwriting each other's folders.
 - Dependencies no longer used: `biopython`, `tqdm`, `coloredlogs`.
 - **The ORF stage** ([ADR-011](docs/adr/ADR-011-retire-orf-gate.md)): `orf_analyser.R`, the `orf`
   config section, the `--orf-analyser` flag and the ORFik dependency. It demanded an open reading

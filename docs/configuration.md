@@ -129,18 +129,9 @@ Override BLAST+ and related program binary names. This entire section is optiona
 | `rpsbproc` | `str` | `'rpsbproc'` | `str()`, optional | Binary name for rpsbproc post-processor. |
 | `makeprofiledb` | `str` | `'makeprofiledb'` | `str()`, optional | Binary name for makeprofiledb (CDD subset construction). |
 
-### `query` -- Query Protein (single query)
+### `queries` -- Query Proteins
 
-Specifies a single query protein sequence used for tBLASTn homology searching. This is the backward-compatible format. See also `queries` below for multi-query support.
-
-| Parameter | Type | Default | Validation | Description |
-|-----------|------|---------|------------|-------------|
-| `format` | `str` | `'fa'` | `str()` | File format extension for the query sequence file (e.g., `'fa'`, `'fasta'`). |
-| `accession` | `str` | -- | `str(matches='[A-Z]{2,}_?[0-9]+\.[0-9]{1,2}')` | NCBI protein accession with version number. Must match the pattern `XX_123456.1` or `XXX123456.1`. Example: `'NP_064612.2'`. |
-
-### `queries` -- Multi-Query Proteins
-
-A YAML mapping of NCBI protein accessions to display labels. Each query runs the full pipeline independently (tBLASTn through domain detection), and results are merged with cross-query domain deduplication at the end.
+The proteins to search the genomes with: NCBI protein accessions, each with a label of your choice.
 
 ```yaml
 queries:
@@ -148,16 +139,14 @@ queries:
   'NP_659058.3': 'mouse PRDM9'
 ```
 
-**Validation:** `map(str(), key=str(), required=False)` -- any number of string key-value pairs.
+- **Key:** NCBI protein accession with its version. It is what `--download-queries` fetches, the
+  name of the FASTA under `data/input/fastas/`, and the `Query_Accession` column of every table.
+- **Value:** A label. It names the query's folders under the results and appears in every job's
+  log line; spaces and slashes become underscores (`human_PRDM9`). Two queries may not share one.
 
-- **Key:** NCBI protein accession (used for Entrez download and `Query_Accession` column in outputs)
-- **Value:** Display label (used for plot titles; filesystem-safe version used for directory names, e.g., `human_PRDM9`)
-
-When `queries` is present, it takes precedence over `query`. Both formats are supported for backward compatibility. The pipeline normalizes both to an internal `QUERY_DICT: Dict[str, str]`.
-
-**Output directory structure:** Per-query intermediate files are stored under `{query_label}/` subdirectories (e.g., `results/blast/human_PRDM9/`). Aggregate tables are organized by stage under `results/tables/` (e.g., `results/tables/blast/`, `results/tables/domains/`). Merged outputs (cross-query deduplicated) are written at the root of each stage subdirectory (e.g., `results/tables/domains/domains.parquet`).
-
-**Deduplication:** After all queries complete, `merge_queries.R` merges overlapping domain annotations across queries using GenomicRanges. The `Query_Accession` column in merged outputs lists all contributing query accessions (comma-separated).
+Each query is searched on its own. Domains found through several queries are counted once in
+`tables/domains/domains.*`, and loci are built from the hits of all queries together. See
+[filtering.md](filtering.md) for how the choice of queries shapes what is found.
 
 ### `execution` -- Runtime Parameters
 
@@ -272,23 +261,16 @@ loci:
   gap: 50000        # chain exons up to 50 kb apart; tandem copies closer than this will fuse
 ```
 
-### Multi-Query for Divergent Species
+### Several Queries for Divergent Species
 
-When analyzing distantly related species (e.g., bats and mice, ~85-90 MY divergence), a single query protein may miss divergent domains. Using multiple query proteins from different species increases sensitivity for detecting all domain families.
+One query protein may miss diverged copies in a distant species. Listing orthologs from several
+species raises sensitivity; what each query found stays visible in the `Queries` column.
 
 ```yaml
-# Multi-query: each query runs the full pipeline independently
 queries:
   'NP_064612.2': 'human PRDM9'
   'NP_659058.3': 'mouse PRDM9'
-
-# query: section is ignored when queries: is present
-# query:
-#   format: 'fa'
-#   accession: 'NP_659058.3'
 ```
-
-The pipeline creates per-query subdirectories for all intermediate files, then merges domain annotations across queries with overlap-based deduplication. The merged output's `Query_Accession` column lists all contributing accessions (comma-separated) for each domain annotation.
 
 ### Minimal Configuration for a New Species
 

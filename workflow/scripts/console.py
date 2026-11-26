@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Mapping, Sequence
-from pathlib import Path
 from typing import NamedTuple
 
 import log
@@ -128,7 +127,7 @@ class Console:
         return self._level >= VERBOSITIES.index(least)
 
     def banner(
-        self, version: str, config: Path, cores: int, flags: Sequence[str]
+        self, version: str, config: str, cores: int, flags: Sequence[str]
     ) -> None:
         """Say what is about to run."""
         self._show(

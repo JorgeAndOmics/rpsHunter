@@ -26,6 +26,10 @@ PURE_MODULES = (
     "loci",
     "hit_table",
     "method_agreement",
+    "query_config",
+    "stages",
+    "guard",
+    "console",
 )
 
 FORBIDDEN = frozenset(

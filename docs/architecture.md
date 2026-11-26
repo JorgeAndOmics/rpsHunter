@@ -64,8 +64,8 @@ enforces the split.
 | `stages.py`, `guard.py` | pure | The launcher's stage table; the heavy-rule guard |
 | `preflight.py`, `launcher.py` | script | Checks before a run; the one Snakemake call |
 
-`defaults.py` and one shell script predate the quality gate and are still exempt from it by name
-([ADR-002](adr/ADR-002-quality-gate-legacy-list.md)); the list only shrinks.
+Every script is under the quality gate. The list of files exempt by name
+([ADR-002](adr/ADR-002-quality-gate-legacy-list.md)) reached zero on 2026-11-27 and a test keeps it there.
 
 ## Contracts
 

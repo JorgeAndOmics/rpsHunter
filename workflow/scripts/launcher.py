@@ -212,7 +212,9 @@ def _launch(request: stages.Request, environment: dict[str, str], tools: Tools) 
         return 0
     settings = _settings(config)
     screen = _screen(request, settings)
-    screen.banner(version(), config, cores, [stage.flag for stage in request.stages])
+    screen.banner(
+        version(), str(config), cores, [stage.flag for stage in request.stages]
+    )
     return _execute(command, environment, screen, _run_log(settings), tools)
 
 
