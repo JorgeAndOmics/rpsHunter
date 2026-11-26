@@ -107,7 +107,14 @@ For each locus and family, `tables/loci/locus_families.*` gives:
 - `Coverage`: the largest fraction of any one model covered when the locus's calls are laid on the
   model's own coordinates. A SET domain split over three exons, each piece "incomplete", adds up
   to a coverage near 1 ([ADR-009](adr/ADR-009-completeness-across-exons.md));
-- `Copies`: the largest number of separate places one model occurs at (the size of a repeat array).
+- `Copies`: the largest number of separate places one model occurs at. For a repeat family this is
+  the size of the array. A domain split across exons counts once per exon piece, so read `Copies`
+  together with `Coverage`.
+
+Tandem gene copies whose hits lie closer than the gap are chained into one locus: `Coverage` then
+describes the copies together, and a high `Copies` for a family that is not a repeat is the sign of
+it. On the model genomes this happens once (four neighbouring PRDM9-like genes in *Desmodus
+rotundus*).
 
 A locus lists the families it carries and gives no verdict of "complete": which families make a
 whole gene depends on the protein family studied. A locus of chance hits is listed too; it carries
