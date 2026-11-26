@@ -18,12 +18,39 @@ import pandas as pd
 
 import defaults
 import colored_logging
+import domain_families
 import tags
 
 
 # -----------------------------------------------------------------------------
 # PARSE RPSBPROC OUTPUT FUNCTION
 # -----------------------------------------------------------------------------
+
+def family_of_each_call(accessions: pd.Series) -> pd.Series:
+    """Family of each call, from the accession of the model or superfamily it reports.
+
+    Superfamily-level calls carry a cluster accession; CDD's family_superfamily_links
+    says which configured models belong to each cluster. A sequence without any call
+    has an empty accession and gets an empty family. An accession that belongs to no
+    configured family means the search database and the config disagree, and is an error.
+    """
+    links = defaults.PATH_DICT['RPSBPROC_DB'] / 'family_superfamily_links'
+    superfamily_of = {}
+    with open(links) as handle:
+        for line in handle:
+            fields = line.rstrip('\n').split('\t')
+            if len(fields) >= 3:
+                superfamily_of[fields[0]] = fields[2]
+    by_accession = {
+        '': '',
+        **domain_families.family_by_cdd(defaults.FAMILIES),
+        **domain_families.family_by_superfamily(defaults.FAMILIES, superfamily_of),
+    }
+    unknown = sorted(set(accessions) - set(by_accession))
+    if unknown:
+        raise ValueError(f"calls for models that belong to no family under 'domains:': {unknown}")
+    return accessions.map(by_accession)
+
 
 def parse_rpsbproc_output(
     files: List[Path],
@@ -193,6 +220,7 @@ def parse_rpsbproc_output(
     # -------------------------------------------------------------------------
     df = pd.DataFrame(domain_hits, columns=fieldnames)
     df['Tag'] = df['Definition'].str.extract(tags.TAG_IN_IDENTIFIER, expand=False)
+    df['Family'] = family_of_each_call(df['Accession'])
     df.to_parquet(output_parquet, index=False)
     logging.info(f'Parquet output written to {output_parquet} ({len(domain_hits)} domain hits)')
 

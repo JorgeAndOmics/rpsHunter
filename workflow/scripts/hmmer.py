@@ -24,6 +24,7 @@ from pathlib import Path
 import pandas as pd
 
 import defaults
+import domain_families
 from colored_logging import colored_logging
 
 
@@ -44,10 +45,29 @@ def df_to_fasta(df: pd.DataFrame, fasta_path: Path) -> None:
 # Profile extraction (hmmfetch subset)
 # -----------------------------------------------------------------------------
 
+def configured_profile_names(full_hmm: Path) -> list:
+    """Names, in the HMM library, of the Pfam accessions listed under `domains:`.
+
+    The config gives accessions without version (PF01352); hmmfetch wants names.
+    The library's NAME and ACC lines are read once to translate.
+    """
+    def library():
+        name = None
+        with open(full_hmm) as handle:
+            for line in handle:
+                if line.startswith('NAME'):
+                    name = line.split()[1]
+                elif line.startswith('ACC'):
+                    yield name, line.split()[1]
+
+    names = domain_families.pfam_profile_names(defaults.FAMILIES, library())
+    return list(names.values())
+
+
 def extract_profiles(full_hmm: Path, domains: list, subset_hmm: Path) -> None:
     """Extract a subset of HMM profiles from a pressed database using hmmfetch.
 
-    domains are Pfam NAMEs (e.g. 'zf-C2H2').  Existence is validated against
+    domains are Pfam profile NAMEs.  Existence is validated against
     the flat file before fetching; a missing name raises early with an
     explicit error.
 
@@ -161,7 +181,7 @@ def parse_domtbl(domtbl_path: Path) -> pd.DataFrame:
             rows.append({
                 'target_name': parts[0],
                 'target_len': int(parts[2]),
-                'query_name': parts[3],       # Pfam domain NAME (e.g. zf-C2H2)
+                'query_name': parts[3],       # Pfam profile NAME
                 'evalue': float(parts[12]),   # per-domain i-evalue
                 'score': float(parts[13]),    # per-domain score
                 'from': int(parts[17]),       # ali from (alignment start on target)
@@ -266,11 +286,12 @@ def main():
 
     # Extract-only mode: build subset HMM and exit
     if args.extract_only:
-        if not defaults.HMMER_PROFILES:
-            raise RuntimeError('--extract-only requires hmmer.profiles to be set in config.')
+        if not defaults.PFAM_ACCESSIONS:
+            raise RuntimeError("--extract-only requires Pfam accessions under 'domains:' in the config.")
         subset_path = Path(args.output_parquet)  # repurposed as subset HMM output
-        extract_profiles(Path(args.pfam_hmm), defaults.HMMER_PROFILES, subset_path)
-        logging.info(f'Extracted {len(defaults.HMMER_PROFILES)} profiles → {subset_path}')
+        names = configured_profile_names(Path(args.pfam_hmm))
+        extract_profiles(Path(args.pfam_hmm), names, subset_path)
+        logging.info(f'Extracted {len(names)} profiles → {subset_path}')
         return
 
     blast_df = pd.read_parquet(args.input_parquet)
@@ -299,10 +320,12 @@ def main():
                 if args.hmm_db:
                     # Pre-built subset provided by Snakefile rule
                     hmm_to_search = Path(args.hmm_db)
-                elif defaults.HMMER_PROFILES:
+                elif defaults.PFAM_ACCESSIONS:
                     # Legacy per-species extraction (fallback)
                     subset_hmm = Path(tmpdir) / 'subset.hmm'
-                    extract_profiles(Path(args.pfam_hmm), defaults.HMMER_PROFILES, subset_hmm)
+                    extract_profiles(
+                        Path(args.pfam_hmm), configured_profile_names(Path(args.pfam_hmm)), subset_hmm
+                    )
                     hmm_to_search = subset_hmm
                 else:
                     hmm_to_search = Path(args.pfam_hmm)

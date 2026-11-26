@@ -37,7 +37,17 @@ SPECIES = {
     "Toyus_fractus": "Toyus fractus",
     "Toyus_vacuus": "Toyus vacuus",
 }
-TARGET_DOMAINS = ["KRAB", "SSXRD", "PR-SET", "SET", "zf-C2H2", "zf-H2C2", "ZMS1"]
+# The families the toy run looks for, by the accessions of the mini database.
+DOMAINS = {
+    "KRAB": {"cdd": ["pfam01352"], "pfam": ["PF01352"]},
+    "SSXRD": {"cdd": ["pfam09514"], "pfam": ["PF09514"]},
+    "SET": {"cdd": ["cd19193", "cd08161"], "pfam": ["PF00856"]},
+    "zinc_fingers": {
+        "cdd": ["pfam00096", "pfam13465", "COG5048"],
+        "pfam": ["PF00096"],
+        "repeat": True,
+    },
+}
 
 # Domain names (CDD short names) that count as evidence for each family.
 FAMILY_MODELS = {
@@ -96,7 +106,7 @@ def _write_config(work: Path) -> Path:
     config = yaml.safe_load((REPO / "data" / "config" / "config.yaml").read_text())
     config["queries"] = QUERIES
     config["species"] = _species_block(work / "db")
-    config["rpsblast"]["target_domains"] = TARGET_DOMAINS
+    config["domains"] = DOMAINS
     config["execution"]["num_cores"] = 2
     config["root"] = {
         "db_root_folder": str(work / "db"),
@@ -326,6 +336,18 @@ def test_an_unchanged_config_schedules_no_search_or_gate_job(toy_run: ToyRun):
 
     assert not _scheduled(plan, "blast_species")
     assert not _scheduled(plan, "blast_parser_species")
+
+
+def test_every_call_carries_the_family_of_its_model(toy_run: ToyRun):
+    path = toy_run.results / "domains" / "Human_PRDM9" / "Toyus_plenus.parquet"
+    calls = pd.read_parquet(path)
+    calls = calls[calls["Accession"] != ""]
+
+    assert not calls.empty
+    assert set(calls["Family"]) <= set(DOMAINS)
+    by_model = calls.drop_duplicates("Accession").set_index("Accession")["Family"]
+    assert by_model["pfam09514"] == "SSXRD"
+    assert by_model["cd19193"] == "SET"
 
 
 # --- behaviour that should hold and does not yet ------------------------------

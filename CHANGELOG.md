@@ -39,6 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The config key `execution.random_id_length` is removed.
 - License is MIT ([ADR-003](docs/adr/ADR-003-mit-licence.md)). The `LICENSE` file previously held
   the GPL v2 text while the README said MIT.
+- **Domain families are defined by accession** ([ADR-012](docs/adr/ADR-012-domain-families-by-accession.md)):
+  one `domains:` block lists, per family, the CDD and Pfam accessions that evidence it, replacing
+  `rpsblast.target_domains` and `hmmer.profiles` (lists of names, one of which CDD had renamed).
+  The RPS-BLAST database is built from exactly those models; domain tables gain a `Family` column.
+  The example now searches 12 CDD models instead of the 121 the name rule selected, and includes
+  the PRDM9-specific SET model that the rule missed.
 - **Species entries name their genome** ([ADR-005](docs/adr/ADR-005-genomes-pinned-by-assembly.md)):
   each species is `name:` plus a versioned `assembly:` accession and/or a `sha256:` of its FASTA.
   The genome downloader fetches exactly that assembly; taxon names and "latest" are gone. The

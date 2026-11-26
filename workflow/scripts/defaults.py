@@ -24,6 +24,7 @@ from typing import Dict, Any, List
 
 import yaml
 
+import domain_families
 import species_config
 
 # Configuration file path. RPSHUNTER_CONFIG selects another complete config (for
@@ -47,7 +48,10 @@ RPSBLAST_E_VALUE: float = config.get('rpsblast', {}).get('e_value', 10)
 RPSBLAST_COMP_BASED_STATS: int = config.get('rpsblast', {}).get('comp_based_stats', 0)
 RPSBLAST_SEG: str = config.get('rpsblast', {}).get('seg', 'no')
 RPSBLAST_WINDOW_SIZE: int = config.get('rpsblast', {}).get('window_size', 40)
-RPSBLAST_TARGET_DOMAINS: List[str] = config.get('rpsblast', {}).get('target_domains', [])
+
+# Domain families: which CDD and Pfam models evidence which family (domain_families.py).
+FAMILIES: Dict[str, domain_families.Family] = domain_families.parse_families(config.get('domains'))
+PFAM_ACCESSIONS: List[str] = list(domain_families.family_by_pfam(FAMILIES))
 
 # Directories - using pathlib.Path
 PATH_DICT: Dict[str, Path] = {
@@ -114,7 +118,7 @@ def _make_label_safe(label: str) -> str:
 def _query_dict(queries: Any, query: Any) -> Dict[str, str]:
     """Return {accession: display label} from either config form."""
     if queries and isinstance(queries, dict):
-        # Multi-query format: queries: {'NP_064612.2': 'human PRDM9', ...}
+        # Multi-query format: queries: {'NP_000000.1': 'display label', ...}
         return dict(queries)
     if query and isinstance(query, dict):
         # Legacy single-query format: query: {format: 'fa', accession: 'NP_659058.3'}
@@ -205,7 +209,6 @@ MIN_ORF_LENGTH: int = config.get('orf', {}).get('min_orf_length', 200)
 
 # === HMMER Configuration ===
 HMMER_ENABLED: bool       = config.get('hmmer', {}).get('enabled', False)
-HMMER_PROFILES: List[str] = config.get('hmmer', {}).get('profiles', [])
 HMMER_USE_GA: bool        = config.get('hmmer', {}).get('use_gathering_threshold', False)
 HMMER_EVALUE: float       = config.get('hmmer', {}).get('evalue', 1e-5)
 HMMER_DOM_EVALUE: float   = config.get('hmmer', {}).get('dom_evalue', 1e-3)
@@ -238,68 +241,3 @@ SPECIES_ENTRIES: Dict[str, species_config.SpeciesEntry] = species_config.parse_s
 )
 SPECIES_DICT: Dict[str, str] = {key: entry.name for key, entry in SPECIES_ENTRIES.items()}
 SPECIES: List[str] = list(SPECIES_ENTRIES)
-
-
-# =============================================================================
-# CDD Subset Resolution
-# =============================================================================
-
-def resolve_cdd_targets(target_domains: List[str], cddid_path: Path) -> List[str]:
-    """Resolve target domain names to CDD accessions via cddid.tbl.
-
-    Matching rules (mirror HMMER prefix convention):
-      - Exact match on ShortName column
-      - Prefix + underscore: 'KRAB' matches 'KRAB_A-box', 'zf-C2H2' matches 'zf-C2H2_2', etc.
-
-    Parameters
-    ----------
-    target_domains : list of str
-        Domain ShortNames from config (e.g. ['KRAB', 'SET', 'zf-C2H2']).
-    cddid_path : Path
-        Path to cddid.tbl (tab-delimited: PSSM_ID, Accession, ShortName, Description, Length).
-
-    Returns
-    -------
-    list of str
-        Matched CDD accessions (e.g. ['pfam01352', 'cd07765', ...]).
-
-    Raises
-    ------
-    RuntimeError
-        If any target domain has zero matches in cddid.tbl.
-    """
-    import re
-
-    # Build regex patterns: exact match OR prefix with '_'
-    patterns = []
-    for name in target_domains:
-        escaped = re.escape(name)
-        patterns.append(f'^{escaped}$|^{escaped}_')
-    combined = re.compile('|'.join(f'(?:{p})' for p in patterns))
-
-    matched_accessions = []
-    matched_names = set()
-
-    with open(cddid_path, 'r') as fh:
-        for line in fh:
-            parts = line.rstrip('\n').split('\t')
-            if len(parts) < 3:
-                continue
-            accession, short_name = parts[1], parts[2]
-            if combined.search(short_name):
-                matched_accessions.append(accession)
-                matched_names.add(short_name)
-
-    # Verify every requested domain had at least one match
-    unmatched = []
-    for name in target_domains:
-        escaped = re.escape(name)
-        pat = re.compile(f'^{escaped}$|^{escaped}_')
-        if not any(pat.search(n) for n in matched_names):
-            unmatched.append(name)
-    if unmatched:
-        raise RuntimeError(
-            f'CDD target domain(s) not found in {cddid_path}: {unmatched}'
-        )
-
-    return matched_accessions

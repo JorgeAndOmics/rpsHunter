@@ -166,8 +166,7 @@ def validate_programs() -> bool:
         'Datasets': check_version('datasets', '--version')
     }
 
-    if defaults.RPSBLAST_TARGET_DOMAINS:
-        checks['makeprofiledb'] = check_version(defaults.MAKEPROFILEDB_CMD, '-version')
+    checks['makeprofiledb'] = check_version(defaults.MAKEPROFILEDB_CMD, '-version')
 
     if defaults.HMMER_ENABLED:
         checks.update({
