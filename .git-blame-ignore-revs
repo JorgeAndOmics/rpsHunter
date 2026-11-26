@@ -1,0 +1,3 @@
+# Commits that only reformat; ignored by: git blame --ignore-revs-file .git-blame-ignore-revs
+# style: normalise line endings to LF
+216aead37a6a25ea2b3aac541e9585c8c240cc22
