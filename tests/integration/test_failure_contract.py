@@ -1,0 +1,102 @@
+"""A search tool that fails must fail the job, not produce an empty result.
+
+Before this contract, a crashed tBLASTn or RPS-BLAST was logged and then
+replaced by an empty table, so a species whose search had failed looked exactly
+like a species with no hits. These tests run the real scripts with the search
+program swapped for one that always fails (`false`).
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+import yaml
+
+pytestmark = pytest.mark.integration
+
+REPO = Path(__file__).resolve().parents[2]
+SCRIPTS = REPO / "workflow" / "scripts"
+
+
+def _config(tmp_path: Path, failing_program: str) -> Path:
+    """Write the shipped config with tmp roots and one program replaced by `false`."""
+    config = yaml.safe_load((REPO / "data" / "config" / "config.yaml").read_text())
+    config["root"] = {
+        f"{name}_root_folder": str(tmp_path / name)
+        for name in ("db", "data", "results", "logs")
+    }
+    config["programs"] = {failing_program: "false"}
+    path = tmp_path / "config.yaml"
+    path.write_text(yaml.safe_dump(config))
+    return path
+
+
+def _run_script(script: str, arguments: list[str], config: Path):
+    """Run a pipeline script as Snakemake would, after creating the output tree."""
+    environment = {**os.environ, "RPSHUNTER_CONFIG": str(config)}
+    subprocess.run(
+        [sys.executable, "-c", "import defaults; defaults.ensure_dirs()"],
+        cwd=SCRIPTS,
+        env=environment,
+        check=True,
+    )
+    return subprocess.run(
+        [sys.executable, str(SCRIPTS / script), *arguments],
+        cwd=REPO / "workflow",
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_a_failed_tblastn_fails_the_job_and_writes_no_table(tmp_path):
+    config = _config(tmp_path, "tblastn")
+    query = tmp_path / "query.fa"
+    query.write_text(">q\nMKV\n")
+    table = tmp_path / "hits.parquet"
+
+    done = _run_script(
+        "blast.py",
+        [
+            "--species", "Toyus_plenus",
+            "--query-file", str(query),
+            "--query-accession", "q",
+            "--output-parquet", str(table),
+            "--output-csv", str(tmp_path / "hits.csv"),
+            "--output-asn", str(tmp_path / "hits.asn"),
+        ],
+        config,
+    )  # fmt: skip
+
+    assert done.returncode != 0
+    assert "tblastn exited with status 1" in done.stderr
+    assert not table.exists()
+
+
+def test_a_failed_rpsblast_fails_the_job_and_writes_no_table(tmp_path):
+    config = _config(tmp_path, "rpsblast")
+    sequences = tmp_path / "Toyus_plenus.fa"
+    sequences.write_text(">scaffold:1-9|tag:AAAAAAAAAAAA\nMKV\n")
+    table = tmp_path / "domains.parquet"
+
+    done = _run_script(
+        "rpsblast.py",
+        [
+            "--species", "Toyus_plenus",
+            "--query-accession", "q",
+            "--fasta-input", str(sequences),
+            "--output-parquet", str(table),
+            "--output-asn", str(tmp_path / "Toyus_plenus.asn"),
+            "--db", str(tmp_path / "no_such_db"),
+        ],
+        config,
+    )  # fmt: skip
+
+    assert done.returncode != 0
+    assert "rpsblast exited with status 1" in done.stderr
+    assert not table.exists()

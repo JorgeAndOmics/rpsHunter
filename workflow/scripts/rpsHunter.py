@@ -87,6 +87,7 @@ def run_snakemake_rule(rule: str, num_cores: int, display_info: bool, snakemake_
         rule,
         '--cores', str(num_cores),
         '--rerun-incomplete',
+        '--show-failed-logs',  # job output goes to per-job log files; show a failed one
         *snakemake_flags
     ]
 

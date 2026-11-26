@@ -9,13 +9,13 @@
 
 import argparse
 import logging
-import subprocess
 from pathlib import Path
 from typing import Optional, Tuple
 
 import pandas as pd
 
 import defaults
+import external
 import tags
 from colored_logging import colored_logging
 
@@ -50,51 +50,28 @@ def blaster(
 
         Raises
         ------
-            :raises subprocess.CalledProcessError: If either BLAST or formatter fails.
-            :raises Exception: For any other unexpected runtime issues.
+            :raises external.ToolError: If tblastn or blast_formatter fails.
     """
     input_path = input_database_path / subject / subject
-    try:
-        if asn_output_path is None:
-            asn_file_path = defaults.PATH_DICT['ASN_TBLASTN_DIR'] / f'{subject}.asn'
-        else:
-            asn_file_path = asn_output_path
+    if asn_output_path is None:
+        asn_file_path = defaults.PATH_DICT['ASN_TBLASTN_DIR'] / f'{subject}.asn'
+    else:
+        asn_file_path = asn_output_path
 
-        # Construct the BLAST command
-        blast_command = [
-            command,
-            '-db', str(input_path),
-            '-query', str(query_file_path),
-            '-evalue', str(evalue),
-            '-outfmt', '11',
-            '-out', str(asn_file_path)
-        ]
-
-        result = subprocess.run(blast_command, capture_output=True, text=True)
-
-        if result.returncode != 0:
-            logging.error(f'Error running {command} for {subject}: {result.stderr}')
-            return None, None
-
-        # Format ASN.1 to tabular output with sequence data
-        blast_formatter_command = [
-            defaults.BLAST_FORMATTER_CMD,
-            '-archive', str(asn_file_path),
-            '-outfmt',
-            '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore sseq'
-        ]
-
-        formatter_result = subprocess.run(blast_formatter_command, capture_output=True, text=True)
-
-        if formatter_result.returncode != 0:
-            logging.error(f'Error running blast_formatter for {subject}: {formatter_result.stderr}')
-            return None, None
-
-        return formatter_result.stdout, asn_file_path
-
-    except Exception as e:
-        logging.error(f'An exception occurred while running BLAST for {subject}: {str(e)}')
-        return None, None
+    # A failing tool raises external.ToolError and is not caught here: the job must
+    # fail, so that a crashed search is never mistaken for a genome without hits.
+    external.run_tool(
+        [command, '-db', str(input_path), '-query', str(query_file_path),
+         '-evalue', str(evalue), '-outfmt', '11', '-out', str(asn_file_path)],
+        tool='tblastn',
+    )
+    # Format ASN.1 to tabular output with sequence data
+    tabular = external.run_tool(
+        [defaults.BLAST_FORMATTER_CMD, '-archive', str(asn_file_path), '-outfmt',
+         '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore sseq'],
+        tool='blast_formatter',
+    )
+    return tabular, asn_file_path
 
 
 # -----------------------------------------------------------------------------
@@ -272,8 +249,9 @@ def main() -> None:
             'Gap Openings', 'Q. Start', 'Q. End', 'S. Start', 'S. End', 'E-value',
             'Bit Score', 'Subject Sequence', 'Species', 'Species_Name', 'Query_Accession', 'Tag'
         ]
-        pd.DataFrame(columns=empty_columns).to_parquet(parquet_path, index=False)
-        csv_path.touch()
+        empty = pd.DataFrame(columns=empty_columns)
+        empty.to_parquet(parquet_path, index=False)
+        empty.to_csv(csv_path, index=False)  # header only: still a valid table
         # Touch the ASN only if tBLASTn did not already write it (paths 2 & 3).
         if not asn_path.exists():
             asn_path.touch()

@@ -65,6 +65,7 @@ class ToyRun:
     """Where a finished toy run left its inputs and outputs."""
 
     results: Path
+    config: Path
     truth: pd.DataFrame
     query_domains: pd.DataFrame
 
@@ -141,6 +142,7 @@ def toy_run(tmp_path_factory: pytest.TempPathFactory) -> ToyRun:
         _run_stage(stage, config)
     return ToyRun(
         results=work / "results",
+        config=config,
         truth=pd.read_csv(truth_path, sep="\t"),
         query_domains=pd.read_csv(
             TOY / "queries" / "query_domains.tsv", sep="\t", comment="#"
@@ -258,6 +260,63 @@ def test_no_domain_is_reported_away_from_a_planted_copy(toy_run: ToyRun):
         near_a_plant.loc[_domains_over(toy_run, plant).index] = True
 
     assert near_a_plant.all(), domains.loc[~near_a_plant].to_string()
+
+
+def _jobs_planned_after_changing(run: ToyRun, section: str, key: str, value) -> str:
+    """Dry-run the search-and-gate stage with one config value changed.
+
+    Returns Snakemake's plan. The changed config is written beside the original
+    and nothing is executed, so the finished run is left as it was.
+    """
+    config = yaml.safe_load(run.config.read_text())
+    config[section][key] = value
+    changed = run.config.with_name(f"config_{section}_{key}.yaml")
+    changed.write_text(yaml.safe_dump(config, sort_keys=False))
+    command = [sys.executable, str(REPO / "rpsHunter"), "--blast", "--skip-validation"]
+    done = subprocess.run(
+        [*command, "-n"],
+        env={**os.environ, "RPSHUNTER_CONFIG": str(changed)},
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return done.stdout + done.stderr
+
+
+def _scheduled(plan: str, rule: str) -> bool:
+    """Whether the dry-run plan's job table lists the rule."""
+    return any(line.split()[:1] == [rule] for line in plan.splitlines())
+
+
+def test_every_job_leaves_a_log_and_a_benchmark(toy_run: ToyRun):
+    logs = toy_run.results.parent / "logs"
+    for label in QUERY_LABELS:
+        for species in SPECIES:
+            name = Path("blast_species") / label / species
+            assert (logs / "jobs" / name.with_suffix(".log")).is_file()
+            assert (logs / "benchmarks" / name.with_suffix(".tsv")).is_file()
+
+
+def test_changing_a_gate_threshold_reruns_the_gate_and_not_the_search(toy_run: ToyRun):
+    plan = _jobs_planned_after_changing(toy_run, "blast", "bitscore", 55)
+
+    assert _scheduled(plan, "blast_parser_species")
+    assert not _scheduled(plan, "blast_species")
+
+
+def test_changing_the_search_e_value_reruns_the_search(toy_run: ToyRun):
+    plan = _jobs_planned_after_changing(toy_run, "blast", "e_value", 5)
+
+    assert _scheduled(plan, "blast_species")
+
+
+def test_an_unchanged_config_schedules_no_search_or_gate_job(toy_run: ToyRun):
+    unchanged = toy_run.config.read_text()
+    current = yaml.safe_load(unchanged)["blast"]["bitscore"]
+    plan = _jobs_planned_after_changing(toy_run, "blast", "bitscore", current)
+
+    assert not _scheduled(plan, "blast_species")
+    assert not _scheduled(plan, "blast_parser_species")
 
 
 # --- behaviour that should hold and does not yet ------------------------------

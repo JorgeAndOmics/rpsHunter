@@ -7,13 +7,13 @@
 
 import argparse
 import logging
-import subprocess
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 import pandas as pd
 
 import defaults
+import external
 import tags
 from colored_logging import colored_logging
 
@@ -45,58 +45,37 @@ def rpsblaster(
         Returns
         -------
             :returns: A tuple containing (BLAST output as tabular string, ASN.1 file path).
-                      If BLAST fails, returns (None, None).
 
         Raises
         ------
-            :raises subprocess.CalledProcessError: If BLAST command fails.
-            :raises Exception: For unexpected errors during execution.
+            :raises external.ToolError: If rpsblast or blast_formatter fails.
     """
-    try:
-        if asn_output_dir is None:
-            asn_output_dir = defaults.PATH_DICT['ASN_RPSBLAST_DIR']
-        asn_file_path: Path = asn_output_dir / f'{species}.asn'
+    if asn_output_dir is None:
+        asn_output_dir = defaults.PATH_DICT['ASN_RPSBLAST_DIR']
+    asn_file_path: Path = asn_output_dir / f'{species}.asn'
 
-        rpsblast_command: List[str] = [
-            command,
-            '-db', str(input_database_path),
-            '-query', str(query_file_path),
-            '-evalue', str(evalue),
-            '-comp_based_stats', str(defaults.RPSBLAST_COMP_BASED_STATS),
-            '-seg', defaults.RPSBLAST_SEG,
-            '-outfmt', '11',
-            '-out', str(asn_file_path)
-        ]
+    rpsblast_command: List[str] = [
+        command,
+        '-db', str(input_database_path),
+        '-query', str(query_file_path),
+        '-evalue', str(evalue),
+        '-comp_based_stats', str(defaults.RPSBLAST_COMP_BASED_STATS),
+        '-seg', defaults.RPSBLAST_SEG,
+        '-outfmt', '11',
+        '-out', str(asn_file_path)
+    ]
 
-        if defaults.RPSBLAST_WINDOW_SIZE and defaults.RPSBLAST_WINDOW_SIZE > 0:
-            rpsblast_command[6:6] = ['-window_size', str(defaults.RPSBLAST_WINDOW_SIZE)]
+    if defaults.RPSBLAST_WINDOW_SIZE and defaults.RPSBLAST_WINDOW_SIZE > 0:
+        rpsblast_command[6:6] = ['-window_size', str(defaults.RPSBLAST_WINDOW_SIZE)]
 
-        result = subprocess.run(rpsblast_command, capture_output=True, text=True)
-
-        if result.returncode != 0:
-            logging.error(f'Error running {command} for {species}: {result.stderr}')
-            return None, None
-
-        blast_formatter_command: List[str] = [
-            defaults.BLAST_FORMATTER_CMD,
-            '-archive', str(asn_file_path),
-            '-outfmt', '6 std stitle'
-        ]
-
-        formatter_result: subprocess.CompletedProcess = subprocess.run(
-            blast_formatter_command, capture_output=True, text=True
-        )
-
-        if formatter_result.returncode != 0:
-            logging.error(f'Error running blast_formatter for {species}: {formatter_result.stderr}')
-            return None, None
-
-        blast_output: str = formatter_result.stdout
-        return blast_output, asn_file_path
-
-    except Exception as e:
-        logging.error(f'An exception occurred while running RPS-BLAST for {species}: {str(e)}')
-        return None, None
+    # A failing tool raises external.ToolError and is not caught here: the job must
+    # fail, so that a crashed search is never mistaken for sequences without domains.
+    external.run_tool(rpsblast_command, tool='rpsblast')
+    blast_output: str = external.run_tool(
+        [defaults.BLAST_FORMATTER_CMD, '-archive', str(asn_file_path), '-outfmt', '6 std stitle'],
+        tool='blast_formatter',
+    )
+    return blast_output, asn_file_path
 
 
 # -----------------------------------------------------------------------------
@@ -164,6 +143,13 @@ def process_rps_species(species: str, fasta_input_dir: Path = None, asn_output_d
 
     if not fasta_file_path.exists():
         logging.warning(f'FASTA file for species {species} does not exist at {fasta_file_path}.')
+        return None
+
+    # No sequence passed the gates for this species: there is nothing to search,
+    # and the empty result is genuine. (Searching an empty FASTA makes rpsblast
+    # write an archive that blast_formatter rejects.)
+    if fasta_file_path.stat().st_size == 0:
+        logging.info(f'No sequences to search for species {species}.')
         return None
 
     rps_db = db_override if db_override else defaults.PATH_DICT['RPS_DB']

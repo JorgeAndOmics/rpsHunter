@@ -15,7 +15,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ([ADR-001](docs/adr/ADR-001-single-locked-conda-env.md)).
 - `RPSHUNTER_CONFIG` environment variable to run with a config other than
   `data/config/config.yaml`.
+- Every job writes its output to `<logs>/jobs/<rule>/<query>/<species>.log` and a Snakemake
+  benchmark (wall time, memory) to `<logs>/benchmarks/...`; the log of a failed job is shown.
+- An end-to-end test on synthetic genomes with planted domains and a miniature database
+  (`tests/integration/test_toy_pipeline.py`), run in CI on every push.
 - `CITATION.cff`, this changelog, and architectural decision records under `docs/adr/`.
+
+### Fixed
+
+- A failed `tblastn`, `rpsblast` or `blast_formatter` now fails its job. Previously the error
+  was logged and an empty table written, so a crashed search looked like a genome without hits.
+- Changing a threshold in the config now reruns the rules that depend on it. The scripts read
+  their settings directly, which Snakemake could not see, so nothing reran.
+- A species with no sequence left after the gates no longer triggers a hidden `blast_formatter`
+  failure in the RPS-BLAST step.
 
 ### Changed
 
