@@ -31,19 +31,15 @@ See also: [Configuration](configuration.md) for details on config-driven reruns.
 
 ---
 
-## 2. Empty Species (0 Sequences After Filtering)
+## 2. A Species With No Results
 
-**Symptom:** A species produces no sequences after quality, ORF, or HMMER filtering, but the pipeline continues without error.
+**Symptom:** A species has empty tables, an empty FASTA or a GFF3 file with only its header, and the
+pipeline finished without error.
 
-**This is expected behavior, not a bug.** Some species genuinely produce zero hits after filtering. The pipeline handles this gracefully through the entire downstream chain:
-
-1. Empty FASTA is written (0 sequences)
-2. RPSBLAST writes an empty Parquet with the correct 15-column schema and touches the ASN file
-3. rpsbproc detects the 0-byte ASN, touches the output `.txt`, and exits early
-4. rpsbproc_parser produces a 0-row Parquet from the empty `.txt`
-5. Aggregate ignores empty species cleanly via `pd.concat`
-
-**No intervention is needed.** The empty-species path has been tested end-to-end across multiple pipeline runs.
+**This is a result, not a failure.** No hit of that species passed the quality gate, or none
+carried a domain. Each step writes a valid empty file with all its columns and the next step
+accepts it. A tool that fails stops its job with an error instead, so an empty table always means
+"searched, nothing found". The job's log under `logs/jobs/` shows what ran.
 
 ---
 
@@ -59,57 +55,30 @@ See also: [Configuration](configuration.md) for details on config-driven reruns.
 
 ---
 
-## 4. HMMER Profile Not Found
+## 4. Pfam Accession Not Found
 
-**Symptom:** Error message: `Domain name(s) not found in Pfam-A.hmm`
+**Symptom:** `domains: Pfam accessions not found in the HMM library: PF.....`
 
-**Cause:** The `profiles` list in `config.yaml` contains a name that does not match any entry in the Pfam HMM database.
+**Cause:** A `pfam:` accession under `domains:` is not in the Pfam release installed under
+`db_root_folder/hmm_dbs/`. Accessions are written without their version (`PF00096`, not
+`PF00096.32`); a malformed one is refused earlier, when the config is read.
 
-**Solution:** Verify the exact Pfam **NAME** identifier for each profile. Key rules:
-
-- Use the Pfam **NAME**, not the accession (e.g., `zf-C2H2`, not `PF00096`) and not the description.
-- Names are **case-sensitive**: use `zf-C2H2`, not `ZF-C2H2` or `Zf-c2h2`.
-- Look up correct names at [InterPro](https://www.ebi.ac.uk/interpro/).
-
-**Example of correct config:**
-```yaml
-hmmer:
-  profiles:
-    - 'KRAB'
-    - 'SET'
-    - 'SSXRD'
-    - 'zf-C2H2'
-```
+**Solution:** Look the family up at [InterPro](https://www.ebi.ac.uk/interpro/) and check that the
+accession exists in the release you downloaded (`grep -c "^ACC   PF00096" Pfam-A.hmm`).
 
 ---
 
-## 5. CDD Domain Not in cddid.tbl
+## 5. CDD Model Not Found
 
-**Symptom:** A domain specified in `rpsblast.target_domains` is not found when building the CDD subset database.
+**Symptom:** Building the families' RPS-BLAST database fails, naming a missing `.smp` file.
 
-**Cause:** The `target_domains` list uses CDD **ShortName** identifiers from `cddid.tbl`, which are different from Pfam names. The two databases use different naming conventions:
+**Cause:** A `cdd:` accession under `domains:` has no model file in `db_root_folder/cdd_smp/`:
+it is misspelt, or it does not exist in the CDD release installed. CDD accessions look like
+`pfam00096`, `cd19193`, `smart00355` or `COG5048`, and are case-sensitive.
 
-| Database | Example Name |
-|----------|-------------|
-| Pfam     | `zf-C2H2`  |
-| CDD      | `ZnF_C2H2` |
-
-**Solution:**
-
-1. Check the `cddid.tbl` file in `db_root_folder/rpsbproc_dbs/` for the exact ShortName values.
-2. Use the ShortName column (column 2) from that file.
-3. Prefix matching is supported: specifying `KRAB` will match both `KRAB` and `KRAB_A-box`.
-
-**Example:**
-```yaml
-rpsblast:
-  target_domains:
-    - 'KRAB'
-    - 'SET'
-    - 'SSXRD'
-    - 'ZnF_C2H2'
-    - 'COG5048'
-```
+**Solution:** Find the accession in column 2 of `db_root_folder/rpsbproc_dbs/cddid.tbl`, or search
+the family at [NCBI CDD](https://www.ncbi.nlm.nih.gov/cdd). Use accessions, not short names: short
+names change between releases.
 
 ---
 
@@ -171,43 +140,7 @@ conda run -n rpsHunter ./rpsHunter --rpsblast --skip-validation
 
 ---
 
-## 9. Chromosome Name Mismatches in contingency_sorter
-
-**Symptom:** Entire species missing from the contingency table and 3D scatter plot, despite having data in `domains.parquet`.
-
-**Cause (fixed):** A restrictive regex (`[A-Za-z]+_?[0-9]+[._]?[0-9]*`) was applied to `Chromosome` values via `str_extract`, which silently dropped identifiers with multiple underscores (e.g., `manual_scaffold_10`), mixed letter-digit-letter patterns (e.g., `HAP1_SUPER_5`), or other non-standard scaffold names. If all rows for a species were rejected, the species vanished from downstream outputs.
-
-**Fix:** The regex extraction was removed. Chromosome identifiers are already parsed upstream by `rpsbproc_parser.py`, so the R script now only filters out rows with empty or NA chromosome values.
-
----
-
-## 10. ORF Filter Blocking Target Domains
-
-**Symptom:** Target domains (e.g., KRAB, SET, SSXRD) are detected by HMMER but are missing from the final domain output.
-
-**Cause:** Short protein domains may not contain open reading frames that meet the minimum ORF length threshold. The ORF filter in `blast_parser.py` blocks these sequences before they reach RPSBLAST. Domain-specific examples:
-
-| Domain | Typical Size | ORF Detection at 200nt |
-|--------|-------------|----------------------|
-| KRAB   | ~65 aa      | Often fails          |
-| SET    | ~130 aa     | Often fails          |
-| SSXRD  | ~25 aa      | Always fails         |
-| zf-C2H2 | ~28 aa    | Passes (tandem repeats extend total length) |
-
-**Solution:** Disable ORF filtering in `config.yaml`:
-
-```yaml
-orf:
-  enabled: false
-```
-
-This was the solution adopted in production for the KRAB/SET/SSXRD capture use case. Disabling the ORF filter resulted in a 2x increase in total domain annotations (10,289 to 20,973) and successfully captured all three previously-blocked domain types.
-
-**Alternative:** Lower the ORF threshold (`min_orf_length: 50` or lower) instead of disabling the filter entirely. However, very short ORF thresholds provide minimal biological filtering value.
-
----
-
-## 11. Multi-Flag CLI Invocation Fails
+## 9. Multi-Flag CLI Invocation Fails
 
 **Symptom:** Running `./rpsHunter --blast --rpsblast` fails with an error about unknown arguments.
 
@@ -227,13 +160,3 @@ conda run -n rpsHunter ./rpsHunter --contingency-parser --skip-validation
 The `--skip-validation` flag is the sole exception: it is consumed by the Python CLI dispatcher before Snakemake is invoked and can be combined with any single stage flag.
 
 ---
-
-## 12. rpsbproc_parser Writes 0-Column Parquets
-
-**Symptom:** Parquet files in `results/domains/` for some species have 0 rows and 0 columns.
-
-**Cause:** When rpsbproc produces empty `.txt` output (a touched 0-byte file from the empty-species path), the parser writes a 0-row, 0-column Parquet because there is no data to infer a schema from.
-
-**This is benign.** The `pd.concat` call in `aggregate.py` pulls the column schema from non-empty Parquet files contributed by other species. The 0-column files are silently ignored during aggregation. If any per-species files are missing entirely, `aggregate.py` now prints a warning listing the affected species.
-
-**No action is needed** unless all species produce empty results, in which case the aggregate table will also be empty (which is correct behavior for a dataset with no domain annotations).
