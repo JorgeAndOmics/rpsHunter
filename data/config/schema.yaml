@@ -2,7 +2,6 @@ blast: include('blast_schema')
 rpsblast: include('rpsblast_schema')
 databases: include('databases_schema')
 domains: map(include('family_schema'), key=str())
-orf: include('orf_schema')
 hmmer: include('hmmer_schema')
 programs: include('programs_schema', required=False)
 query: include('query_schema', required=False)
@@ -39,12 +38,6 @@ family_schema:
   cdd: list(str(), required=False)
   pfam: list(str(matches='^PF[0-9]{5}$'), required=False)
   repeat: bool(required=False)
-
-orf_schema:
-  enabled: bool()
-  min_orf_length: int(min=1)
-  start_codon: str(matches='^([ATGC]{3})?$')
-  longest_orf: bool()
 
 hmmer_schema:
   enabled: bool()

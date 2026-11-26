@@ -79,17 +79,6 @@ in NCBI's Conserved Domain Database or in InterPro. A model may belong to one fa
 reported at superfamily level are assigned to the family whose models belong to that superfamily.
 Every domain table carries a `Family` column beside the model.
 
-### `orf` -- Open Reading Frame Analysis
-
-Controls the ORF detection stage, which enriches BLAST hits with ORF information and optionally filters sequences that lack ORFs. When enabled, this step runs between BLAST and HMMER in the pipeline. See [filtering.md](filtering.md) for details on how ORF filtering interacts with HMMER gating.
-
-| Parameter | Type | Default | Validation | Description |
-|-----------|------|---------|------------|-------------|
-| `enabled` | `bool` | `false` | `bool()` | Master toggle. When `false`, the ORF stage is skipped entirely and no `ORF_Filtered` column is added to per-species parquets. |
-| `min_orf_length` | `int` | `200` | `int(min=1)` | Minimum ORF length in nucleotides. Lower values (e.g., 50) capture short domains like KRAB/SET but increase false positives. |
-| `start_codon` | `str` | `''` | `str(matches='^([ATGC]{3})?$')` | Required start codon (e.g., `'ATG'`). Empty string disables start codon filtering, accepting ORFs beginning at any codon. |
-| `longest_orf` | `bool` | `true` | `bool()` | When `true`, retain only the longest ORF per reading frame. When `false`, all ORFs meeting the length threshold are reported. |
-
 ### `hmmer` -- HMMER Domain Filtering
 
 Controls hmmsearch against the Pfam database. When enabled, sequences are enriched with HMM domain annotations and optionally filtered by domain match. HMMER runs after ORF analysis (if enabled) and before BLAST parsing. All quality-passing domain hits per sequence are retained as list-valued columns.

@@ -99,7 +99,6 @@ PATH_DICT['TABLE_LOCI_DIR']        = PATH_DICT['TABLE_OUTPUT_DIR'] / 'loci'
 # Each step that produces per-species parquets before aggregation gets its own directory.
 # Aggregate rules in Snakefile combine these into results/tables/*.parquet.
 PATH_DICT['BLAST_SPECIES_DIR']    = PATH_DICT['RESULTS_DIR'] / 'blast'
-PATH_DICT['ORF_OUTPUT_DIR']       = PATH_DICT['RESULTS_DIR'] / 'orf'
 PATH_DICT['HMM_OUTPUT_DIR']       = PATH_DICT['RESULTS_DIR'] / 'hmmer'
 PATH_DICT['RPSBLAST_SPECIES_DIR'] = PATH_DICT['RESULTS_DIR'] / 'rpsblast'
 PATH_DICT['DOMAINS_SPECIES_DIR']  = PATH_DICT['RESULTS_DIR'] / 'domains'
@@ -156,7 +155,6 @@ QUERY_FILE: Path = PATH_DICT['FASTA_DIR'] / f'{QUERY_ACC}.{QUERY_FORMAT.lower()}
 
 _PER_QUERY_PARENTS = [
     PATH_DICT['BLAST_SPECIES_DIR'],       # results/blast/{ql}/
-    PATH_DICT['ORF_OUTPUT_DIR'],          # results/orf/{ql}/
     PATH_DICT['HMM_OUTPUT_DIR'],          # results/hmmer/{ql}/
     PATH_DICT['FASTA_OUTPUT_DIR'],        # results/fastas/{ql}/
     PATH_DICT['RPSBLAST_SPECIES_DIR'],    # results/rpsblast/{ql}/
@@ -205,10 +203,6 @@ def query_file_path(accession: str) -> Path:
 # Execution and requests
 NUM_CORES: int = config['execution'].get('num_cores', 1)
 ENTREZ_EMAIL: str = config['execution'].get('entrez_email', '')
-
-# === ORF Configuration ===
-ORF_ENABLED: bool = config.get('orf', {}).get('enabled', False)
-MIN_ORF_LENGTH: int = config.get('orf', {}).get('min_orf_length', 200)
 
 # === HMMER Configuration ===
 HMMER_ENABLED: bool       = config.get('hmmer', {}).get('enabled', False)

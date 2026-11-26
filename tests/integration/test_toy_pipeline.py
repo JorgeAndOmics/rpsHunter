@@ -244,6 +244,18 @@ def test_planted_copies_are_found_by_tblastn_on_the_right_strand(toy_run: ToyRun
         assert forward.all() if plant["strand"] == "+" else (~forward).all()
 
 
+def test_planted_copies_have_no_internal_stop_codon(toy_run: ToyRun):
+    # The planted copies are exact back-translations, so their hits are clean;
+    # the flag exists for pseudogenes and frameshifts.
+    columns = ("Subject ID", "S. Start", "S. End")
+    plant = toy_run.truth.iloc[0]
+    path = toy_run.results / "blast" / "Human_PRDM9" / f"{plant['species']}.parquet"
+    hits = _overlapping(pd.read_parquet(path), plant, columns)
+
+    assert hits["Internal_Stop"].dtype == bool
+    assert not hits.loc[hits["Pct Identity"] == 100, "Internal_Stop"].any()
+
+
 def test_chance_hits_in_random_dna_do_not_pass_the_gates(toy_run: ToyRun):
     # tBLASTn at the configured E-value reports chance matches even in random
     # DNA; none may survive into the selected table or the domain table.

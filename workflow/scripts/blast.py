@@ -16,6 +16,7 @@ import pandas as pd
 
 import defaults
 import external
+import hit_table
 import tags
 from colored_logging import colored_logging
 
@@ -187,6 +188,7 @@ def process_species(species: str, query_file: Path = None, query_accession: str 
     # tag_hits refuses a table in which a hit appears twice.
     blast_df = blast_df.drop_duplicates().reset_index(drop=True)
     blast_df['Tag'] = tags.tag_hits(blast_df)
+    blast_df['Internal_Stop'] = hit_table.has_internal_stop(blast_df['Subject Sequence'])
 
     return blast_df
 
@@ -247,7 +249,8 @@ def main() -> None:
         empty_columns = [
             'Query ID', 'Subject ID', 'Pct Identity', 'Alignment Length', 'Mismatches',
             'Gap Openings', 'Q. Start', 'Q. End', 'S. Start', 'S. End', 'E-value',
-            'Bit Score', 'Subject Sequence', 'Species', 'Species_Name', 'Query_Accession', 'Tag'
+            'Bit Score', 'Subject Sequence', 'Species', 'Species_Name', 'Query_Accession', 'Tag',
+            'Internal_Stop'
         ]
         empty = pd.DataFrame(columns=empty_columns)
         empty.to_parquet(parquet_path, index=False)

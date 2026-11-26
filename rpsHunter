@@ -55,12 +55,6 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--orf-analyser',
-        action='store_true',
-        help="Runs ORF detection on BLAST hits."
-    )
-
-    parser.add_argument(
         '--hmmer',
         action='store_true',
         help="Runs HMMER domain filtering on BLAST hits."
@@ -125,9 +119,6 @@ if __name__ == '__main__':
 
     if args.blast:
         main_cmd.append('--blast')
-
-    if args.orf_analyser:
-        main_cmd.append('--orf-analyser')
 
     if args.hmmer:
         main_cmd.append('--hmmer')

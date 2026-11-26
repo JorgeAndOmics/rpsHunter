@@ -556,4 +556,3 @@ https://conda.anaconda.org/bioconda/noarch/bioconductor-genomicfeatures-1.58.0-r
 https://conda.anaconda.org/bioconda/noarch/bioconductor-plyranges-1.26.0-r44hdfd78af_0.tar.bz2#9ec00c23672e3118eca0259495231e98
 https://conda.anaconda.org/bioconda/noarch/r-biomartr-1.0.7-r44h3342da4_2.tar.bz2#8598cd52bdbaf1b958b4e5065f2c41c8
 https://conda.anaconda.org/bioconda/noarch/bioconductor-txdbmaker-1.2.0-r44hdfd78af_0.tar.bz2#d25b525f31267207fff3f05ed1e2c859
-https://conda.anaconda.org/bioconda/linux-64/bioconductor-orfik-1.26.0-r44he5774e6_0.tar.bz2#31c0de9369e02ec05957584154326830
