@@ -211,7 +211,7 @@ def disk_note(free_bytes: int, folder: Path) -> str | None:
     return f"only {free_bytes / 1024**3:.1f} GB free in {folder}"
 
 
-def _installed_packages() -> set[str]:
+def installed_packages() -> set[str]:
     """Packages of the running conda environment, as `<name>-<version>-<build>`."""
     return {path.stem for path in (Path(sys.prefix) / "conda-meta").glob("*.json")}
 
@@ -219,7 +219,7 @@ def _installed_packages() -> set[str]:
 def _notes(results: Path) -> list[str]:
     """The notes for this machine: environment against the lock, free space."""
     found = [
-        environment_note(LOCK.read_text(), _installed_packages()),
+        environment_note(LOCK.read_text(), installed_packages()),
         disk_note(shutil.disk_usage(results.anchor).free, results),
     ]
     return [note for note in found if note]
@@ -228,7 +228,7 @@ def _notes(results: Path) -> list[str]:
 # --- the whole check --------------------------------------------------------------
 
 
-def _settings(config_file: Path) -> Any:
+def load_settings(config_file: Path) -> Any:
     """Evaluate defaults.py for this config, apart from any copy already imported.
 
     defaults.py reads the config named by RPSHUNTER_CONFIG when it is executed.
@@ -255,7 +255,7 @@ def _settings(config_file: Path) -> Any:
 
 def _layout(config_file: Path) -> tuple[Layout, Path]:
     """Read the pipeline's paths for a config already known to be sound."""
-    defaults = _settings(config_file)
+    defaults = load_settings(config_file)
     paths = defaults.PATH_DICT
     layout = Layout(
         genomes={key: paths["SPECIES_DB"] / f"{key}.fa" for key in defaults.SPECIES},

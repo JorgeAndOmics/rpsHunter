@@ -32,6 +32,7 @@ results/
     domains/hmmer_domains.*              HMMER domains (when HMMER runs)
     loci/loci.*                          loci
     loci/locus_families.*                what each locus carries, per family
+  manifests/<date>_<time>.yaml           what each run was made with
 ```
 
 The tables to start from are `tables/loci/loci`, `tables/loci/locus_families` and
@@ -138,6 +139,26 @@ One row per locus and family present.
 | `Best_Model` | The model that coverage refers to |
 | `Copies` | Largest number of separate places one model occurs at. For a repeat family this is the size of the array; for a domain split across exons each exon piece is a place, so a single SET domain in three exons gives 3 |
 | `N_Calls` | Calls of the family in the locus |
+
+## Run manifests
+
+### `manifests/<date>_<time>.yaml`
+
+One file per launcher call that executed jobs, written when the run ends (also when it fails).
+With the results it answers "what exactly produced this?":
+
+| Section | Content |
+|---|---|
+| `rpshunter` | Version, git commit, and whether the code had uncommitted changes |
+| `run` | The command, the stages, start time, duration, exit status, jobs per rule |
+| `config` | The config file's path and checksum, and a full copy of its settings (thresholds, seed, families) |
+| `environment` | Python version, the installed versions of the analysis tools, and whether the environment matches the lock file |
+| `databases` | CDD: configured and installed release, checksum of every model searched. Pfam: configured release, the profiles used with their versions, checksum of the profile file |
+| `genomes` | Each species' name, assembly accession and pinned checksum, and the size of its FASTA |
+| `queries` | Each query's label and the checksum of its FASTA |
+
+Genome files are not hashed again for the manifest; the pinned checksum is verified whenever a BLAST
+database is built. The log of the same run is `logs/runs/<date>_<time>.log`.
 
 ## Empty results
 

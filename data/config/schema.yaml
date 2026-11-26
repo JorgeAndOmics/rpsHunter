@@ -25,10 +25,14 @@ rpsblast_schema:
 
 databases_schema:
   cdd: include('cdd_release_schema')
+  pfam: include('pfam_release_schema')
 
 cdd_release_schema:
   version: str()
   residues: int(min=1)
+
+pfam_release_schema:
+  version: str(matches='^[0-9]+\\.[0-9]+$')
 
 # One domain family: the CDD and Pfam accessions that evidence it. At least one
 # list is required and no accession may belong to two families; those rules live

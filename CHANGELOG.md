@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A manifest per run** (`results/manifests/<date>_<time>.yaml`): code version and commit, command,
+  a copy of the config with its checksum, versions of the analysis tools, database releases with
+  checksums of the models searched, genomes and queries.
+- **Pinned database downloads.** Pfam is fetched from the release named in the new required key
+  `databases.pfam.version`, not from `current_release`. NCBI serves only its current CDD, so the
+  CDD download now stops if that is not the release in `databases.cdd.version`.
 - `make check`: one quality gate running ruff, mypy, lintr, ShellCheck, pytest and testthat
   ([ADR-002](docs/adr/ADR-002-quality-gate-legacy-list.md)).
 - Explicit conda lock, `data/config/environment.lock-linux-64.txt`, and `make env` to build from it

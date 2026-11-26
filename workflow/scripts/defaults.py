@@ -49,6 +49,9 @@ BITSCORE_THRESHOLD: int = config["blast"].get("bitscore", 70)
 # holds only the configured families' models.
 RPSBLAST_E_VALUE: float = config.get("rpsblast", {}).get("e_value", 1)
 CDD_RESIDUES: int = config["databases"]["cdd"]["residues"]
+CDD_VERSION: str = str(config["databases"]["cdd"]["version"])
+# Pfam release the HMMER profiles are taken from (the download is pinned to it).
+PFAM_VERSION: str = str(config["databases"]["pfam"]["version"])
 RPSBLAST_COMP_BASED_STATS: int = config.get("rpsblast", {}).get("comp_based_stats", 0)
 RPSBLAST_SEG: str = config.get("rpsblast", {}).get("seg", "no")
 RPSBLAST_WINDOW_SIZE: int = config.get("rpsblast", {}).get("window_size", 40)
@@ -77,6 +80,8 @@ PATH_DICT["LOG_DIR"] = Path(
 PATH_DICT["WORKFLOW_DIR"] = Path(__file__).parent
 # The launcher's log of each run (everything printed) and its warnings.
 PATH_DICT["RUN_LOG_DIR"] = PATH_DICT["LOG_DIR"] / "runs"
+# One manifest per run: what was run, with what (manifest.py).
+PATH_DICT["MANIFEST_DIR"] = PATH_DICT["RESULTS_DIR"] / "manifests"
 
 # === Database Directories ===
 PATH_DICT["SPECIES_DB"] = PATH_DICT["ROOT"]

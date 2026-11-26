@@ -63,6 +63,10 @@ enforces the split.
 | `log.py` | I/O | The one line shape every job writes |
 | `stages.py`, `guard.py` | pure | The launcher's stage table; the heavy-rule guard |
 | `preflight.py`, `launcher.py` | script | Checks before a run; the one Snakemake call |
+| `console.py` | pure | What the launcher shows of a run |
+| `manifest.py` | script | The manifest of a run |
+| `query_config.py` | pure | Validates the `queries:` block |
+| `cdd_release.py` | script | Refuses downloaded CDD files of another release than configured |
 
 Every script is under the quality gate. The list of files exempt by name
 ([ADR-002](adr/ADR-002-quality-gate-legacy-list.md)) reached zero on 2026-11-27 and a test keeps it there.
@@ -84,8 +88,9 @@ Every script is under the quality gate. The list of files exempt by name
 ## Reproducibility
 
 The conda environment is locked (`data/config/environment.lock-linux-64.txt`). Genomes are pinned by
-assembly accession or checksum ([ADR-005](adr/ADR-005-genomes-pinned-by-assembly.md)). HMMER is
-seeded. Two runs on the same inputs give byte-identical tables.
+assembly accession or checksum ([ADR-005](adr/ADR-005-genomes-pinned-by-assembly.md)), Pfam by
+release, and the CDD release is verified. HMMER is seeded. Two runs on the same inputs give
+byte-identical tables, and every run leaves a manifest of what it was made with.
 
 ## Tests
 

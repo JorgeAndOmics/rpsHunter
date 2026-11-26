@@ -50,6 +50,7 @@ Controls the RPSBLAST search against the NCBI Conserved Domain Database (CDD). T
 |-----------|------|----------|-------------|
 | `cdd.version` | `str` | yes | CDD release the models come from, for the record (for example `'3.22'`). |
 | `cdd.residues` | `int` | yes | Total residues of that full CDD release (`15821058` for 3.22; `blastdbcmd -db Cdd -info` prints it). Passed to RPS-BLAST as `-dbsize`. The search runs against the configured families' models only, and an E-value depends on database size: without this, the same alignment would score about a thousand times better than in NCBI's CD-Search, and its E-value would change whenever a family was added or removed. |
+| `pfam.version` | `str` | yes | Pfam release the HMMER profiles come from (`38.2`). `--download-databases` fetches exactly this release from the EBI archive and checks its MD5. |
 
 ### `domains` -- Domain Families
 

@@ -444,6 +444,21 @@ def test_every_selected_hit_is_searched_whether_or_not_hmmer_matched_it(
     assert fasta.read_text().count(">") == len(hits)
 
 
+def test_the_run_leaves_a_manifest_and_a_run_log(toy_run: ToyRun):
+    (manifest_file,) = (toy_run.results / "manifests").glob("*.yaml")
+    record = yaml.safe_load(manifest_file.read_text())
+    logs = toy_run.results.parent / "logs" / "runs"
+
+    assert record["run"]["exit_status"] == 0
+    assert record["run"]["jobs"]["blast_species"] == len(QUERY_LABELS) * len(SPECIES)
+    assert record["config"]["sha256"]
+    assert record["databases"]["cdd"]["installed_release"] == "cdd version 3.22"
+    assert all(record["databases"]["cdd"]["models_sha256"].values())
+    assert record["databases"]["pfam"]["profiles"]
+    assert all(query["sha256"] for query in record["queries"].values())
+    assert (logs / manifest_file.with_suffix(".log").name).is_file()
+
+
 # Fixed with ADR-007: a species without domains used to get no GFF3 file.
 def test_every_species_has_a_range_file(toy_run: ToyRun):
     for species in SPECIES:
