@@ -93,6 +93,7 @@ PATH_DICT['RANGE_OUTPUT_DIR'] = PATH_DICT['RESULTS_DIR'] / 'ranges'
 PATH_DICT['TABLE_BLAST_DIR']       = PATH_DICT['TABLE_OUTPUT_DIR'] / 'blast'
 PATH_DICT['TABLE_RPSBLAST_DIR']    = PATH_DICT['TABLE_OUTPUT_DIR'] / 'rpsblast'
 PATH_DICT['TABLE_DOMAINS_DIR']     = PATH_DICT['TABLE_OUTPUT_DIR'] / 'domains'
+PATH_DICT['TABLE_LOCI_DIR']        = PATH_DICT['TABLE_OUTPUT_DIR'] / 'loci'
 
 # === Per-Species Intermediate Directories ===
 # Each step that produces per-species parquets before aggregation gets its own directory.
@@ -221,8 +222,8 @@ HMMER_MAX_SENS: bool      = config.get('hmmer', {}).get('max_sensitivity', False
 HMMER_BIAS_FILTER: bool   = config.get('hmmer', {}).get('bias_filter', True)
 HMMER_SEED: int           = config.get('hmmer', {}).get('seed', 67)
 
-# === Hit-Domain Inventory Configuration ===
-LOCUS_GAP: int = config.get('hit_domain_inventory', {}).get('locus_gap', 50000)
+# === Loci: largest gap (bp) between gated hits chained into one locus (ADR-008) ===
+LOCUS_GAP: int = config.get('loci', {}).get('gap', 20000)
 
 # === External Program Names ===
 _programs = config.get('programs', {})

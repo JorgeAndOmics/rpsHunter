@@ -57,6 +57,7 @@ STAGES = (
     "rpsblast",
     "rpsbproc",
     "rpsbproc-parser",
+    "loci",
 )
 
 
@@ -167,8 +168,13 @@ def _domains(run: ToyRun) -> pd.DataFrame:
 
 
 def _loci(run: ToyRun) -> pd.DataFrame:
-    path = run.results / "tables" / "inventory" / "locus_domain_inventory.parquet"
-    return pd.read_parquet(path)
+    return pd.read_parquet(run.results / "tables" / "loci" / "loci.parquet")
+
+
+def _locus_families(run: ToyRun, species: str, family: str) -> pd.DataFrame:
+    """Rows of the per-locus family evidence for one species and family."""
+    table = pd.read_parquet(run.results / "tables" / "loci" / "locus_families.parquet")
+    return table[(table["Species"] == species) & (table["Family"] == family)]
 
 
 def _overlapping(table: pd.DataFrame, plant: pd.Series, columns: tuple) -> pd.DataFrame:
@@ -375,24 +381,34 @@ def test_numeric_columns_of_the_domain_table_are_numbers(toy_run: ToyRun):
         assert pd.api.types.is_numeric_dtype(table[column]), column
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=f"loci are built from hits that failed the gates: {AWAITING_SCIENCE_AUDIT}",
-)
+# Fixed by ADR-008: loci used to be built from hits that had failed the gates.
 def test_random_dna_yields_no_locus(toy_run: ToyRun):
     assert "Toyus_vacuus" not in set(_loci(toy_run)["Species"])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=f"separate fragments are chained into one locus and their domains "
-    f"pooled: {AWAITING_SCIENCE_AUDIT}",
-)
-def test_two_partial_copies_are_not_one_complete_locus(toy_run: ToyRun):
+def test_each_whole_copy_is_one_locus_carrying_every_family(toy_run: ToyRun):
     loci = _loci(toy_run)
-    fractus = loci[loci["Species"] == "Toyus_fractus"]
+    plenus = loci[loci["Species"] == "Toyus_plenus"]
 
-    assert not fractus["Complete_CDD"].any()
+    assert len(plenus) == 2
+    assert set(plenus["Families"]) == {"KRAB,SSXRD,SET,zinc_fingers"}
+
+
+def test_a_whole_copy_has_its_set_domain_fully_covered(toy_run: ToyRun):
+    coverage = _locus_families(toy_run, "Toyus_plenus", "SET")["Coverage"]
+
+    assert len(coverage) == 2
+    assert (coverage >= 0.8).all()
+
+
+# Fixed by ADR-008 and ADR-009: two fragments used to be pooled into a locus that
+# was called complete. They may still share a locus (they are 16 kb apart), but
+# the locus now says how much of each model it holds instead of giving a verdict.
+def test_fragments_of_a_copy_do_not_add_up_to_a_whole_set_domain(toy_run: ToyRun):
+    coverage = _locus_families(toy_run, "Toyus_fractus", "SET")["Coverage"]
+
+    assert not coverage.empty
+    assert (coverage < 0.5).all()
 
 
 # Fixed with ADR-007: a species without domains used to get no GFF3 file.

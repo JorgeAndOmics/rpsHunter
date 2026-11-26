@@ -47,6 +47,7 @@ CALL_COLUMNS = (
     "Model_Length",
     "Incomplete",
     "PSSM_ID",
+    "Aligned_PSSM",
 )
 
 

@@ -50,6 +50,10 @@ MERGED_DOM_CSV   = _R + '/tables/domains/domains.csv'
 CALLS_PQ         = _R + '/tables/domains/calls.parquet'
 CALLS_CSV        = _R + '/tables/domains/calls.csv'
 GFF3             = _R + '/ranges/{species}.gff3'
+LOCI_PQ          = _R + '/tables/loci/loci.parquet'
+LOCI_CSV         = _R + '/tables/loci/loci.csv'
+LOCUS_FAM_PQ     = _R + '/tables/loci/locus_families.parquet'
+LOCUS_FAM_CSV    = _R + '/tables/loci/locus_families.csv'
 MERGED_BLAST_PQ  = _R + '/tables/blast/aggregate.parquet'
 MERGED_BLAST_CSV = _R + '/tables/blast/aggregate.csv'
 MERGED_RPS_PQ    = _R + '/tables/rpsblast/rpsblast.parquet'
@@ -722,6 +726,37 @@ rule domain_tables:
         '''
 
 # =============================================================================
+# Loci
+# =============================================================================
+
+rule locus_tables:
+    """Gated hits chained into loci, with the families each locus carries."""
+    input:
+        hits=expand(SELECTED_PQ, query_label=QUERY_LABELS, species=SPECIES),
+        calls=expand(DOMAINS_PQ, query_label=QUERY_LABELS, species=SPECIES)
+    output:
+        loci=LOCI_PQ,
+        loci_csv=LOCI_CSV,
+        families=LOCUS_FAM_PQ,
+        families_csv=LOCUS_FAM_CSV
+    params:
+        settings=tracked('loci', 'domains')
+    log:
+        job_log('locus_tables')
+    benchmark:
+        job_benchmark('locus_tables')
+    shell:
+        '''
+        (
+        python scripts/locus_tables.py \
+            --loci-out {output.loci:q} \
+            --families-out {output.families:q} \
+            --hits {input.hits:q} \
+            --calls {input.calls:q}
+        ) > {log:q} 2>&1
+        '''
+
+# =============================================================================
 # Target Rules (CLI entry points — one per pipeline stage)
 # Each triggers only its own per-species jobs.  Snakemake resolves upstream
 # dependencies automatically.
@@ -765,3 +800,9 @@ rule rpsbproc_parser:
         CALLS_PQ,
         MERGED_DOM_PQ,
         expand(GFF3, species=SPECIES)
+
+rule loci:
+    """Loci and the families each carries."""
+    input:
+        LOCI_PQ,
+        LOCUS_FAM_PQ
