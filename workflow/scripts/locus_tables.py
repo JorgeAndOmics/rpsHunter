@@ -30,10 +30,30 @@ HIT_COLUMNS = {
 """Columns of the gated-hit tables, renamed to the names loci.py uses."""
 
 
+_TYPES = {
+    "S. Start": "int64",
+    "S. End": "int64",
+    "Identity": "float64",
+    "Bitscore": "float64",
+    "Internal_Stop": "bool",
+}
+
+
+def typed(hits: pd.DataFrame) -> pd.DataFrame:
+    """Give the columns loci are computed from their types.
+
+    A search that found nothing leaves a table of untyped columns, which would
+    otherwise turn the whole concatenated table into objects.
+    """
+    return hits.astype(_TYPES)
+
+
 def read_hits(paths: list[Path]) -> pd.DataFrame:
     """Read gated hits and express each as a start <= end interval."""
-    hits = pd.concat([pd.read_parquet(path) for path in paths], ignore_index=True)
-    hits = hits.rename(columns=HIT_COLUMNS)
+    tables = [
+        typed(pd.read_parquet(path).rename(columns=HIT_COLUMNS)) for path in paths
+    ]
+    hits = pd.concat(tables, ignore_index=True)
     ends = hits[["S. Start", "S. End"]]
     return hits.assign(Start=ends.min(axis=1), End=ends.max(axis=1))
 

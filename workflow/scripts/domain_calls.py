@@ -62,14 +62,16 @@ REPORT_COLUMNS = (
 them (A greater than B on the minus strand); Residue_From/To are positions in the
 hit's translated sequence; Model is the CDD accession of the model or superfamily."""
 
-_DEFINITION = re.compile(r"(?P<sequence>.+):(?P<a>\d+)-(?P<b>\d+)\|tag:(?P<tag>\w+)")
+DEFINITION = re.compile(r"(?P<sequence>.+):(?P<a>\d+)-(?P<b>\d+)\|tag:(?P<tag>\w+)")
+"""A hit's name in the FASTA: `<sequence>:<a>-<b>|tag:<Tag>`. The sequence part is
+greedy, so sequence names may themselves contain colons and bars."""
 _INTEGERS = ("Hit_A", "Hit_B", "PSSM_ID", "Residue_From", "Residue_To")
 _FLOATS = ("Evalue", "Bitscore")
 
 
 def _hit_of(definition: str) -> tuple[str, str, int, int]:
     """Return (tag, sequence, a, b) from a query definition line."""
-    match = _DEFINITION.fullmatch(definition)
+    match = DEFINITION.fullmatch(definition)
     if match is None:
         raise ValueError(f"not a tagged hit identifier: {definition!r}")
     return match["tag"], match["sequence"], int(match["a"]), int(match["b"])
@@ -134,8 +136,9 @@ def place_on_genome(calls: pd.DataFrame) -> pd.DataFrame:
     first, last = calls["Residue_From"], calls["Residue_To"]
     placed = calls.assign(
         Strand=forward.map({True: "+", False: "-"}).astype("object"),
-        Hit_Start=calls[["Hit_A", "Hit_B"]].min(axis=1),
-        Hit_End=calls[["Hit_A", "Hit_B"]].max(axis=1),
+        # An empty frame's row-wise minimum is float; coordinates stay integers.
+        Hit_Start=calls[["Hit_A", "Hit_B"]].min(axis=1).astype("int64"),
+        Hit_End=calls[["Hit_A", "Hit_B"]].max(axis=1).astype("int64"),
         Start=(calls["Hit_A"] + 3 * (first - 1)).where(
             forward, calls["Hit_A"] - 3 * last + 1
         ),

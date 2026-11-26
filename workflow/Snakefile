@@ -416,7 +416,8 @@ rule select_hits_species:
     output:
         fasta=FASTA_OUT,
         audit=FASTA_AUDIT,
-        selected=SELECTED_PQ
+        selected=SELECTED_PQ,
+        selected_csv=SELECTED_PQ.replace('.parquet', '.csv')
     params:
         settings=tracked('blast')
     threads: 1
