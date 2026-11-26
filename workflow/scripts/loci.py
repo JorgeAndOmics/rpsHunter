@@ -31,6 +31,7 @@ LOCUS_COLUMNS = (
     "End",
     "Length",
     "N_Hits",
+    "N_Hits_With_Stop",
     "Queries",
     "Best_Identity",
     "Best_Bitscore",
@@ -171,6 +172,7 @@ def _summarise_hits(chained: pd.DataFrame) -> pd.DataFrame:
         Start=("Start", "min"),
         End=("End", "max"),
         N_Hits=("Tag", "size"),
+        N_Hits_With_Stop=("Internal_Stop", "sum"),
         Queries=("Query_Accession", _listed),
         Best_Identity=("Identity", "max"),
         Best_Bitscore=("Bitscore", "max"),
@@ -206,7 +208,7 @@ def locus_table(
 
     Args:
         chained: Output of chain; needs Species_Name, Tag, Query_Accession,
-            Identity and Bitscore besides the position columns.
+            Identity, Bitscore and Internal_Stop besides the position columns.
         evidence: Output of family_evidence, or None to leave families empty.
         family_order: Family names in the order to list them (the config's).
             Families not named are listed after them, alphabetically.

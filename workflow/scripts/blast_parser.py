@@ -6,7 +6,7 @@ Description
     Parses, filters, and exports BLAST result sequences as per-species FASTA files.
     Applies a strict, auditable filter chain:
 
-        table_filter  →  orf_aware_filter  →  hmm_aware_filter  →  FASTA export
+        table_filter  →  hmm_aware_filter  →  FASTA export
 
     Each gate follows the same contract:
         - Column missing        → step was disabled → pass through unchanged.
@@ -16,7 +16,6 @@ Description
     An audit parquet is written to fastas/{species}.parquet before any filtering.
     It contains every input row plus four boolean columns:
         Quality_Pass  – passed table_filter thresholds
-        ORF_Pass      – True/False/NaN (NaN = ORF step not run)
         HMM_Pass      – True/False/NaN (NaN = HMMER step not run)
         Selected      – made it through all gates to FASTA export
 
@@ -75,37 +74,12 @@ def table_filter(df: pd.DataFrame) -> pd.DataFrame:
     ].copy()
 
 
-def orf_aware_filter(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Strict ORF gate: keeps only rows where ORF_Filtered is True.
-
-    Contract:
-        - Column missing        → ORF step was disabled → pass through unchanged.
-        - Column present, ≥1 True  → keep only True rows.
-        - Column present, 0 True   → return empty DF (real result: ORF ran, nothing passed).
-
-        Parameters
-        ----------
-            :param df: The input DataFrame containing BLAST results.
-
-        Returns
-        -------
-            :returns: Filtered DataFrame (may be empty).
-    """
-    if 'ORF_Filtered' not in df.columns:
-        logging.info("No ORF_Filtered column — ORF step was not run; passing through")
-        return df
-
-    filtered_df = df[df['ORF_Filtered'] == True].copy()
-    logging.info(f"ORF gate: {len(filtered_df)}/{len(df)} rows passed")
-    return filtered_df
-
-
 def hmm_aware_filter(df: pd.DataFrame) -> pd.DataFrame:
     """
     Strict HMM gate: keeps only rows where HMM_Filtered is True.
 
-    Same contract as orf_aware_filter but on the HMM_Filtered column.
+    Keeps a row only if its HMM_Filtered flag is set; passes all rows through
+    if the column is absent (the HMMER step was not run).
 
         Parameters
         ----------
@@ -159,11 +133,7 @@ if __name__ == '__main__':
     )
     raw_df['Quality_Pass'] = quality_mask
 
-    # ORF_Pass / HMM_Pass: True/False if the column exists, NaN if the step was not run
-    if 'ORF_Filtered' in raw_df.columns:
-        raw_df['ORF_Pass'] = raw_df['ORF_Filtered'].astype(bool)
-    else:
-        raw_df['ORF_Pass'] = pd.array([pd.NA] * len(raw_df), dtype=pd.BooleanDtype())
+    # HMM_Pass: True/False if the column exists, NaN if the step was not run
 
     if 'HMM_Filtered' in raw_df.columns:
         raw_df['HMM_Pass'] = raw_df['HMM_Filtered'].astype(bool)
@@ -172,7 +142,6 @@ if __name__ == '__main__':
 
     # ── Run the filter chain ────────────────────────────────────────────────
     blast_df = table_filter(raw_df)
-    blast_df = orf_aware_filter(blast_df)
     blast_df = hmm_aware_filter(blast_df)
 
     # ── Mark Selected on the full audit frame ──────────────────────────────
@@ -189,7 +158,7 @@ if __name__ == '__main__':
     # dropped — they are all True by construction here; the audit parquet is
     # the place to inspect per-row pass/fail detail.
     output_selected_path: Path = Path(args.output_selected)
-    flag_cols = ['Quality_Pass', 'ORF_Pass', 'HMM_Pass']
+    flag_cols = ['Quality_Pass', 'HMM_Pass']
     selected_df = blast_df.drop(columns=[c for c in flag_cols if c in blast_df.columns])
     selected_df.to_parquet(output_selected_path, index=False)
     try:

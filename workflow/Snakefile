@@ -28,7 +28,6 @@ _R = str(defaults.PATH_DICT['RESULTS_DIR'])
 BLAST_PQ     = _R + '/blast/{query_label}/{species}.parquet'
 BLAST_CSV    = _R + '/blast/{query_label}/{species}.csv'
 ASN_TBLASTN  = _R + '/asn/tblastn/{query_label}/{species}.asn'
-ORF_PQ       = _R + '/orf/{query_label}/{species}.parquet'
 HMM_PQ       = _R + '/hmmer/{query_label}/{species}.parquet'
 FASTA_OUT    = _R + '/fastas/{query_label}/{species}.fa'
 FASTA_AUDIT  = _R + '/fastas/{query_label}/{species}.parquet'
@@ -63,14 +62,12 @@ MERGED_RPS_CSV   = _R + '/tables/rpsblast/rpsblast.csv'
 # holds the "final" blast parquet after all enabled enrichment steps.
 ENRICHED_PATTERN = (
     HMM_PQ if defaults.HMMER_ENABLED
-    else ORF_PQ if defaults.ORF_ENABLED
     else BLAST_PQ
 )
 
 # Input pattern for HMMER (one step back from ENRICHED_PATTERN).
 PRE_HMMER_PATTERN = (
-    ORF_PQ if defaults.ORF_ENABLED
-    else BLAST_PQ
+    BLAST_PQ
 )
 
 # RPSBLAST database path
@@ -447,35 +444,6 @@ rule blast_species:
         '''
 
 # =============================================================================
-# Per-Query Per-Species ORF Analysis (conditional)
-# =============================================================================
-
-if defaults.ORF_ENABLED:
-    rule orf_species:
-        input:
-            parquet=BLAST_PQ,
-            genome=str(defaults.PATH_DICT['SPECIES_DB'] / '{species}.fa')
-        output:
-            parquet=ORF_PQ
-        threads: 1
-        params:
-            settings=tracked('orf')
-        log:
-            job_log('orf_species', 'query_label', 'species')
-        benchmark:
-            job_benchmark('orf_species', 'query_label', 'species')
-        shell:
-            '''
-            (
-            Rscript scripts/orf_analyser.R \
-                --species {wildcards.species} \
-                {input.parquet:q} \
-                {input.genome:q} \
-                {output.parquet:q}
-            ) > {log:q} 2>&1
-            '''
-
-# =============================================================================
 # Per-Query Per-Species HMMER (conditional)
 # =============================================================================
 
@@ -525,7 +493,7 @@ rule blast_parser_species:
         audit=FASTA_AUDIT,
         selected=SELECTED_PQ
     params:
-        settings=tracked('blast', 'orf.enabled', 'hmmer.enabled'),
+        settings=tracked('blast', 'hmmer.enabled'),
         query_acc=query_acc_for_label
     threads: 1
     log:
@@ -766,11 +734,6 @@ rule blaster:
     """Per-query per-species BLAST."""
     input:
         expand(BLAST_PQ, query_label=QUERY_LABELS, species=SPECIES)
-
-rule orf_analyser:
-    """Per-query ORF analysis (no-op if orf.enabled: false)."""
-    input:
-        expand(ORF_PQ, query_label=QUERY_LABELS, species=SPECIES) if defaults.ORF_ENABLED else []
 
 rule hmmer:
     """Per-query HMMER filtering (no-op if hmmer.enabled: false)."""

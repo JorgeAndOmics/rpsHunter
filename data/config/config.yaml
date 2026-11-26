@@ -41,12 +41,6 @@ domains:
     pfam: [PF00096]
     repeat: true
 
-orf:
-  enabled: false           # Toggle ORF analysis on/off (DISABLED to capture KRAB/SET/SSXRD)
-  min_orf_length: 50       # Minimum ORF length in nucleotides
-  start_codon: ''          # Start codon filter (empty string = no filter)
-  longest_orf: true        # If true, keep only longest ORF per reading frame
-
 hmmer:
   enabled: true            # Toggle HMMER on/off
 

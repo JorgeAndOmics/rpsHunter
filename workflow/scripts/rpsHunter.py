@@ -149,10 +149,6 @@ def cli_entry() -> None:
     parser.add_argument('--blast', action='store_true',
                         help='Run tBLASTn of the query sequence against genome databases.')
 
-    parser.add_argument('--orf-analyser', action='store_true',
-                        help='Run ORF detection on BLAST hits. Enriches blast.parquet with ORF data; '
-                             'downstream rules auto-detect and use only ORF-filtered sequences.')
-
     parser.add_argument('--hmmer', action='store_true',
                         help='Run HMMER domain filtering on BLAST hits.')
 
@@ -235,14 +231,6 @@ def cli_entry() -> None:
     if args.blast:
         run_snakemake_rule(
             rule='blast_parser',
-            num_cores=defaults.NUM_CORES,
-            display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
-            snakemake_flags=unknown
-        )
-
-    if args.orf_analyser:
-        run_snakemake_rule(
-            rule='orf_analyser',
             num_cores=defaults.NUM_CORES,
             display_info=defaults.DISPLAY_SNAKEMAKE_INFO,
             snakemake_flags=unknown

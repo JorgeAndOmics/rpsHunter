@@ -22,6 +22,7 @@ def test_loci_and_family_evidence_are_written_as_parquet_and_csv(tmp_path, monke
             "Query_Accession": ["NP_1.1", "NP_1.1"],
             "Pct Identity": [80.0, 30.0],
             "Bit Score": [200.0, 40.0],
+            "Internal_Stop": [False, True],
         }
     )
     calls = pd.DataFrame(

@@ -17,6 +17,7 @@ def _hit(start, end, tag, **overrides):
         "Query_Accession": "NP_1.1",
         "Identity": 50.0,
         "Bitscore": 100.0,
+        "Internal_Stop": False,
     }
     return row | overrides
 
@@ -104,6 +105,20 @@ def test_the_locus_table_summarises_its_hits():
     assert row["Queries"] == "NP_1.1,NP_2.1"
     assert row["Best_Identity"] == 95.0
     assert row["Best_Bitscore"] == 300.0
+
+
+def test_the_locus_counts_its_hits_with_an_internal_stop():
+    hits = pd.DataFrame(
+        [
+            _hit(1000, 1300, "A", Internal_Stop=True),
+            _hit(5000, 5600, "B"),
+            _hit(7000, 7300, "C", Internal_Stop=True),
+        ]
+    )
+
+    table = loci.locus_table(loci.chain(hits, gap=20_000))
+
+    assert table.loc[0, "N_Hits_With_Stop"] == 2
 
 
 def test_exon_pieces_of_one_model_add_up_to_its_coverage():

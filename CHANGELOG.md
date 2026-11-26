@@ -82,6 +82,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **The ORF stage** ([ADR-011](docs/adr/ADR-011-retire-orf-gate.md)): `orf_analyser.R`, the `orf`
+  config section, the `--orf-analyser` flag and the ORFik dependency. It demanded an open reading
+  frame with a start codon inside every hit, and a hit covers one exon; its minimum length was
+  counted in codons while documented as nucleotides. In its place every hit has an
+  `Internal_Stop` column (a stop codon inside its translation) and every locus counts such hits
+  in `N_Hits_With_Stop`.
 - The stages downstream of domain parsing, pending their rebuild on ADR-006 to ADR-012: the
   contingency table and GFF3 export, the hit-domain and locus inventories, the HMMER-versus-CDD
   concordance tables, and the tile, 3D and extended plots, with their launcher flags
