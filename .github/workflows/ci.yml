@@ -1,0 +1,50 @@
+# Continuous integration: the same gate as `make check`, in the locked environment.
+#
+# The environment is created from the explicit lock, so CI tests exactly the tool
+# versions the pipeline is validated with. The test suite includes an end-to-end
+# run on toy genomes against the miniature databases under tests/fixtures/toy
+# (about a minute, no network).
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: make check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -el {0}  # login shell, so the micromamba environment is active
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Create the locked environment
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: data/config/environment.lock-linux-64.txt
+          environment-name: rpsHunter
+          cache-environment: true
+
+      - name: Tool versions
+        run: |
+          snakemake --version
+          tblastn -version | head -1
+          hmmsearch -h | sed -n 2p
+          rpsbproc -version 2>&1 | head -1
+          R --version | head -1
+
+      - name: Quality gate
+        run: make check
