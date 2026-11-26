@@ -139,6 +139,35 @@ def query_acc_for_label(wildcards):
     """Resolve the query accession from a {query_label} wildcard."""
     return defaults.LABEL_TO_ACC[wildcards.query_label]
 
+def tracked(*keys):
+    """Config values a rule depends on, as one stable string for its `params`.
+
+    The scripts read their settings through defaults.py, which Snakemake cannot
+    see. Naming them here makes a changed threshold rerun exactly the rules that
+    use it. A key is a config section ('hmmer') or one value in it ('blast.e_value').
+    """
+    import json
+    values = {}
+    for key in keys:
+        value = config
+        for part in key.split('.'):
+            value = (value or {}).get(part)
+        values[key] = value
+    return json.dumps(values, sort_keys=True)
+
+def _job_file(kind, rule, wildcard_names, suffix):
+    """Path of a per-job file: <logs>/<kind>/<rule>/<wildcard values...>.<suffix>."""
+    name = '/'.join('{' + w + '}' for w in wildcard_names) or 'all'
+    return str(defaults.PATH_DICT['LOG_DIR'] / kind / rule / f'{name}.{suffix}')
+
+def job_log(rule, *wildcard_names):
+    """Log file of one job; every rule that runs a command writes its output here."""
+    return _job_file('jobs', rule, wildcard_names, 'log')
+
+def job_benchmark(rule, *wildcard_names):
+    """Benchmark file of one job (wall time, memory), written by Snakemake."""
+    return _job_file('benchmarks', rule, wildcard_names, 'tsv')
+
 # =============================================================================
 # Genome & Query Download Rules
 # =============================================================================
@@ -152,10 +181,16 @@ rule genome_downloader_setup:
         API_KEY=defaults.NCBI_API_TOKEN
     threads:
         workflow.cores / 3
+    log:
+        job_log('genome_downloader_setup', 'genome')
+    benchmark:
+        job_benchmark('genome_downloader_setup', 'genome')
     shell:
         '''
+        (
         export NCBI_API_KEY={params.API_KEY:q} && \
         bash scripts/genome_downloader.sh {wildcards.genome:q} {params.SPECIES_DB:q} {params.DOWNLOAD_LOG:q}
+        ) > {log:q} 2>&1
         '''
 
 rule genome_downloader:
@@ -174,10 +209,16 @@ rule query_downloader_setup:
         entrez_email=defaults.ENTREZ_EMAIL
     resources:
         ncbi_api=1   # serialise all query downloads — prevents HTTP 429 from simultaneous efetch calls
+    log:
+        job_log('query_downloader_setup', 'query_acc')
+    benchmark:
+        job_benchmark('query_downloader_setup', 'query_acc')
     shell:
         '''
+        (
         export ENTREZ_EMAIL={params.entrez_email:q} && \
         bash scripts/query_downloader.sh {wildcards.query_acc:q} {params.query_dir:q} {params.download_log:q}
+        ) > {log:q} 2>&1
         '''
 
 rule query_downloader:
@@ -202,14 +243,20 @@ rule pfam_hmm_downloader:
         md5_url='https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/md5_checksums'
     threads:
         workflow.cores
+    log:
+        job_log('pfam_hmm_downloader')
+    benchmark:
+        job_benchmark('pfam_hmm_downloader')
     shell:
         """
+        (
         cd {params.hmm_profile_dir:q} && \
         wget -O {output.hmm:q}.gz {params.url:q} && \
         wget -O {output.md5:q} {params.md5_url:q} && \
         grep "Pfam-A.hmm.gz" {output.md5:q} | md5sum -c - && \
         echo "MD5 checksum for HMM profile is correct. Decompressing..." && \
         gunzip -d -f -v -k {params.hmm_profile_dir:q}/Pfam-A.hmm.gz
+        ) > {log:q} 2>&1
         """
 
 rule cdd_database_downloader:
@@ -221,8 +268,13 @@ rule cdd_database_downloader:
         url='https://ftp.ncbi.nih.gov/pub/mmdb/cdd/little_endian/Cdd_LE.tar.gz'
     threads:
         workflow.cores
+    log:
+        job_log('cdd_database_downloader')
+    benchmark:
+        job_benchmark('cdd_database_downloader')
     shell:
         """
+        (
         cd {params.cdd_dir:q} && \
         echo "Downloading CDD database (~1.5 GB)..." && \
         wget -q --show-progress -O Cdd_LE.tar.gz {params.url:q} && \
@@ -230,6 +282,7 @@ rule cdd_database_downloader:
         tar -xzf Cdd_LE.tar.gz && \
         rm -f Cdd_LE.tar.gz && \
         echo "CDD database download complete."
+        ) > {log:q} 2>&1
         """
 
 rule rpsbproc_data_downloader:
@@ -244,8 +297,13 @@ rule rpsbproc_data_downloader:
     params:
         rpsbproc_dir=str(defaults.PATH_DICT['RPSBPROC_DB']),
         base_url='https://ftp.ncbi.nih.gov/pub/mmdb/cdd'
+    log:
+        job_log('rpsbproc_data_downloader')
+    benchmark:
+        job_benchmark('rpsbproc_data_downloader')
     shell:
         """
+        (
         cd {params.rpsbproc_dir:q} && \
         echo "Downloading rpsbproc annotation data files..." && \
         wget -q --show-progress -O cddid.tbl.gz {params.base_url}/cddid.tbl.gz && \
@@ -259,6 +317,7 @@ rule rpsbproc_data_downloader:
         gunzip -f cddannot.dat.gz && \
         gunzip -f cddannot_generic.dat.gz && \
         echo "rpsbproc data download complete."
+        ) > {log:q} 2>&1
         """
 
 rule cdd_smp_downloader:
@@ -270,8 +329,13 @@ rule cdd_smp_downloader:
         url='https://ftp.ncbi.nih.gov/pub/mmdb/cdd/cdd.tar.gz'
     threads:
         workflow.cores
+    log:
+        job_log('cdd_smp_downloader')
+    benchmark:
+        job_benchmark('cdd_smp_downloader')
     shell:
         """
+        (
         cd {params.smp_dir:q} && \
         echo "Downloading CDD SMP archive (~2.2 GB)..." && \
         wget -q --show-progress -O cdd.tar.gz {params.url:q} && \
@@ -280,6 +344,7 @@ rule cdd_smp_downloader:
         rm -f cdd.tar.gz && \
         touch {output.done:q} && \
         echo "CDD SMP extraction complete."
+        ) > {log:q} 2>&1
         """
 
 rule setup_databases:
@@ -304,14 +369,21 @@ if defaults.RPSBLAST_TARGET_DOMAINS:
         output:
             db=str(RPSBLAST_DB) + '.rps'
         params:
+            settings=tracked('rpsblast.target_domains', 'programs'),
             smp_dir=str(defaults.PATH_DICT['SMP_DIR']),
             db_path=str(RPSBLAST_DB)
+        log:
+            job_log('cdd_subset_builder')
+        benchmark:
+            job_benchmark('cdd_subset_builder')
         shell:
             '''
+            (
             python scripts/cdd_subset.py \
                 --cddid {input.cddid:q} \
                 --smp-dir {params.smp_dir:q} \
                 --output-db {params.db_path:q}
+            ) > {log:q} 2>&1
             '''
 
 # =============================================================================
@@ -325,12 +397,20 @@ if defaults.HMMER_ENABLED and defaults.HMMER_PROFILES:
             pfam_hmm=str(defaults.PATH_DICT['HMM_DB'] / 'Pfam-A.hmm')
         output:
             subset_hmm=str(HMMER_SUBSET_HMM)
+        params:
+            settings=tracked('hmmer.profiles')
+        log:
+            job_log('hmmer_extract_profiles')
+        benchmark:
+            job_benchmark('hmmer_extract_profiles')
         shell:
             '''
+            (
             python scripts/hmmer.py \
                 --extract-only \
                 {input.pfam_hmm:q} \
                 {output.subset_hmm:q}
+            ) > {log:q} 2>&1
             '''
 
 # =============================================================================
@@ -351,10 +431,16 @@ rule blast_db_generator_setup:
     params:
         db_dir=str(defaults.PATH_DICT['SPECIES_DB']),
         makeblastdb_cmd=defaults.MAKEBLASTDB_CMD
+    log:
+        job_log('blast_db_generator_setup', 'genome')
+    benchmark:
+        job_benchmark('blast_db_generator_setup', 'genome')
     shell:
         """
+        (
         {params.makeblastdb_cmd} -in {input.fa:q} -dbtype nucl \
         -out {params.db_dir:q}/{wildcards.genome:q}/{wildcards.genome:q}
+        ) > {log:q} 2>&1
         """
 
 rule blast_db_generator:
@@ -376,10 +462,16 @@ rule blast_species:
         csv=BLAST_CSV,
         asn=ASN_TBLASTN
     params:
+        settings=tracked('blast.e_value', 'programs'),
         query_acc=query_acc_for_label
     threads: 1
+    log:
+        job_log('blast_species', 'query_label', 'species')
+    benchmark:
+        job_benchmark('blast_species', 'query_label', 'species')
     shell:
         '''
+        (
         python scripts/blast.py \
             --species {wildcards.species} \
             --query-file {input.query:q} \
@@ -387,6 +479,7 @@ rule blast_species:
             --output-parquet {output.parquet:q} \
             --output-csv {output.csv:q} \
             --output-asn {output.asn:q}
+        ) > {log:q} 2>&1
         '''
 
 # =============================================================================
@@ -401,13 +494,21 @@ if defaults.ORF_ENABLED:
         output:
             parquet=ORF_PQ
         threads: 1
+        params:
+            settings=tracked('orf')
+        log:
+            job_log('orf_species', 'query_label', 'species')
+        benchmark:
+            job_benchmark('orf_species', 'query_label', 'species')
         shell:
             '''
+            (
             Rscript scripts/orf_analyser.R \
                 --species {wildcards.species} \
                 {input.parquet:q} \
                 {input.genome:q} \
                 {output.parquet:q}
+            ) > {log:q} 2>&1
             '''
 
 # =============================================================================
@@ -425,13 +526,19 @@ if defaults.HMMER_ENABLED:
         output:
             parquet=HMM_PQ
         params:
+            settings=tracked('hmmer'),
             hmm_db_flag=('--hmm-db ' + str(HMMER_SUBSET_HMM)
                          if defaults.HMMER_PROFILES
                          else '')
         threads:
             workflow.cores
+        log:
+            job_log('hmmer_species', 'query_label', 'species')
+        benchmark:
+            job_benchmark('hmmer_species', 'query_label', 'species')
         shell:
             '''
+            (
             python scripts/hmmer.py \
                 --species {wildcards.species} \
                 --threads {threads} \
@@ -439,6 +546,7 @@ if defaults.HMMER_ENABLED:
                 {input.parquet:q} \
                 {input.pfam_hmm:q} \
                 {output.parquet:q}
+            ) > {log:q} 2>&1
             '''
 
 # =============================================================================
@@ -453,10 +561,16 @@ rule blast_parser_species:
         audit=FASTA_AUDIT,
         selected=SELECTED_PQ
     params:
+        settings=tracked('blast', 'orf.enabled', 'hmmer.enabled'),
         query_acc=query_acc_for_label
     threads: 1
+    log:
+        job_log('blast_parser_species', 'query_label', 'species')
+    benchmark:
+        job_benchmark('blast_parser_species', 'query_label', 'species')
     shell:
         '''
+        (
         python scripts/blast_parser.py \
             --species {wildcards.species} \
             --query-accession {params.query_acc} \
@@ -464,6 +578,7 @@ rule blast_parser_species:
             --output-fasta {output.fasta:q} \
             --output-audit {output.audit:q} \
             --output-selected {output.selected:q}
+        ) > {log:q} 2>&1
         '''
 
 # =============================================================================
@@ -480,13 +595,19 @@ rule rpsblast_species:
         parquet=RPSBLAST_PQ,
         asn=ASN_RPSBLAST
     params:
+        settings=tracked('rpsblast', 'programs'),
         db_flag=('--db ' + str(RPSBLAST_DB)
                  if defaults.RPSBLAST_TARGET_DOMAINS
                  else ''),
         query_acc=query_acc_for_label
     threads: 1
+    log:
+        job_log('rpsblast_species', 'query_label', 'species')
+    benchmark:
+        job_benchmark('rpsblast_species', 'query_label', 'species')
     shell:
         '''
+        (
         python scripts/rpsblast.py \
             --species {wildcards.species} \
             --query-accession {params.query_acc} \
@@ -494,6 +615,7 @@ rule rpsblast_species:
             --output-parquet {output.parquet:q} \
             --output-asn {output.asn:q} \
             {params.db_flag}
+        ) > {log:q} 2>&1
         '''
 
 # =============================================================================
@@ -507,11 +629,19 @@ rule rpsbproc_species:
     output:
         txt=RPSBPROC_TXT
     threads: 1
+    params:
+        settings=tracked('programs')
+    log:
+        job_log('rpsbproc_species', 'query_label', 'species')
+    benchmark:
+        job_benchmark('rpsbproc_species', 'query_label', 'species')
     shell:
         '''
+        (
         python scripts/rpsbproc.py \
             --input-asn {input.asn:q} \
             --output-txt {output.txt:q}
+        ) > {log:q} 2>&1
         '''
 
 # =============================================================================
@@ -526,12 +656,18 @@ rule rpsbproc_parser_species:
     params:
         query_acc=query_acc_for_label
     threads: 1
+    log:
+        job_log('rpsbproc_parser_species', 'query_label', 'species')
+    benchmark:
+        job_benchmark('rpsbproc_parser_species', 'query_label', 'species')
     shell:
         '''
+        (
         python scripts/rpsbproc_parser.py \
             --input-txt {input.txt:q} \
             --output-parquet {output.parquet:q} \
             --query-accession {params.query_acc}
+        ) > {log:q} 2>&1
         '''
 
 # =============================================================================
@@ -545,8 +681,12 @@ rule aggregate_blast:
     output:
         parquet=AGG_BLAST_PQ,
         csv=AGG_BLAST_CSV
+    log:
+        job_log('aggregate_blast', 'query_label')
+    benchmark:
+        job_benchmark('aggregate_blast', 'query_label')
     shell:
-        'python scripts/aggregate.py blast {output.parquet:q} {input}'
+        'python scripts/aggregate.py blast {output.parquet:q} {input} > {log:q} 2>&1'
 
 rule aggregate_rpsblast:
     input:
@@ -554,8 +694,12 @@ rule aggregate_rpsblast:
     output:
         parquet=AGG_RPS_PQ,
         csv=AGG_RPS_CSV
+    log:
+        job_log('aggregate_rpsblast', 'query_label')
+    benchmark:
+        job_benchmark('aggregate_rpsblast', 'query_label')
     shell:
-        'python scripts/aggregate.py rpsblast {output.parquet:q} {input}'
+        'python scripts/aggregate.py rpsblast {output.parquet:q} {input} > {log:q} 2>&1'
 
 rule aggregate_domains:
     input:
@@ -563,8 +707,12 @@ rule aggregate_domains:
     output:
         parquet=AGG_DOM_PQ,
         csv=AGG_DOM_CSV
+    log:
+        job_log('aggregate_domains', 'query_label')
+    benchmark:
+        job_benchmark('aggregate_domains', 'query_label')
     shell:
-        'python scripts/aggregate.py domains {output.parquet:q} {input}'
+        'python scripts/aggregate.py domains {output.parquet:q} {input} > {log:q} 2>&1'
 
 # =============================================================================
 # Cross-Query Merge Rules
@@ -577,8 +725,12 @@ rule merge_blast:
     output:
         parquet=MERGED_BLAST_PQ,
         csv=MERGED_BLAST_CSV
+    log:
+        job_log('merge_blast')
+    benchmark:
+        job_benchmark('merge_blast')
     shell:
-        'python scripts/aggregate.py blast {output.parquet:q} {input}'
+        'python scripts/aggregate.py blast {output.parquet:q} {input} > {log:q} 2>&1'
 
 rule merge_rpsblast:
     """Concatenate per-query rpsblast aggregates."""
@@ -587,8 +739,12 @@ rule merge_rpsblast:
     output:
         parquet=MERGED_RPS_PQ,
         csv=MERGED_RPS_CSV
+    log:
+        job_log('merge_rpsblast')
+    benchmark:
+        job_benchmark('merge_rpsblast')
     shell:
-        'python scripts/aggregate.py rpsblast {output.parquet:q} {input}'
+        'python scripts/aggregate.py rpsblast {output.parquet:q} {input} > {log:q} 2>&1'
 
 rule merge_domains:
     """Merge per-query domain tables with cross-query deduplication."""
@@ -599,12 +755,18 @@ rule merge_domains:
         csv=MERGED_DOM_CSV
     params:
         config_path=str(defaults.CONFIG_FILE)
+    log:
+        job_log('merge_domains')
+    benchmark:
+        job_benchmark('merge_domains')
     shell:
         '''
+        (
         Rscript scripts/merge_queries.R \
             {output.parquet:q} \
             {params.config_path:q} \
             {input}
+        ) > {log:q} 2>&1
         '''
 
 # =============================================================================
@@ -620,12 +782,18 @@ rule pq_completeness_detector:
         tile_plot=PQ_TILE
     params:
         config_path=str(defaults.CONFIG_FILE)
+    log:
+        job_log('pq_completeness_detector', 'query_label')
+    benchmark:
+        job_benchmark('pq_completeness_detector', 'query_label')
     shell:
         '''
+        (
         Rscript scripts/completeness_detector.R \
             {input.domains:q} \
             $(dirname {output.tile_plot:q}) \
             {params.config_path:q}
+        ) > {log:q} 2>&1
         '''
 
 rule pq_contingency_sorter:
@@ -640,14 +808,20 @@ rule pq_contingency_sorter:
     params:
         range_dir=lambda wc: _R + '/ranges/' + wc.query_label,
         config_path=str(defaults.CONFIG_FILE)
+    log:
+        job_log('pq_contingency_sorter', 'query_label')
+    benchmark:
+        job_benchmark('pq_contingency_sorter', 'query_label')
     shell:
         '''
+        (
         Rscript scripts/contingency_sorter.R \
             {input.domains:q} \
             $(dirname {output.domain_3d_plot:q}) \
             $(dirname {output.contingency_table:q}) \
             {params.range_dir:q} \
             {params.config_path:q}
+        ) > {log:q} 2>&1
         '''
 
 rule pq_concordance:
@@ -663,15 +837,22 @@ rule pq_concordance:
         conc_sum=PQ_CONC_SUM,
         conc_sum_csv=PQ_CONC_SUM_CSV
     params:
+        settings=tracked('hmmer.profiles', 'rpsblast.target_domains'),
         config_path=str(defaults.CONFIG_FILE),
         outdir=_R + '/tables/concordance/{query_label}'
+    log:
+        job_log('pq_concordance', 'query_label')
+    benchmark:
+        job_benchmark('pq_concordance', 'query_label')
     shell:
         '''
+        (
         python scripts/concordance.py \
             --aggregate {input.aggregate:q} \
             --domains {input.domains:q} \
             --config {params.config_path:q} \
             --outdir {params.outdir:q}
+        ) > {log:q} 2>&1
         '''
 
 # =============================================================================
@@ -687,12 +868,18 @@ rule merged_completeness_detector:
         tile_plot=MERGED_TILE
     params:
         config_path=str(defaults.CONFIG_FILE)
+    log:
+        job_log('merged_completeness_detector')
+    benchmark:
+        job_benchmark('merged_completeness_detector')
     shell:
         '''
+        (
         Rscript scripts/completeness_detector.R \
             {input.domains:q} \
             $(dirname {output.tile_plot:q}) \
             {params.config_path:q}
+        ) > {log:q} 2>&1
         '''
 
 rule merged_contingency_sorter:
@@ -707,14 +894,20 @@ rule merged_contingency_sorter:
     params:
         range_dir=str(defaults.PATH_DICT['RANGE_OUTPUT_DIR']),
         config_path=str(defaults.CONFIG_FILE)
+    log:
+        job_log('merged_contingency_sorter')
+    benchmark:
+        job_benchmark('merged_contingency_sorter')
     shell:
         '''
+        (
         Rscript scripts/contingency_sorter.R \
             {input.domains:q} \
             $(dirname {output.domain_3d_plot:q}) \
             $(dirname {output.contingency_table:q}) \
             {params.range_dir:q} \
             {params.config_path:q}
+        ) > {log:q} 2>&1
         '''
 
 rule pq_hit_domain_inventory:
@@ -728,17 +921,24 @@ rule pq_hit_domain_inventory:
         locus_pq=PQ_LDI_PQ,
         locus_csv=PQ_LDI_CSV
     params:
+        settings=tracked('hit_domain_inventory', 'hmmer.profiles', 'rpsblast.target_domains'),
         config_path=str(defaults.CONFIG_FILE),
         outdir=_R + '/tables/inventory/{query_label}',
         locus_gap=defaults.LOCUS_GAP
+    log:
+        job_log('pq_hit_domain_inventory', 'query_label')
+    benchmark:
+        job_benchmark('pq_hit_domain_inventory', 'query_label')
     shell:
         '''
+        (
         python scripts/hit_domain_inventory.py \
             --aggregate {input.aggregate:q} \
             --domains {input.domains:q} \
             --config {params.config_path:q} \
             --outdir {params.outdir:q} \
             --locus-gap {params.locus_gap}
+        ) > {log:q} 2>&1
         '''
 
 rule merge_hit_domain_inventory:
@@ -752,17 +952,24 @@ rule merge_hit_domain_inventory:
         locus_pq=MERGED_LDI_PQ,
         locus_csv=MERGED_LDI_CSV
     params:
+        settings=tracked('hit_domain_inventory', 'hmmer.profiles', 'rpsblast.target_domains'),
         config_path=str(defaults.CONFIG_FILE),
         outdir=str(defaults.PATH_DICT['TABLE_INVENTORY_DIR']),
         locus_gap=defaults.LOCUS_GAP
+    log:
+        job_log('merge_hit_domain_inventory')
+    benchmark:
+        job_benchmark('merge_hit_domain_inventory')
     shell:
         '''
+        (
         python scripts/hit_domain_inventory.py \
             --aggregate {input.aggregates} \
             --domains {input.domains} \
             --config {params.config_path:q} \
             --outdir {params.outdir:q} \
             --locus-gap {params.locus_gap}
+        ) > {log:q} 2>&1
         '''
 
 rule merge_concordance:
@@ -778,8 +985,13 @@ rule merge_concordance:
         conc_seq_csv=MERGED_CONC_SEQ_CSV,
         conc_sum=MERGED_CONC_SUM,
         conc_sum_csv=MERGED_CONC_SUM_CSV
+    log:
+        job_log('merge_concordance')
+    benchmark:
+        job_benchmark('merge_concordance')
     shell:
         '''
+        (
         python -c "
 import pandas as pd
 from pathlib import Path
@@ -795,6 +1007,7 @@ for inputs, out_pq, out_csv in [
     merged.to_csv(out_csv, index=False)
     print(f'Merged {{len(dfs)}} files -> {{len(merged)}} rows -> {{out_pq}}')
 "
+        ) > {log:q} 2>&1
         '''
 
 # =============================================================================

@@ -596,3 +596,16 @@ When a species produces zero results at any stage, the pipeline creates valid bu
 - **Empty rpsbproc input:** rpsbproc is skipped (the output `.txt` is touched). The parser produces a zero-row parquet.
 
 This ensures that a single species failure does not halt the entire pipeline.
+
+## Logs and benchmarks
+
+Written under `logs_root_folder`, not under the results:
+
+| Path | Content |
+|------|---------|
+| `jobs/<rule>/<query label>/<species>.log` | Everything one job printed (the script's messages and the tool's output). Per-query rules use `jobs/<rule>/<query label>.log`; rules that run once use `jobs/<rule>/all.log`. |
+| `benchmarks/<rule>/...tsv` | Snakemake's benchmark for the same job: wall-clock seconds, peak memory, I/O. |
+
+When a job fails, its log is printed to the console and the job's outputs are removed. A tool that
+exits with an error always fails its job; an empty table in the results therefore means the search
+ran and found nothing.
