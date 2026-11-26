@@ -4,30 +4,15 @@ This document covers common issues encountered when running the rpsHunter pipeli
 
 ---
 
-## 1. Never Use `snakemake --forceall`
+## 1. Redoing Part of a Run
 
-**Symptom:** Pipeline attempts to re-download all genomes, rebuild all BLAST databases, and rerun every rule from scratch.
+`--forceall` is refused by the launcher: it would rebuild every database and download the genomes
+again. To redo a step:
 
-**Why this is dangerous:** The `--forceall` flag forces rerun of ALL rules, including genome download. This will:
-
-- Delete existing genome FASTA files (`.fna` files in the species database directory)
-- Attempt to re-download approximately 6 GB of genome data from NCBI
-- Recreate BLAST databases unnecessarily
-- Take hours to complete
-
-**Safe alternatives:**
-
-1. **Delete specific output files** and rerun normally. Snakemake will only regenerate the missing files:
-   ```bash
-   rm -rf results/fastas/*.fa results/rpsblast/*.parquet results/domains/*.parquet
-   conda run -n rpsHunter ./rpsHunter --blast --skip-validation
-   ```
-
-2. **Use `--forcerun` with specific (non-wildcarded) rule names** to rerun a particular stage without touching upstream outputs.
-
-3. **Touch upstream files** to trigger dependency-based reruns (use with caution).
-
-See also: [Configuration](configuration.md) for details on config-driven reruns.
+- change the config value that should take effect and run again: the steps it affects are redone
+  (see "What reruns when" in the [CLI reference](cli-reference.md));
+- or delete the outputs you want remade and run the stage again;
+- `./rpsHunter <stage> -n` shows what would run before anything does.
 
 ---
 
@@ -115,7 +100,7 @@ If a job was partially completed (e.g., a file was being written when the proces
 
 ```bash
 # Just rerun the same command:
-conda run -n rpsHunter ./rpsHunter --rpsblast --skip-validation
+./rpsHunter --all
 ```
 
 ---
@@ -137,26 +122,5 @@ conda run -n rpsHunter ./rpsHunter --rpsblast --skip-validation
 2. For very large genomes, downloads may take hours even with an API key. Plan accordingly and ensure a stable network connection.
 
 3. If a download is interrupted, re-running the same command will resume from where it left off (see [Pipeline Resumption](#7-pipeline-resumption-after-interruption)).
-
----
-
-## 9. Multi-Flag CLI Invocation Fails
-
-**Symptom:** Running `./rpsHunter --blast --rpsblast` fails with an error about unknown arguments.
-
-**Cause:** Each CLI flag dispatches a **separate** Snakemake subprocess. When multiple flags are provided, subsequent flags are passed as unknown arguments to the first Snakemake invocation, which fails.
-
-**Solution:** Run one flag per command, in the correct order:
-
-```bash
-conda run -n rpsHunter ./rpsHunter --blast --skip-validation
-conda run -n rpsHunter ./rpsHunter --rpsblast --skip-validation
-conda run -n rpsHunter ./rpsHunter --rpsbproc --skip-validation
-conda run -n rpsHunter ./rpsHunter --rpsbproc-parser --skip-validation
-conda run -n rpsHunter ./rpsHunter --completeness-detector --skip-validation
-conda run -n rpsHunter ./rpsHunter --contingency-parser --skip-validation
-```
-
-The `--skip-validation` flag is the sole exception: it is consumed by the Python CLI dispatcher before Snakemake is invoked and can be combined with any single stage flag.
 
 ---

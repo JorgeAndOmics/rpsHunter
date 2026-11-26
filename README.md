@@ -40,97 +40,47 @@ Built on Snakemake, rpsHunter provides fully parallelized, reproducible, and fau
 ## Quick Start
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/JorgeAndOmics/rpsHunter.git
 cd rpsHunter
+make env                      # the locked conda environment `rpsHunter`
+conda activate rpsHunter
 
-# 2. Create the conda environment
-conda env create -f data/config/environment.yaml
+# Edit data/config/config.yaml: queries, species, domain families, folders.
 
-# 3. Configure your analysis
-#    Edit data/config/config.yaml with your species, query protein, and thresholds
-
-# 4. Download databases (one-time setup)
-conda run -n rpsHunter ./rpsHunter --setup-databases --skip-validation
-
-# 5. Run the pipeline (each stage separately)
-conda run -n rpsHunter ./rpsHunter --download-genomes --skip-validation
-conda run -n rpsHunter ./rpsHunter --download-query --skip-validation
-conda run -n rpsHunter ./rpsHunter --blast-dbs --skip-validation
-conda run -n rpsHunter ./rpsHunter --blast --skip-validation
-conda run -n rpsHunter ./rpsHunter --hmmer --skip-validation
-conda run -n rpsHunter ./rpsHunter --rpsblast --skip-validation
-conda run -n rpsHunter ./rpsHunter --rpsbproc --skip-validation
-conda run -n rpsHunter ./rpsHunter --rpsbproc-parser --skip-validation
-conda run -n rpsHunter ./rpsHunter --completeness-detector --skip-validation
-conda run -n rpsHunter ./rpsHunter --contingency-parser --skip-validation
+./rpsHunter --download-databases --download-genomes --download-queries   # once
+./rpsHunter --all -n          # list what the analysis would run
+./rpsHunter --all             # search, domains, loci
 ```
 
-> **Important:** Each CLI flag dispatches a separate Snakemake subprocess. Run one flag per invocation. See the [CLI Reference](docs/cli-reference.md) for details.
+Results are tables under `results/tables/` and GFF3 tracks under `results/ranges/`; see
+[Outputs](docs/outputs.md). The shipped config finds PRDM9-like regions in five mammalian genomes.
 
 ## Installation
 
-### Prerequisites
+Linux (including Windows through WSL). Needs [conda](https://docs.conda.io); everything else,
+including BLAST+, HMMER, rpsbproc and Snakemake, comes with the environment.
 
-- [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Mamba](https://mamba.readthedocs.io/) (recommended)
-- Git
+```bash
+make env        # creates the environment from data/config/environment.lock-linux-64.txt
+```
 
-### Setup
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/JorgeAndOmics/rpsHunter.git
-   cd rpsHunter
-   ```
-
-2. **Create the conda environment** from the provided specification:
-
-   ```bash
-   conda env create -f data/config/environment.yaml
-   ```
-
-   This installs all dependencies including Python 3.12, R 4.x, BLAST+, HMMER, Snakemake, rpsbproc, and all required R/Python packages.
-
-3. **Download required databases** (CDD, rpsbproc annotation data, CDD SMP files):
-
-   ```bash
-   conda run -n rpsHunter ./rpsHunter --setup-databases --skip-validation
-   ```
-
-4. **Download the Pfam HMM database** (required if using HMMER filtering):
-
-   The Pfam database is downloaded automatically when HMMER rules are first invoked. No manual setup is needed.
-
-5. **Configure your analysis** by editing `data/config/config.yaml`:
-   - List your query proteins under `queries:` (accession and display label)
-   - Define your species in the `species:` dictionary
-   - Set `root.db_root_folder` to where databases should be stored
-   - Adjust thresholds as needed (see [Configuration Reference](docs/configuration.md))
-
-6. **Prepare rpsbproc annotation data:**
-
-   After running `--setup-databases`, the rpsbproc annotation files are placed in `db_root_folder/rpsbproc_dbs/`. No further manual configuration is needed.
+The databases (`--download-databases`) are NCBI CDD with its annotation files and Pfam: about 8 GB
+to download and 45 GB unpacked, under `root.db_root_folder`.
 
 ## Usage
 
-rpsHunter is executed from the project root directory. Each pipeline stage is invoked with its own CLI flag:
-
 ```bash
-# Run BLAST searches and generate filtered FASTAs + aggregate table
-conda run -n rpsHunter ./rpsHunter --blast --skip-validation
-
-# Run HMMER domain filtering
-conda run -n rpsHunter ./rpsHunter --hmmer --skip-validation
-
-# Run RPSBLAST domain detection
-conda run -n rpsHunter ./rpsHunter --rpsblast --skip-validation
-
-# Generate domain completeness heatmap
-conda run -n rpsHunter ./rpsHunter --completeness-detector --skip-validation
+./rpsHunter --help                     # stages, grouped, with examples
+./rpsHunter --all                      # everything after the downloads
+./rpsHunter --domains --loci           # only these stages (and what they need)
+./rpsHunter --all --config my.yaml     # another config file
 ```
 
-For the complete flag reference and workflow recipes, see the [CLI Reference](docs/cli-reference.md).
+Before anything runs, rpsHunter checks the config, the tools and the input files, offline and
+without questions, and lists what Snakemake would do. A stage builds what it needs upstream, but a
+download, a BLAST database build or a tBLASTn search starts only when its own stage is requested;
+otherwise the run stops and says why. After a config change, the next run redoes exactly the steps
+that change affects. See the [CLI Reference](docs/cli-reference.md).
 
 ## Documentation
 
@@ -145,11 +95,12 @@ For the complete flag reference and workflow recipes, see the [CLI Reference](do
 
 ## Environment Variables
 
-To enhance performance when downloading data from NCBI, you may optionally provide an NCBI API key. This significantly increases the request rate limit for NCBI services. Instructions for obtaining an API key can be found in the [NCBI documentation](https://support.nlm.nih.gov/kbArticle/?pn=KA-05317).
+| Variable | Use |
+|---|---|
+| `RPSHUNTER_CONFIG` | Config file for the run, when `--config` is not given |
+| `NCBI_API_KEY` | Optional. Raises NCBI's request limit for `--download-genomes` and `--download-queries`. Never put the key in the config |
 
-When launching the pipeline, rpsHunter will prompt you to enter your API key unless input validation is explicitly skipped using `--skip-validation` or `-skp`. Your API key is sensitive and should not be shared.
-
-Additionally, a valid email address must be provided under the `entrez_email` field in `config.yaml`. This is required by NCBI's Entrez API for responsible use.
+`execution.entrez_email` in the config is sent to NCBI with download requests, as its usage policy asks.
 
 ## Acknowledgments
 

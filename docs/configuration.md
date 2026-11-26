@@ -14,7 +14,7 @@ This YAML file is read at import time by `workflow/scripts/defaults.py`, which e
 
 ## Schema Validation
 
-Configuration is validated against `data/config/schema.yaml` using [Yamale](https://github.com/23andMe/Yamale), a strict YAML schema validator. Validation runs automatically before pipeline execution unless bypassed with the `--skip-validation` CLI flag (see [cli-reference.md](cli-reference.md)).
+Configuration is validated against `data/config/schema.yaml` using [Yamale](https://github.com/23andMe/Yamale), a strict YAML schema validator. Validation runs before every launch, together with the other checks described in [cli-reference.md](cli-reference.md#what-happens-before-anything-runs); it cannot be skipped and needs no network.
 
 The schema enforces types, value ranges, regex patterns, and required/optional status for every parameter. If validation fails, the pipeline exits with a descriptive error before any computation begins.
 
@@ -308,13 +308,10 @@ species:
     assembly: GCF_000147115.1
 ```
 
-Then run the full pipeline starting from genome download:
+Then download the new genome and run the analysis:
 
 ```bash
-conda run -n rpsHunter ./rpsHunter --download-genomes --skip-validation
-conda run -n rpsHunter ./rpsHunter --blast-dbs --skip-validation
-conda run -n rpsHunter ./rpsHunter --blast --skip-validation
-# ... continue through remaining stages
+./rpsHunter --download-genomes --all
 ```
 
 Snakemake will detect that the existing three species already have outputs and only process the new species through each stage.
