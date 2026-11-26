@@ -123,6 +123,7 @@ def cli_entry() -> None:
         ------
             :raises SystemExit: If validation fails or CLI arguments are missing.
     """
+    defaults.ensure_dirs()  # before the first log file is opened
     colored_logging.colored_logging(log_file_name='rpsHunter_main.log')
 
     # -------------------------------------------------------------------------

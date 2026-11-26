@@ -36,7 +36,6 @@ def main():
         print(f'WARNING: {args.type} aggregation — missing per-species files for: {", ".join(missing)}')
 
     output_path = Path(args.output_parquet)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     if dfs:
         combined = pd.concat(dfs, ignore_index=True)

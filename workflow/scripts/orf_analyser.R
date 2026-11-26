@@ -52,7 +52,6 @@ START_CODON    <- {
 }
 LONGEST_ORF    <- config$orf$longest_orf %||% TRUE
 
-dir.create(dirname(args$output_parquet), showWarnings = FALSE, recursive = TRUE)
 
 # ==============================================================================
 # SECTION 4: HELPER FUNCTIONS

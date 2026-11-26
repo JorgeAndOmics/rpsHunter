@@ -60,7 +60,6 @@ def blaster(
             asn_file_path = defaults.PATH_DICT['ASN_TBLASTN_DIR'] / f'{subject}.asn'
         else:
             asn_file_path = asn_output_path
-            asn_file_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Construct the BLAST command
         blast_command = [
@@ -279,9 +278,6 @@ def main() -> None:
     else:
         asn_path = defaults.PATH_DICT['ASN_TBLASTN_DIR'] / f'{args.species}.asn'
 
-    parquet_path.parent.mkdir(parents=True, exist_ok=True)
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-    asn_path.parent.mkdir(parents=True, exist_ok=True)
 
     if blast_df is not None and not blast_df.empty:
         blast_df.to_parquet(parquet_path, index=False)

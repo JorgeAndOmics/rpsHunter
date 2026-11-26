@@ -1,6 +1,9 @@
 from pathlib import Path
 from scripts import defaults
 
+# The one place directories are created for a run (see defaults.ensure_dirs).
+defaults.ensure_dirs()
+
 # =============================================================================
 # Top-level constants
 # =============================================================================
@@ -220,7 +223,6 @@ rule cdd_database_downloader:
         workflow.cores
     shell:
         """
-        mkdir -p {params.cdd_dir:q} && \
         cd {params.cdd_dir:q} && \
         echo "Downloading CDD database (~1.5 GB)..." && \
         wget -q --show-progress -O Cdd_LE.tar.gz {params.url:q} && \
@@ -244,7 +246,6 @@ rule rpsbproc_data_downloader:
         base_url='https://ftp.ncbi.nih.gov/pub/mmdb/cdd'
     shell:
         """
-        mkdir -p {params.rpsbproc_dir:q} && \
         cd {params.rpsbproc_dir:q} && \
         echo "Downloading rpsbproc annotation data files..." && \
         wget -q --show-progress -O cddid.tbl.gz {params.base_url}/cddid.tbl.gz && \
@@ -271,7 +272,6 @@ rule cdd_smp_downloader:
         workflow.cores
     shell:
         """
-        mkdir -p {params.smp_dir:q} && \
         cd {params.smp_dir:q} && \
         echo "Downloading CDD SMP archive (~2.2 GB)..." && \
         wget -q --show-progress -O cdd.tar.gz {params.url:q} && \

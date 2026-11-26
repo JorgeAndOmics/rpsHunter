@@ -102,10 +102,6 @@ PATH_DICT['ASN_TBLASTN_DIR'] = PATH_DICT['ASN_ROOT_OUTPUT_DIR'] / 'tblastn'
 PATH_DICT['ASN_RPSBLAST_DIR'] = PATH_DICT['ASN_ROOT_OUTPUT_DIR'] / 'rpsblast'
 PATH_DICT['ASN_RPS_PROTEIN_DIR'] = PATH_DICT['ASN_ROOT_OUTPUT_DIR'] / 'protein'
 
-# Directory generation
-for path in PATH_DICT.values():
-    if isinstance(path, Path):
-        path.mkdir(parents=True, exist_ok=True)
 
 # =============================================================================
 # Query Configuration (multi-query support)
@@ -177,11 +173,28 @@ _PER_QUERY_NESTED = [
     PATH_DICT['TABLE_BLAST_DIR'] / '{ql}' / 'selected',
 ]
 
-for _ql in QUERY_LABEL_LIST:
-    for _parent in _PER_QUERY_PARENTS:
-        (_parent / _ql).mkdir(parents=True, exist_ok=True)
-    for _nested_tmpl in _PER_QUERY_NESTED:
-        Path(str(_nested_tmpl).replace('{ql}', _ql)).mkdir(parents=True, exist_ok=True)
+# PATH_DICT entries that are file-name prefixes rather than folders (cdd_dbs/Cdd.*):
+# only their parent folder is created.
+_FILE_PREFIX_KEYS = frozenset({'RPS_DB'})
+
+
+def ensure_dirs() -> None:
+    """Create every directory the pipeline writes to.
+
+    This is the only place in the project that creates directories. It is called
+    once by the launcher and once when the Snakefile is parsed, so importing this
+    module stays free of side effects and scripts can rely on their output folders
+    existing. A new output folder is added to PATH_DICT (or to the per-query lists
+    above), never created by the script that writes into it.
+    """
+    for key, path in PATH_DICT.items():
+        folder = path.parent if key in _FILE_PREFIX_KEYS else path
+        folder.mkdir(parents=True, exist_ok=True)
+    for label in QUERY_LABEL_LIST:
+        for parent in _PER_QUERY_PARENTS:
+            (parent / label).mkdir(parents=True, exist_ok=True)
+        for template in _PER_QUERY_NESTED:
+            Path(str(template).replace('{ql}', label)).mkdir(parents=True, exist_ok=True)
 
 # =============================================================================
 # Extended Visualization Suite — Output File Paths
