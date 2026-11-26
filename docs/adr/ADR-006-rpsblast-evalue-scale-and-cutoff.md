@@ -1,6 +1,6 @@
 # ADR-006: RPS-BLAST E-values on the full-CDD scale, with a cut-off of 1
 
-- **Status**: Proposed
+- **Status**: Accepted (2026-11-27)
 - **Date**: 2026-11-26
 - **Deciders**: Jorge Gonzalez Garcia
 - **Affects results**: yes

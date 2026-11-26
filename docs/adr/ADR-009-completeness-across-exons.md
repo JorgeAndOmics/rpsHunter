@@ -1,6 +1,6 @@
 # ADR-009: Completeness measured per locus across exons, not from per-hit flags
 
-- **Status**: Proposed
+- **Status**: Accepted (2026-11-27)
 - **Date**: 2026-11-26
 - **Deciders**: Jorge Gonzalez Garcia
 - **Affects results**: yes
