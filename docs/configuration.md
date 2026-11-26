@@ -133,7 +133,6 @@ Controls parallelism, NCBI data retrieval behavior, and internal identifiers.
 |-----------|------|---------|------------|-------------|
 | `num_cores` | `int` | `16` | `int(min=1)` | Maximum number of CPU cores for Snakemake. Per-species rules run in parallel up to this limit; HMMER consumes all cores per job (serialized). |
 | `use_species_list` | `bool` | `true` | `bool()` | When `true`, species are read from the `species:` section of this config. When `false`, species are inferred from `.fa` files in the database root directory. |
-| `random_id_length` | `int` | `6` | `int(min=1)` | Length of the alphanumeric Tag appended to each BLAST hit for traceability through the pipeline. |
 | `retrieval_time_lag` | `float` | `0.3` | `num(min=0)` | Delay in seconds between NCBI Entrez requests to avoid rate limiting. |
 | `max_retrieval_attempts` | `int` | `9` | `int(min=1)` | Maximum retry attempts for failed NCBI data retrievals. |
 | `entrez_email` | `str` | -- | `str()` | Email address for NCBI Entrez API identification. Required by NCBI usage policies. |

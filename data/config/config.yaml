@@ -62,7 +62,6 @@ queries:
 execution:
   num_cores: 16
   use_species_list: true
-  random_id_length: 6
   retrieval_time_lag: 0.3
   max_retrieval_attempts: 9
   entrez_email: 'your_email@example.com'

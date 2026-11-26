@@ -51,7 +51,6 @@ query_schema:
 execution_schema:
   num_cores: int(min=1)
   use_species_list: bool()
-  random_id_length: int(min=1)
   retrieval_time_lag: num(min=0)
   max_retrieval_attempts: int(min=1)
   entrez_email: str()

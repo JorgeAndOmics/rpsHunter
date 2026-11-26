@@ -206,9 +206,9 @@ The key insight: most rules use `threads: 1`, which lets Snakemake run up to `nu
 
 ## Tag System
 
-Every BLAST hit receives a 6-character random alphanumeric ID (the **Tag**) at creation time in `blast.py`. This Tag propagates through the entire pipeline:
+Every BLAST hit receives a 12-character identifier (the **Tag**) when it is created in `blast.py`. The Tag is a hash of what the hit is: query accession, species, sequence, subject start and end (which carry the strand) and query start and end. The same hit therefore has the same Tag on every run and every machine, and a run stops if two different hits would share one ([ADR-004](adr/ADR-004-content-derived-tags.md)). Query coordinates are part of the identity because one stretch of genome often aligns to several places on the query, for example in a zinc-finger array. The Tag propagates through the entire pipeline:
 
-1. **blast.py** --- generates `Tag` column with `random_string_generator()`
+1. **blast.py** --- generates the `Tag` column with `tags.tag_hits()` (`workflow/scripts/tags.py`)
 2. **blast_parser.py** --- embeds Tag in FASTA header: `{Subject_ID}:{S.Start}-{S.End}|tag:{Tag}`
 3. **rpsblast.py** --- extracts Tag from FASTA header back into a column
 4. **rpsbproc_parser.py** --- extracts Tag from the `Definition` field via regex `\|tag:(\w+)`

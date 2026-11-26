@@ -141,9 +141,10 @@ omit = [
 ]
 
 [tool.coverage.report]
-# The floor only rises. It starts at 0 because no rewritten code exists yet; it
-# is set to the achieved value when the first modules land.
-fail_under = 0
+# The floor only rises. 100% was measured when tags.py, the first rewritten
+# module, landed (2026-11-26); 95 leaves room for an unreachable defensive branch
+# without inviting untested code.
+fail_under = 95
 show_missing = true
 skip_empty = true
 exclude_lines = [

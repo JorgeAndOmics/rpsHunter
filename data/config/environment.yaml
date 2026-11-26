@@ -51,7 +51,6 @@ dependencies:
   - yamale=6.1.0
   # --- development tooling (make check); never affects results ---
   - deptry=0.25.1
-  - import-linter=2.17
   - mypy=2.4.1
   - pandas-stubs=3.1.0.261029
   - pre-commit=4.7.0
