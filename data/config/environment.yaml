@@ -2,8 +2,6 @@ name: rpsHunter
 channels:
   - conda-forge
   - bioconda
-  - https://repo.anaconda.com/pkgs/main
-  - https://repo.anaconda.com/pkgs/r
 dependencies:
   - python=3.12
   - snakemake-minimal>=7.0
@@ -24,11 +22,14 @@ dependencies:
   - blast
   - diamond
   - dill=0.3.9
+  - entrez-direct
   - hmmer
   - humanfriendly=10.0
   - idna=3.8
+  - jq
   - ncbi-datasets-cli
   - numpy
+  - pandoc
   - pandas=2.2.2
   - pandera
   - pv
@@ -55,5 +56,7 @@ dependencies:
   - six=1.16.0
   - taxonkit
   - tqdm=4.67.1
+  - unzip
   - urllib3=2.2.2
+  - wget
   - yamale

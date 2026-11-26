@@ -10,20 +10,25 @@ Modules:
     - `pathlib.Path`: For robust path handling.
 
 Configuration:
-    - The configuration file is expected to be located at `../data/config/config.yaml`.
+    - The configuration file defaults to `data/config/config.yaml`; the environment
+      variable `RPSHUNTER_CONFIG` points at a different complete config.
     - Various constants and directory paths are initialized based on the configuration file.
 
 Usage:
     This script is intended to be imported as a module and not run directly.
 """
 
+import os
 from pathlib import Path
 from typing import Dict, Any, List, Union
 
 import yaml
 
-# Configuration file path
-CONFIG_FILE: Path = Path(__file__).parents[2] / 'data' / 'config' / 'config.yaml'
+# Configuration file path. RPSHUNTER_CONFIG selects another complete config (for
+# example a machine-local one); it is an environment variable because this module
+# is imported by the Snakefile and by every script, before any argument parsing.
+_DEFAULT_CONFIG_FILE: Path = Path(__file__).parents[2] / 'data' / 'config' / 'config.yaml'
+CONFIG_FILE: Path = Path(os.environ.get('RPSHUNTER_CONFIG') or _DEFAULT_CONFIG_FILE).resolve()
 
 with open(CONFIG_FILE, 'r') as f:
     config: Dict[str, Any] = yaml.safe_load(f)
