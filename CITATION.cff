@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use rpsHunter, please cite it using the metadata below."
+title: "rpsHunter: protein domain detection in genomes with tBLASTn, RPS-BLAST and HMMER"
+type: software
+authors:
+  - family-names: "Gonzalez Garcia"
+    given-names: "Jorge"
+repository-code: "https://github.com/JorgeAndOmics/rpsHunter"
+license: MIT
+version: "0.9.0"
+date-released: "2026-11-26"
+keywords:
+  - bioinformatics
+  - protein domains
+  - snakemake
+  - blast
+  - conserved domain database
+  - hmmer

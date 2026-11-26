@@ -32,7 +32,7 @@ Built on Snakemake, rpsHunter provides fully parallelized, reproducible, and fau
 - **Comprehensive audit trail** with per-sequence pass/fail flags at every filtering gate
 - **Dual output formats** (Parquet + CSV) for all tables, GFF3 for genomic coordinates
 - **Publication-quality visualizations** including domain completeness heatmaps and interactive 3D scatter plots
-- **Cross-platform support** for Linux, macOS, and Windows (WSL)
+- **Linux** (including Windows through WSL); the shell steps rely on GNU tools
 
 ## Quick Start
 
@@ -100,7 +100,7 @@ conda run -n rpsHunter ./rpsHunter --contingency-parser --skip-validation
    The Pfam database is downloaded automatically when HMMER rules are first invoked. No manual setup is needed.
 
 5. **Configure your analysis** by editing `data/config/config.yaml`:
-   - Set `query.accession` to your protein of interest
+   - List your query proteins under `queries:` (accession and display label)
    - Define your species in the `species:` dictionary
    - Set `root.db_root_folder` to where databases should be stored
    - Adjust thresholds as needed (see [Configuration Reference](docs/configuration.md))
@@ -170,7 +170,7 @@ Contributions are always welcome! Feel free to generate a pull request, or conta
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+[MIT](LICENSE). To cite rpsHunter, see [CITATION.cff](CITATION.cff).
 
 ## References
 
