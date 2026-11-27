@@ -32,6 +32,7 @@ results/
     domains/hmmer_domains.*              HMMER domains (when HMMER runs)
     loci/loci.*                          loci
     loci/locus_families.*                what each locus carries, per family
+  plots/{overview,domains,loci,architecture}.pdf   figures
   manifests/<date>_<time>.yaml           what each run was made with
 ```
 
@@ -139,6 +140,20 @@ One row per locus and family present.
 | `Best_Model` | The model that coverage refers to |
 | `Copies` | Largest number of separate places one model occurs at. For a repeat family this is the size of the array; for a domain split across exons each exon piece is a place, so a single SET domain in three exons gives 3 |
 | `N_Calls` | Calls of the family in the locus |
+
+## Figures
+
+Vector PDFs under `plots/`, written by `--figures`. Species are on rows, in config order or the
+order of an optional tree; the visual system is described in [visual_style.md](visual_style.md).
+
+| File | Pages |
+|---|---|
+| `overview.pdf` | Key. Loci carrying each family (and every family). From hits to loci: what remains at each step |
+| `domains.pdf` | Key. Calls by evidence tier. Strength of the calls. How CDD classifies them. Whether HMMER confirms them. How many queries found each domain |
+| `loci.pdf` | Key. Model coverage per locus and family. Size of repeat arrays (families marked `repeat: true`) |
+| `architecture.pdf` | The loci carrying most families (up to eight per species), each drawn with its domains at their own positions |
+
+All four files are always written; a run with nothing to show gets pages with empty rows.
 
 ## Run manifests
 

@@ -49,13 +49,10 @@ test: test-py test-r ## Run Python and R tests
 test-py: ## pytest, with the coverage floor from pyproject.toml
 	pytest --cov --cov-report=term-missing:skip-covered
 
-# No R test exists yet: the R scripts are all on the legacy list and run top to
-# bottom on import. The first testthat files arrive with the first rewritten R
-# module; until then this target says so instead of passing silently.
+# The figure code (workflow/scripts/plots, figures.R, utils/log.R). A warning
+# fails the suite: a clean run draws without one.
 test-r: ## R testthat suite
-	@if ls $(R_TESTS)/test-*.R >/dev/null 2>&1; then \
-		Rscript -e 'testthat::test_dir("$(R_TESTS)", stop_on_failure = TRUE)'; \
-	else echo "test-r: NO R TESTS YET ($(R_TESTS) is empty)"; fi
+	Rscript -e 'testthat::test_dir("$(R_TESTS)", stop_on_failure = TRUE, stop_on_warning = TRUE)'
 
 # -- combined gate ---------------------------------------
 check: lint lint-r lint-sh format-check typecheck test ## Run every quality gate (before each commit)

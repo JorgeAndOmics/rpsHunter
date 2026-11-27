@@ -444,6 +444,15 @@ def test_every_selected_hit_is_searched_whether_or_not_hmmer_matched_it(
     assert fasta.read_text().count(">") == len(hits)
 
 
+def test_the_run_draws_its_four_figure_files(toy_run: ToyRun):
+    plots = toy_run.results / "plots"
+
+    for name in ("overview", "domains", "loci", "architecture"):
+        pdf = plots / f"{name}.pdf"
+        assert pdf.read_bytes().startswith(b"%PDF-"), name
+        assert pdf.stat().st_size > 3000, name
+
+
 def test_the_run_leaves_a_manifest_and_a_run_log(toy_run: ToyRun):
     (manifest_file,) = (toy_run.results / "manifests").glob("*.yaml")
     record = yaml.safe_load(manifest_file.read_text())

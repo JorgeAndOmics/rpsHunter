@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Figures, rebuilt** (`--figures`, part of `--all`): four vector PDFs under `results/plots/`
+  (`overview`, `domains`, `loci`, `architecture`) on one visual system: a colour-blind-safe palette
+  with fixed meanings, IBM Plex Sans embedded, species on rows in config or tree order
+  (`figures.species_tree`), pages that grow with the number of species
+  ([visual_style.md](docs/visual_style.md)).
 - `--config-help [KEY]` explains config sections and parameters at the terminal, read from
   `docs/configuration.md` so the two cannot disagree.
 - **A manifest per run** (`results/manifests/<date>_<time>.yaml`): code version and commit, command,
@@ -45,6 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A new version does not redo finished work.** The launcher reruns a job when an input or a
+  setting it depends on changed, not when the wording of its rule did. Before, upgrading rpsHunter
+  scheduled downloads and searches again (the guard stopped them, on every run).
 - **Query proteins are fetched exactly.** `--download-queries` takes the versioned accession from the
   config and checks that NCBI returned that record; it no longer falls back to a search by name and
   the first match. Each download is recorded with its checksum.
@@ -123,6 +131,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The old figures (tile plot, 3D scatter, seven extended plots) and the R and Bioconductor packages
+  only they used (28 packages, among them plotly, rtracklayer, GenomicRanges and the tidyverse
+  bundle; ggplot2, dplyr and arrow stay).
 - The single-query config form `query: {format, accession}`. Use `queries:`, which also takes one
   query; a config still using `query:` stops with that advice. Two queries with the same label
   are now refused instead of silently overwriting each other's folders.

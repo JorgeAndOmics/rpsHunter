@@ -19,19 +19,11 @@ dependencies:
   - numpy=2.5.5
   - pandas=2.2.2
   - pyarrow=17.0.0
-  # --- analysis: R and Bioconductor ---
-  - bioconductor-biostrings=2.74.0
-  - bioconductor-genomicranges=1.58.0
-  - bioconductor-iranges=2.40.0
-  - bioconductor-plyranges=1.26.0
-  - bioconductor-rtracklayer=1.66.0
+  # --- figures (R; draws the tables, changes no result) ---
+  - font-ttf-ibm-plex-sans=1.1.0   # the one typeface of every figure, embedded in the PDFs
   - r-arrow=17.0.0
-  - r-tidyverse=2.0.0
-  # --- figures ---
-  - pandoc=3.14
-  - r-ggsci=5.2.0
-  - r-htmlwidgets=1.6.4
-  - r-plotly=4.12.1
+  - r-dplyr=1.2.1
+  - r-ggplot2=4.0.4
   - r-scales=1.4.0
   # --- data acquisition (download stages only) ---
   - entrez-direct=26.0
@@ -52,7 +44,9 @@ dependencies:
   - pytest=9.2.0
   - pytest-cov=7.1.0
   - pytest-mock=3.17.0
+  - r-colorspace=2.1_3     # colour-blindness simulation in the palette tests
   - r-cyclocomp=1.1.2
+  - r-farver=2.1.2         # colour distances in the palette tests
   - r-lintr=3.4.0
   - r-testthat=3.3.2
   - ruff=0.17.6

@@ -21,6 +21,7 @@ Any number of stages can be given in one call; they run in the order below, as o
 | Domains | `--hmmer` | HMMER domains of the selected hits (nothing to do if `hmmer.enabled` is false or no family lists a Pfam accession) |
 | Domains | `--domains` | RPS-BLAST, rpsbproc, domain calls and instances, GFF3 tracks |
 | Tables | `--loci` | Loci and the families each carries |
+| Figures | `--figures` | The four figure PDFs |
 | | `--all` | Every stage after Setup |
 
 ## Options
@@ -86,8 +87,9 @@ databases and download the genomes again.
 
 ## What reruns when
 
-Rules record the config sections they depend on. After editing the config, the next call reruns
-exactly the affected steps:
+A job is redone when one of its inputs is newer or changed, or when a setting it depends on
+changed: rules record the config sections they use. A new version of rpsHunter does not by itself
+redo anything. After editing the config, the next call reruns exactly the affected steps:
 
 | Changed | Reruns from |
 |---|---|
@@ -97,6 +99,7 @@ exactly the affected steps:
 | `rpsblast:` | RPS-BLAST |
 | `hmmer:` | HMMER, then the domain tables |
 | `loci.gap` | locus tables |
+| `figures:`, the order of `species:` | figures |
 
 ## Parallelism
 
