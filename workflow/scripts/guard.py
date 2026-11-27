@@ -27,22 +27,26 @@ _STATS = "Job stats:"
 _OWNER = {rule: stage.flag for stage in stages.STAGES for rule in stage.heavy}
 
 
+def _rows_after_first_header(dry_run: str) -> list[tuple[str, int]]:
+    """Every (name, number) row that follows the first "Job stats" header."""
+    lines = dry_run.splitlines()
+    headers = [index for index, line in enumerate(lines) if line.startswith(_STATS)]
+    if not headers:
+        return []
+    found = [_ROW.match(line) for line in lines[headers[0] + 1 :]]
+    return [(row[1], int(row[2])) for row in found if row]
+
+
 def job_counts(dry_run: str) -> dict[str, int]:
     """Return jobs per rule from the first "Job stats" table of a dry run.
 
     Snakemake prints the table again at the end, so reading stops at the
     table's "total" row. Empty when nothing would run.
     """
-    counts: dict[str, int] = {}
-    in_table = False
-    for line in dry_run.splitlines():
-        if line.startswith(_STATS):
-            in_table = True
-        elif in_table and (row := _ROW.match(line)):
-            if row[1] == "total":
-                break
-            counts[row[1]] = int(row[2])
-    return counts
+    rows = _rows_after_first_header(dry_run)
+    names = [name for name, _ in rows]
+    end = names.index("total") if "total" in names else len(rows)
+    return dict(rows[:end])
 
 
 def first_reasons(dry_run: str) -> dict[str, str]:

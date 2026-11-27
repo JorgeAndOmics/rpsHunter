@@ -210,6 +210,20 @@ def _execute(session: _Session, screen: console.Console, tools: Tools) -> int:
     return status
 
 
+def _stop_before_running(
+    request: stages.Request, config: Path, plan: str, counts: dict[str, int]
+) -> int | None:
+    """Show what would run; return an exit status if the run ends here, else None."""
+    if not counts:
+        print("Nothing to do: every requested output is up to date.")
+        return 0
+    print(f"Jobs ({config.name}):\n{_job_table(counts)}", flush=True)
+    if verdict := _guard_verdict(request, plan, counts):
+        print(verdict, file=sys.stderr)
+        return EXIT_GUARD
+    return 0 if request.dry_run else None
+
+
 def _launch(request: stages.Request, environment: dict[str, str], tools: Tools) -> int:
     """Check, plan and run; return the exit status."""
     config = config_path(request.config, environment)
@@ -223,15 +237,9 @@ def _launch(request: stages.Request, environment: dict[str, str], tools: Tools) 
         print(plan, file=sys.stderr)
         return int(status)
     counts = guard.job_counts(plan)
-    if not counts:
-        print("Nothing to do: every requested output is up to date.")
-        return 0
-    print(f"Jobs ({config.name}):\n{_job_table(counts)}", flush=True)
-    if verdict := _guard_verdict(request, plan, counts):
-        print(verdict, file=sys.stderr)
-        return EXIT_GUARD
-    if request.dry_run:
-        return 0
+    stop = _stop_before_running(request, config, plan, counts)
+    if stop is not None:
+        return stop
     screen = _screen(request, _settings(config))
     screen.banner(
         version(), str(config), cores, [stage.flag for stage in request.stages]
