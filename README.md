@@ -49,10 +49,11 @@ conda activate rpsHunter
 
 ./rpsHunter --download-databases --download-genomes --download-queries   # once
 ./rpsHunter --all -n          # list what the analysis would run
-./rpsHunter --all             # search, domains, loci
+./rpsHunter --all             # search, domains, loci, figures
 ```
 
-Results are tables under `results/tables/` and GFF3 tracks under `results/ranges/`; see
+Results are tables under `results/tables/`, GFF3 tracks under `results/ranges/` and figures under
+`results/plots/`; see
 [Outputs](docs/outputs.md). The shipped config finds PRDM9-like regions in five mammalian genomes.
 
 ## Installation
@@ -91,8 +92,26 @@ that change affects. See the [CLI Reference](docs/cli-reference.md).
 | [Filtering](docs/filtering.md) | What is searched, kept and reported at each step, and what cannot be concluded |
 | [Outputs](docs/outputs.md) | Output directory structure, parquet column schemas, file format descriptions |
 | [CLI Reference](docs/cli-reference.md) | All CLI flags, invocation patterns, flag-to-rule mapping, rerun recipes |
+| [Visual style](docs/visual_style.md) | The colour, type and layout system of the figures |
 | [Console and logs](docs/console_style.md) | What a run prints, where every line is kept, verbosity and colour |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues, empty species handling, Windows/WSL caveats |
+
+## What the figures look like
+
+From the shipped example (three PRDM9 queries on five mammalian genomes).
+
+Loci carrying each domain family:
+
+[![Loci by family](images/loci-by-family.png)](images/loci-by-family.png)
+
+The loci carrying most families, domain by domain (human PRDM9 and PRDM7 are the first two
+*Homo sapiens* rows):
+
+[![Locus architecture](images/locus-architecture.png)](images/locus-architecture.png)
+
+Whether the two methods agree:
+
+[![Method agreement](images/method-agreement.png)](images/method-agreement.png)
 
 ## Environment Variables
 

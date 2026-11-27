@@ -28,6 +28,8 @@ query proteins            genomes (FASTA)        CDD models      Pfam profiles
                  |                |  tables/domains/{calls,domains,hmmer_domains}, ranges/*.gff3
                  +---------- locus_tables
                                   |  tables/loci/{loci,locus_families}
+                             figure_pdfs
+                                  |  plots/{overview,domains,loci,architecture}.pdf
 ```
 
 Per-query, per-species jobs run in parallel; the two table rules at the end read every species and
@@ -64,6 +66,8 @@ enforces the split.
 | `stages.py`, `guard.py` | pure | The launcher's stage table; the heavy-rule guard |
 | `preflight.py`, `launcher.py` | script | Checks before a run; the one Snakemake call |
 | `console.py` | pure | What the launcher shows of a run |
+| `figures.R`, `plots/` | R | The figure PDFs: `style.R` (visual system), `tables.R` (counts), `pages.R` (pages) |
+| `utils/log.R` | R | The log line shape, for R |
 | `manifest.py` | script | The manifest of a run |
 | `query_config.py` | pure | Validates the `queries:` block |
 | `cdd_release.py` | script | Refuses downloaded CDD files of another release than configured |

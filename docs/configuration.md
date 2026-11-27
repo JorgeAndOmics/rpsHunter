@@ -120,6 +120,12 @@ covered when the locus's exon fragments are put together, and the number of sepa
 family occurs at ([ADR-009](adr/ADR-009-completeness-across-exons.md)). It gives no verdict of
 "complete": which families make a whole gene depends on the protein family studied.
 
+### `figures` -- Figure Layout (Optional)
+
+| Parameter | Type | Default | Validation | Description |
+|-----------|------|---------|------------|-------------|
+| `species_tree` | `str` | none | `str()`, optional | Path to a Newick tree. Species are listed in the order of its tips in every figure (tips matched by species key or display name; species the tree lacks go last). Without it, the order of `species:` is used. The tree is not drawn. |
+
 ### `programs` -- External Program Names (Optional)
 
 Override BLAST+ and related program binary names. This entire section is optional; when omitted, bioconda-standard names are used. Useful when your system provides modern BLAST+ naming conventions (e.g., `rpsblast+` instead of `rpsblast`).
