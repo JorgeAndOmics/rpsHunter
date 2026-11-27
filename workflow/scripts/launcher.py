@@ -32,6 +32,11 @@ REPO = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO / "workflow"
 DEFAULT_CONFIG = REPO / "data" / "config" / "config.yaml"
 CONFIG_VARIABLE = "RPSHUNTER_CONFIG"
+RERUN_TRIGGERS = ("mtime", "params", "input")
+"""What makes Snakemake redo a job: a newer or changed input, or a changed
+setting (rules list the config sections they depend on). Not "code": that is
+the wording of a rule's command, which changes with every release of rpsHunter
+without the result changing, and would schedule downloads and searches again."""
 EXIT_USAGE = 2
 EXIT_GUARD = 3
 
@@ -83,6 +88,7 @@ def snakemake_command(request: stages.Request, cores: int) -> list[str]:
         sys.executable, "-m", "snakemake",
         "--snakefile", str(WORKFLOW / "Snakefile"),
         *request.targets,
+        "--rerun-triggers", *RERUN_TRIGGERS,
         "--cores", str(cores),
         "--rerun-incomplete",
         "--resources", "ncbi_api=1",  # one NCBI request at a time (HTTP 429 otherwise)
