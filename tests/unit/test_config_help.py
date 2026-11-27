@@ -56,9 +56,9 @@ def test_one_parameter_is_shown_with_type_default_and_meaning():
 
     assert text.splitlines() == [
         "alpha.size",
-        "  type:     int",
-        "  default:  3",
-        "  allowed:  int(min=0)",
+        "  type:        int",
+        "  default:     3",
+        "  validation:  int(min=0)",
         "  How big, with a code word and a link.",
     ]
 
@@ -66,7 +66,7 @@ def test_one_parameter_is_shown_with_type_default_and_meaning():
 def test_an_escaped_bar_inside_a_cell_does_not_split_it():
     text = config_help.explain(SAMPLE, "alpha.mode")
 
-    assert "  allowed:  str(matches='^(yes|no)$')" in text
+    assert "  validation:  str(matches='^(yes|no)$')" in text
     assert text.splitlines()[-1] == "  Which way."
 
 
@@ -92,3 +92,32 @@ def test_every_documented_parameter_of_the_real_reference_can_be_explained():
 
             assert text.startswith(f"{name}.{parameter}")
             assert "|" not in text.splitlines()[-1][:3]
+
+
+def test_a_table_with_other_columns_is_read_by_its_own_header():
+    reference = SAMPLE.replace(
+        "### `beta` -- Second Things (Optional)\n\nAbout beta.\n",
+        "### `beta` -- Second Things (Optional)\n\n"
+        "| Parameter | Type | Required | Description |\n|---|---|---|---|\n"
+        "| `name` | `str` | yes | What it is called. |\n",
+    )
+
+    text = config_help.explain(reference, "beta.name")
+
+    assert text.splitlines() == [
+        "beta.name",
+        "  type:      str",
+        "  required:  yes",
+        "  What it is called.",
+    ]
+
+
+def test_no_parameter_of_the_real_reference_shows_a_description_as_a_fact():
+    for name, section in config_help.sections(REFERENCE).items():
+        for parameter, cells in config_help.parameters(section.body).items():
+            assert "Description" in cells, f"{name}.{parameter}"
+            assert all(
+                len(cell) < 60
+                for header, cell in cells.items()
+                if header != "Description"
+            )

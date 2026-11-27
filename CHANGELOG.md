@@ -29,13 +29,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `RPSHUNTER_CONFIG` environment variable to run with a config other than
   `data/config/config.yaml`.
 - Every job writes its output to `<logs>/jobs/<rule>/<query>/<species>.log` and a Snakemake
-  benchmark (wall time, memory) to `<logs>/benchmarks/...`; the log of a failed job is shown.
+  benchmark (wall time, memory) to `<logs>/benchmarks/...`.
 - An end-to-end test on synthetic genomes with planted domains and a miniature database
-  (`tests/integration/test_toy_pipeline.py`), run in CI on every push.
+  (`tests/integration/test_toy_pipeline.py`), run in CI on pushes to `main` and `feat/` branches and
+  on pull requests.
 - `CITATION.cff`, this changelog, and architectural decision records under `docs/adr/`.
 
 ### Fixed
 
+- Reordering `species:` or `domains:` in the config now redraws the figures (and, for families,
+  rebuilds the locus tables); the order was not seen as a change.
 - **Stop codons no longer shift domain positions.** A stop codon inside a hit's translation was
   deleted before the domain searches, moving every later residue, and the genomic position of
   every domain after it, by three bases per stop. It is now masked with `X`
@@ -126,7 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   placed on a job's command line.
 - All text files are stored with LF line endings.
 - The environment no longer references Anaconda's `pkgs/main` and `pkgs/r` channels and now lists
-  the tools the scripts call: `entrez-direct`, `jq`, `pandoc`, `unzip`, `wget`.
+  the tools the scripts call: `entrez-direct`, `jq`, `unzip`, `wget`.
 - Supported platform stated as Linux (including Windows through WSL); the macOS claim is withdrawn.
 
 ### Removed
@@ -144,11 +147,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   counted in codons while documented as nucleotides. In its place every hit has an
   `Internal_Stop` column (a stop codon inside its translation) and every locus counts such hits
   in `N_Hits_With_Stop`.
-- The stages downstream of domain parsing, pending their rebuild on ADR-006 to ADR-012: the
-  contingency table and GFF3 export, the hit-domain and locus inventories, the HMMER-versus-CDD
-  concordance tables, and the tile, 3D and extended plots, with their launcher flags
+- The former stages downstream of domain parsing and their launcher flags
   (`--completeness-detector`, `--contingency-parser`, `--hit-domain-inventory`, `--concordance`,
-  `--extended-plots`).
+  `--extended-plots`): contingency tables, inventories, concordance tables and the old plots. Their
+  place is taken by the domain tables, `Method_Agreement`, the locus tables and `--figures` above.
 - Config keys that nothing read: the `logging` section, `execution.retrieval_time_lag`,
   `execution.max_retrieval_attempts`, `display.display_requests_warning`,
   `display.display_operation_info`; and `execution.use_species_list`, whose "discover genomes from

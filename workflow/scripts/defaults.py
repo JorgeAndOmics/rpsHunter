@@ -105,7 +105,6 @@ PATH_DICT["RANGE_OUTPUT_DIR"] = PATH_DICT["RESULTS_DIR"] / "ranges"
 PATH_DICT["PLOT_DIR"] = PATH_DICT["RESULTS_DIR"] / "plots"
 # === Table Stage Subdirectories ===
 PATH_DICT["TABLE_BLAST_DIR"] = PATH_DICT["TABLE_OUTPUT_DIR"] / "blast"
-PATH_DICT["TABLE_RPSBLAST_DIR"] = PATH_DICT["TABLE_OUTPUT_DIR"] / "rpsblast"
 PATH_DICT["TABLE_DOMAINS_DIR"] = PATH_DICT["TABLE_OUTPUT_DIR"] / "domains"
 PATH_DICT["TABLE_LOCI_DIR"] = PATH_DICT["TABLE_OUTPUT_DIR"] / "loci"
 
@@ -152,7 +151,6 @@ _PER_QUERY_PARENTS = [
     PATH_DICT["ASN_TBLASTN_DIR"],  # results/asn/tblastn/{ql}/
     PATH_DICT["ASN_RPSBLAST_DIR"],  # results/asn/rpsblast/{ql}/
     PATH_DICT["TABLE_BLAST_DIR"],  # results/tables/blast/{ql}/
-    PATH_DICT["TABLE_RPSBLAST_DIR"],  # results/tables/rpsblast/{ql}/
 ]
 
 # Also: results/tables/blast/{ql}/selected/

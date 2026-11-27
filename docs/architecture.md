@@ -65,6 +65,8 @@ enforces the split.
 | `log.py` | I/O | The one line shape every job writes |
 | `stages.py`, `guard.py` | pure | The launcher's stage table; the heavy-rule guard |
 | `preflight.py`, `launcher.py` | script | Checks before a run; the one Snakemake call |
+| `config_help.py` | pure | `--config-help`, read from the configuration reference |
+| `genome_downloader.sh`, `query_downloader.sh` | shell | Fetch exactly the assembly and the protein accessions the config names |
 | `console.py` | pure | What the launcher shows of a run |
 | `figures.R`, `plots/` | R | The figure PDFs: `style.R` (visual system), `tables.R` (counts), `pages.R` (pages) |
 | `utils/log.R` | R | The log line shape, for R |

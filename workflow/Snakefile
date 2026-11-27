@@ -41,8 +41,6 @@ DOMAINS_PQ   = _R + '/domains/{query_label}/{species}.parquet'
 # Per-query aggregate tables
 AGG_BLAST_PQ  = _R + '/tables/blast/{query_label}/aggregate.parquet'
 AGG_BLAST_CSV = _R + '/tables/blast/{query_label}/aggregate.csv'
-AGG_RPS_PQ    = _R + '/tables/rpsblast/{query_label}/rpsblast.parquet'
-AGG_RPS_CSV   = _R + '/tables/rpsblast/{query_label}/rpsblast.csv'
 
 # Merged outputs (top-level, post-deduplication)
 MERGED_DOM_PQ    = _R + '/tables/domains/domains.parquet'
@@ -59,8 +57,12 @@ LOCUS_FAM_CSV    = _R + '/tables/loci/locus_families.csv'
 FIGURE_PDFS      = [_R + f'/plots/{name}.pdf' for name in ('overview', 'domains', 'loci', 'architecture')]
 MERGED_BLAST_PQ  = _R + '/tables/blast/aggregate.parquet'
 MERGED_BLAST_CSV = _R + '/tables/blast/aggregate.csv'
-MERGED_RPS_PQ    = _R + '/tables/rpsblast/rpsblast.parquet'
-MERGED_RPS_CSV   = _R + '/tables/rpsblast/rpsblast.csv'
+
+# The order of species and of families in the config decides the order of rows and
+# columns; tracked() compares settings whatever their order, so the order is a
+# parameter of its own where it matters.
+SPECIES_ORDER = ','.join(SPECIES)
+FAMILY_ORDER = ','.join(defaults.FAMILIES)
 
 # Pfam is fetched from the release the config names.
 PFAM_RELEASE_URL = f'https://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam{defaults.PFAM_VERSION}'
@@ -615,19 +617,6 @@ rule aggregate_blast:
     shell:
         'python scripts/aggregate.py --scope {wildcards.query_label} --output {output.parquet:q} {input:q} 2>&1 | tee {log:q}'
 
-rule aggregate_rpsblast:
-    input:
-        lambda wc: expand(RPSBLAST_PQ, query_label=wc.query_label, species=SPECIES)
-    output:
-        parquet=AGG_RPS_PQ,
-        csv=AGG_RPS_CSV
-    log:
-        job_log('aggregate_rpsblast', 'query_label')
-    benchmark:
-        job_benchmark('aggregate_rpsblast', 'query_label')
-    shell:
-        'python scripts/aggregate.py --scope {wildcards.query_label} --output {output.parquet:q} {input:q} 2>&1 | tee {log:q}'
-
 # =============================================================================
 # Cross-Query Merge Rules
 # =============================================================================
@@ -643,20 +632,6 @@ rule merge_blast:
         job_log('merge_blast')
     benchmark:
         job_benchmark('merge_blast')
-    shell:
-        'python scripts/aggregate.py --output {output.parquet:q} {input:q} 2>&1 | tee {log:q}'
-
-rule merge_rpsblast:
-    """Concatenate per-query rpsblast aggregates."""
-    input:
-        expand(AGG_RPS_PQ, query_label=QUERY_LABELS)
-    output:
-        parquet=MERGED_RPS_PQ,
-        csv=MERGED_RPS_CSV
-    log:
-        job_log('merge_rpsblast')
-    benchmark:
-        job_benchmark('merge_rpsblast')
     shell:
         'python scripts/aggregate.py --output {output.parquet:q} {input:q} 2>&1 | tee {log:q}'
 
@@ -707,7 +682,8 @@ rule locus_tables:
         families=LOCUS_FAM_PQ,
         families_csv=LOCUS_FAM_CSV
     params:
-        settings=tracked('loci', 'domains')
+        settings=tracked('loci', 'domains'),
+        family_order=FAMILY_ORDER
     log:
         job_log('locus_tables')
     benchmark:
@@ -740,6 +716,8 @@ rule figure_pdfs:
         FIGURE_PDFS
     params:
         settings=tracked('domains', 'species', 'queries', 'figures'),
+        species_order=SPECIES_ORDER,
+        family_order=FAMILY_ORDER,
         results=_R,
         config=str(defaults.CONFIG_FILE),
         out_dir=str(defaults.PATH_DICT['PLOT_DIR']),

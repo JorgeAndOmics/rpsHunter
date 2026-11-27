@@ -6,7 +6,7 @@ This document covers common issues encountered when running the rpsHunter pipeli
 
 ## 1. Redoing Part of a Run
 
-`--forceall` is refused by the launcher: it would rebuild every database and download the genomes
+`--forceall` (or `-F`) is refused by the launcher: it would rebuild every database and download the genomes
 again. To redo a step:
 
 - change the config value that should take effect and run again: the steps it affects are redone
@@ -28,15 +28,14 @@ accepts it. A tool that fails stops its job with an error instead, so an empty t
 
 ---
 
-## 3. Windows/WSL File Locking
+## 3. A CSV Cannot Be Written
 
-**Symptom:** `PermissionError` when writing CSV files, typically in `blast_parser.py`.
+**Symptom:** A job fails with `PermissionError` on a `.csv` file.
 
-**Cause:** On Windows/WSL, CSV files fail to write if Excel or another process has them open. Windows file locks prevent overwriting files that are in use.
+**Cause:** Another program has the file open (a spreadsheet, typically, on Windows through WSL).
 
-**Solution:** Close Excel (or any other application) that has the output CSV files open before rerunning the pipeline.
-
-**Note:** The pipeline includes a `try/except` guard in `blast_parser.py` specifically for this case. The Parquet output file will still be written successfully even when the CSV write fails, so no data is lost. The CSV is a convenience copy; the Parquet is the authoritative output.
+**Solution:** Close it and run the same command again. Tables are written as Parquet first and
+CSV second; the job is redone as a whole.
 
 ---
 
@@ -55,7 +54,7 @@ accession exists in the release you downloaded (`grep -c "^ACC   PF00096" Pfam-A
 
 ## 5. CDD Model Not Found
 
-**Symptom:** Building the families' RPS-BLAST database fails, naming a missing `.smp` file.
+**Symptom:** The checks stop the run with `CDD model missing for <accession>: .../cdd_smp/<accession>.smp`.
 
 **Cause:** A `cdd:` accession under `domains:` has no model file in `db_root_folder/cdd_smp/`:
 it is misspelt, or it does not exist in the CDD release installed. CDD accessions look like
@@ -69,7 +68,7 @@ names change between releases.
 
 ## 6. BLAST+ Program Naming
 
-**Symptom:** `FileNotFoundError` or `command not found` when running BLAST+ tools. Typically occurs because the system has `rpsblast+` instead of `rpsblast`.
+**Symptom:** The checks stop the run with `program not found on PATH: rpsblast`. Typically the system has `rpsblast+` instead of `rpsblast`.
 
 **Cause:** Different BLAST+ installations use different binary names. The bioconda package uses `rpsblast`, but some system installations use `rpsblast+`.
 
@@ -82,6 +81,7 @@ programs:
   blast_formatter: 'blast_formatter'
   makeblastdb: 'makeblastdb'
   rpsbproc: 'rpsbproc'
+  makeprofiledb: 'makeprofiledb'
 ```
 
 The pipeline defaults match bioconda package naming (`rpsblast`, `tblastn`, etc.). Override only the programs that differ on your system.
@@ -113,7 +113,7 @@ If a job was partially completed (e.g., a file was being written when the proces
 
 **Solution:**
 
-1. Set an NCBI API key via the validation prompt when running the pipeline, or set it as an environment variable:
+1. Set an NCBI API key as an environment variable (it is never written in the config):
    ```bash
    export NCBI_API_KEY="your_api_key_here"
    ```
@@ -121,6 +121,6 @@ If a job was partially completed (e.g., a file was being written when the proces
 
 2. For very large genomes, downloads may take hours even with an API key. Plan accordingly and ensure a stable network connection.
 
-3. If a download is interrupted, re-running the same command will resume from where it left off (see [Pipeline Resumption](#7-pipeline-resumption-after-interruption)).
+3. If a download is interrupted, run the same command again: genomes already fetched are skipped and the interrupted one starts over.
 
 ---

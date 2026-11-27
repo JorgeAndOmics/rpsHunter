@@ -19,7 +19,7 @@ Any number of stages can be given in one call; they run in the order below, as o
 | Search | `--blast-dbs` | BLAST databases of the genomes, after verifying their checksums |
 | Search | `--search` | tBLASTn, hit selection, hit tables |
 | Domains | `--hmmer` | HMMER domains of the selected hits (nothing to do if `hmmer.enabled` is false or no family lists a Pfam accession) |
-| Domains | `--domains` | RPS-BLAST, rpsbproc, domain calls and instances, GFF3 tracks |
+| Domains | `--domains` | RPS-BLAST, rpsbproc, domain calls and instances, GFF3 tracks. When HMMER is active it runs HMMER too, since the domain tables include HMMER's |
 | Tables | `--loci` | Loci and the families each carries |
 | Figures | `--figures` | The four figure PDFs |
 | | `--all` | Every stage after Setup |
@@ -42,8 +42,8 @@ Any number of stages can be given in one call; they run in the order below, as o
    - config keys of earlier versions, each with its replacement;
    - the schema (`data/config/schema.yaml`) and the rules on families and species;
    - the programs the requested stages call, on `PATH`;
-   - the input files those stages read (genomes, queries, CDD models, Pfam), unless the same call
-     downloads them.
+   - the input files those stages read (genomes, queries, CDD models, Pfam, a configured species
+     tree), unless the same call downloads them.
 
    Two notes do not stop a run: the environment differing from the lock file, and less than 5 GB
    free for the results.
@@ -82,7 +82,7 @@ Using one stops with its replacement.
 ## Passing options to Snakemake
 
 Everything after `--` goes to Snakemake unchanged, for example
-`./rpsHunter --domains -- --rerun-triggers mtime`. `--forceall` is refused: it would rebuild the
+`./rpsHunter --domains -- --keep-going`. `--forceall` (and `-F`) is refused: it would rebuild the
 databases and download the genomes again.
 
 ## What reruns when
@@ -99,7 +99,7 @@ redo anything. After editing the config, the next call reruns exactly the affect
 | `rpsblast:` | RPS-BLAST |
 | `hmmer:` | HMMER, then the domain tables |
 | `loci.gap` | locus tables |
-| `figures:`, the order of `species:` | figures |
+| `figures:`, the order of `species:` or of `domains:` | figures (the order of `domains:` also the locus tables) |
 
 ## Parallelism
 

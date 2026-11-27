@@ -12,11 +12,12 @@ tables to each other.
 
 ```
 results/
-  blast/{query}/{species}.parquet        every tBLASTn hit
+  blast/{query}/{species}.parquet        every tBLASTn hit (and .csv)
   asn/tblastn/{query}/{species}.asn      BLAST archive of the search
   fastas/{query}/{species}.fa            translations of the selected hits
   fastas/{query}/{species}.parquet       audit: every hit with the gate's verdict
   hmmer/{query}/{species}.parquet        HMMER domains (when HMMER runs)
+  hmmer/subset.hmm                       the families' Pfam profiles, as searched
   rpsblast/{query}/{species}.parquet     raw RPS-BLAST alignments
   asn/rpsblast/{query}/{species}.asn     BLAST archive, input of rpsbproc
   rpsbproc/{query}/{species}.txt         rpsbproc's report
@@ -26,7 +27,6 @@ results/
     blast/{query}/selected/{species}.*   selected hits
     blast/{query}/aggregate.*            every hit of a query, all species
     blast/aggregate.*                    every hit of the run
-    rpsblast/...                         raw alignments, aggregated the same way
     domains/calls.*                      every domain call of the run
     domains/domains.*                    domain instances
     domains/hmmer_domains.*              HMMER domains (when HMMER runs)
@@ -185,7 +185,7 @@ table always means "searched, nothing found".
 
 | Path | Content |
 |------|---------|
-| `jobs/<rule>/<query>/<species>.log` | Everything one job printed. Per-query rules use `jobs/<rule>/<query>.log`; rules that run once use `jobs/<rule>/all.log` |
+| `jobs/<rule>/<query>/<species>.log` | Everything one job printed. Per-query rules use `jobs/<rule>/<query>.log`, per-genome rules (downloads, BLAST databases) `jobs/<rule>/<species>.log`, query downloads `jobs/<rule>/<accession>.log`; rules that run once use `jobs/<rule>/all.log` |
 | `runs/<date>_<time>.log` | Everything one launcher call printed, Snakemake's lines included; `.warnings.txt` beside it when there were warnings |
 | `benchmarks/<rule>/...tsv` | Snakemake's benchmark for the same job: wall-clock seconds, peak memory, I/O |
 
