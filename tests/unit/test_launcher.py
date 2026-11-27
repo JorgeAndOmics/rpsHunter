@@ -111,6 +111,8 @@ def test_the_command_names_every_target_once_and_the_fixed_options(config):
     assert "rpsbproc_parser" in command
     assert "loci" in command
     assert "--rerun-incomplete" in command
+    triggers = command[command.index("--rerun-triggers") + 1 : command.index("--cores")]
+    assert triggers == ["mtime", "params", "input"]  # a reworded rule reruns nothing
     assert command[-2:] == ["--rerun-triggers", "mtime"]
 
 

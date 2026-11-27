@@ -45,6 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A new version does not redo finished work.** The launcher reruns a job when an input or a
+  setting it depends on changed, not when the wording of its rule did. Before, upgrading rpsHunter
+  scheduled downloads and searches again (the guard stopped them, on every run).
 - **Query proteins are fetched exactly.** `--download-queries` takes the versioned accession from the
   config and checks that NCBI returned that record; it no longer falls back to a search by name and
   the first match. Each download is recorded with its checksum.

@@ -86,8 +86,9 @@ databases and download the genomes again.
 
 ## What reruns when
 
-Rules record the config sections they depend on. After editing the config, the next call reruns
-exactly the affected steps:
+A job is redone when one of its inputs is newer or changed, or when a setting it depends on
+changed: rules record the config sections they use. A new version of rpsHunter does not by itself
+redo anything. After editing the config, the next call reruns exactly the affected steps:
 
 | Changed | Reruns from |
 |---|---|
