@@ -25,16 +25,21 @@ The schema enforces types, value ranges, regex patterns, and required/optional s
 `./rpsHunter --config-help` prints this reference at the terminal: the sections, one section
 (`--config-help rpsblast`) or one parameter (`--config-help rpsblast.e_value`).
 
+Every section except those marked optional is required, and so are its keys unless their
+validation says `optional`. The **Default** column gives the value in the shipped
+`data/config/config.yaml`, which is the PRDM9 example: deliberately permissive search settings,
+explained in [filtering.md](filtering.md).
+
 ### `blast` -- tBLASTn Filtering Thresholds
 
 These thresholds filter tBLASTn hits during the homology search stage. Hits that fail any threshold are excluded from downstream processing. Relaxing these values captures weaker homology signals at the cost of increased noise.
 
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|
-| `e_value` | `float` | `0.01` | `num(min=0)` | Maximum E-value for a tBLASTn hit to pass quality filtering. Lower values are more stringent. |
-| `perc_identity` | `float` | `60` | `num(min=0, max=100)` | Minimum percent identity between query and subject. Values below 35 introduce significant noise. |
-| `seq_length` | `int` | `50` | `int(min=1)` | Minimum alignment length in amino acids. Short domains (e.g., SSXRD at 24aa) require lowering this. |
-| `bitscore` | `float` | `70` | `num(min=0)` | Minimum bit-score. Context-dependent; weak but real homologs can score as low as 45. |
+| `e_value` | `float` | `10` | `num(min=0)` | Maximum E-value for a tBLASTn hit to pass quality filtering. Lower values are more stringent. |
+| `perc_identity` | `float` | `20` | `num(min=0, max=100)` | Minimum percent identity between query and subject. Values below 35 introduce significant noise. |
+| `seq_length` | `int` | `15` | `int(min=1)` | Minimum alignment length in amino acids. Short domains (e.g., SSXRD at 24aa) require lowering this. |
+| `bitscore` | `float` | `20` | `num(min=0)` | Minimum bit-score. Context-dependent; weak but real homologs can score as low as 45. |
 
 ### `rpsblast` -- RPSBLAST / CDD Domain Detection
 
@@ -45,15 +50,15 @@ Controls the RPS-BLAST search of the selected hits against the CDD models of the
 | `e_value` | `float` | `1` | `num(min=0)` | Highest E-value kept, on NCBI's scale (the search is told the size of the full CDD, see `databases`). CD-Search's default is 0.01; NCBI treats 0.01 to 1 as borderline and 1 and above as putative false positives. Each call reports its tier in the `Evidence` column: `standard` (at most 0.01), `borderline` (up to 1) or `rescue` (above 1, only present if this value is raised). The same cut-off is given to rpsbproc. See [ADR-006](adr/ADR-006-rpsblast-evalue-scale-and-cutoff.md). |
 | `comp_based_stats` | `int` | `0` | `int(min=0, max=4)` | Composition-based statistics mode. `0` disables (more sensitive); `1`-`4` enable progressive correction. See BLAST+ documentation. |
 | `seg` | `str` | `'no'` | `str(matches='^(yes\|no)$')` | SEG low-complexity filtering. `'no'` disables, allowing short/repetitive domains through. `'yes'` masks low-complexity regions. |
-| `window_size` | `int` | `40` | `int(min=0)`, optional | Window size for multi-hit algorithm. `0` switches to single-hit mode (more sensitive, slower). Omit or set to `40` for default behavior. |
+| `window_size` | `int` | `0` | `int(min=0)`, optional | Window size for multi-hit algorithm. `0` switches to single-hit mode (more sensitive, slower). Omit or set to `40` for default behavior. |
 
 ### `databases` -- Reference Database Releases
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `cdd.version` | `str` | yes | CDD release the models come from, for the record (for example `'3.22'`). |
-| `cdd.residues` | `int` | yes | Total residues of that full CDD release (`15821058` for 3.22; `blastdbcmd -db Cdd -info` prints it). Passed to RPS-BLAST as `-dbsize`. The search runs against the configured families' models only, and an E-value depends on database size: without this, the same alignment would score about a thousand times better than in NCBI's CD-Search, and its E-value would change whenever a family was added or removed. |
-| `pfam.version` | `str` | yes | Pfam release the HMMER profiles come from (`38.2`). `--download-databases` fetches exactly this release from the EBI archive and checks its MD5. |
+| Parameter | Type | Default | Validation | Description |
+|-----------|------|---------|------------|-------------|
+| `cdd.version` | `str` | `'3.22'` | `str()` | CDD release the models come from (for example `'3.22'`). `--download-databases` stops if NCBI now serves another release, and the manifest records it. |
+| `cdd.residues` | `int` | `15821058` | `int(min=1)` | Total residues of that full CDD release (`15821058` for 3.22; `blastdbcmd -db Cdd -info` prints it). Passed to RPS-BLAST as `-dbsize`. The search runs against the configured families' models only, and an E-value depends on database size: without this, the same alignment would score about a thousand times better than in NCBI's CD-Search, and its E-value would change whenever a family was added or removed. |
+| `pfam.version` | `str` | `'38.2'` | digits, a dot, digits | Pfam release the HMMER profiles come from (`38.2`). `--download-databases` fetches exactly this release from the EBI archive and checks its MD5. |
 
 ### `domains` -- Domain Families
 
@@ -100,11 +105,11 @@ accession.
 |-----------|------|---------|------------|-------------|
 | `enabled` | `bool` | `true` | `bool()` | Master toggle. When `false`, HMMER is not run, no HMMER table is written and every call is `not_compared`. |
 | `use_gathering_threshold` | `bool` | `false` | `bool()` | Use Pfam's curated `--cut_ga` thresholds instead of manual E-value thresholds. When `true`, `evalue` and `dom_evalue` are ignored. |
-| `evalue` | `float` | `1e-5` | `num(min=0)`, optional | Sequence-level E-value threshold for hmmsearch. Ignored when `use_gathering_threshold` is `true`. |
-| `dom_evalue` | `float` | `1e-3` | `num(min=0)`, optional | Per-domain E-value threshold. Controls sensitivity for individual domain hits within multi-domain sequences. Ignored when `use_gathering_threshold` is `true`. |
+| `evalue` | `float` | `10` | `num(min=0)`, optional | Sequence-level E-value threshold for hmmsearch. Ignored when `use_gathering_threshold` is `true`. |
+| `dom_evalue` | `float` | `10` | `num(min=0)`, optional | Per-domain E-value threshold. Controls sensitivity for individual domain hits within multi-domain sequences. Ignored when `use_gathering_threshold` is `true`. |
 | `min_score` | `float\|null` | `null` | `any(num(min=0), null())`, optional | Minimum sequence bit score to report (`hmmsearch -T`). `null` disables it. Ignored when `use_gathering_threshold` is `true`. |
-| `min_coverage` | `float` | `0.5` | `num(min=0, max=1)` | Minimum fraction of the HMM profile aligned to the target sequence. Range 0.0-1.0. |
-| `min_alignment_length` | `int` | `20` | `int(min=0)` | Minimum alignment length in amino acids. Filters short, unreliable matches. |
+| `min_coverage` | `float` | `0.1` | `num(min=0, max=1)` | Minimum fraction of the HMM profile aligned to the target sequence. Range 0.0-1.0. |
+| `min_alignment_length` | `int` | `10` | `int(min=0)` | Minimum alignment length in amino acids. Filters short, unreliable matches. |
 | `max_sensitivity` | `bool` | `false` | `bool()` | Enable hmmsearch `--max` flag, which disables all heuristic filters. Significantly slower but maximally sensitive. |
 | `bias_filter` | `bool` | `true` | `bool()` | Enable the bias composition filter. Disabling (`false`) increases sensitivity for biased-composition sequences at the cost of more false positives. |
 | `seed` | `int` | `67` | `int(min=0)` | Random seed for hmmsearch reproducibility. |
@@ -175,14 +180,14 @@ Controls parallelism and NCBI identification. An NCBI API key is never written i
 
 ### `root` -- Directory Paths
 
-Absolute paths to the four root directories used by the pipeline. All intermediate and output directories are derived from these paths (see [architecture.md](architecture.md) for the full directory tree).
+Absolute paths to the four root directories used by the pipeline. All intermediate and output directories are derived from these paths (see [outputs.md](outputs.md#layout) for the results tree).
 
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|
 | `db_root_folder` | `str` | -- | `str()` | Root directory for all databases: BLAST nucleotide DBs, Pfam HMMs, CDD files, and rpsbproc data. Genome FASTA files (`<key>.fa`) are stored here as well. |
-| `data_root_folder` | `str` | -- | `str()` | Root for pipeline input data. Contains `config/` (this config file, schema, environment spec) and `input/fastas/` (query protein files). |
+| `data_root_folder` | `str` | -- | `str()` | Root for pipeline input data: `input/fastas/` (query protein files) and `config/download.txt` (the record of genome and query downloads). |
 | `results_root_folder` | `str` | -- | `str()` | Root for all pipeline outputs: per-species intermediates, aggregated tables, plots, GFF3 ranges, ASN archives. |
-| `logs_root_folder` | `str` | -- | `str()` | Root for execution logs. Each pipeline stage writes timestamped logs here. |
+| `logs_root_folder` | `str` | -- | `str()` | Root for logs: one per job under `jobs/`, Snakemake's benchmarks under `benchmarks/`, and one per launcher run under `runs/`. |
 
 ### `species` -- Target Genomes
 
@@ -211,7 +216,7 @@ log so that it can be added. At least one of `assembly` and `sha256` is required
 ([ADR-005](adr/ADR-005-genomes-pinned-by-assembly.md)). The former form, `'Key': 'Display name'`,
 is refused with a message showing the new one. Each download appends a line to
 `<data_root_folder>/config/download.txt`: species key, accession, SHA-256 of the FASTA, UTC time
-and the `datasets` version.
+and the `datasets` version. Query downloads add a line each: accession, SHA-256, UTC time.
 
 The species list drives the entire pipeline DAG. Each species generates an independent parallel track through all per-species rules. Adding or removing entries here is the primary way to scale the analysis.
 
@@ -304,4 +309,4 @@ Then download the new genome and run the analysis:
 ./rpsHunter --download-genomes --all
 ```
 
-Snakemake will detect that the existing three species already have outputs and only process the new species through each stage.
+The species that already have outputs are not searched again; only the new one runs through each stage.

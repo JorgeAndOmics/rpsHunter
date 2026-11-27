@@ -12,14 +12,14 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)
 ![R](https://img.shields.io/badge/R-4.x-blue?logo=r&logoColor=white)
-![Snakemake](https://img.shields.io/badge/Snakemake-%E2%89%A57.0-green?logo=snakemake&logoColor=white)
+![Snakemake](https://img.shields.io/badge/Snakemake-9.27-green?logo=snakemake&logoColor=white)
 ![BLAST+](https://img.shields.io/badge/BLAST+-NCBI-lightblue)
 ![HMMER](https://img.shields.io/badge/HMMER-3.x-orange)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-**rpsHunter** is a production-grade bioinformatics pipeline for detecting, quantifying, and classifying protein domains in genomic sequences. It combines homology-based searches (tBLASTn) with specialized domain detection (RPSBLAST against NCBI CDD) and HMM-based filtering (HMMER against Pfam) to identify conserved protein domains across multiple genomes.
+**rpsHunter** finds the regions of genomes that resemble your query proteins and describes the protein domains inside them. It searches with tBLASTn, calls domains in every hit with RPS-BLAST against NCBI CDD and, independently, with HMMER against Pfam, puts the exons of a gene back together into loci, and reports each domain at its own genomic position.
 
-Built on Snakemake, rpsHunter provides fully parallelized, reproducible, and fault-tolerant execution from genome acquisition through publication-quality visualization.
+Built on Snakemake, it runs in parallel, reruns only what a changed setting affects, and records what every run was made with.
 
 ## Key Features
 
@@ -87,14 +87,14 @@ that change affects. See the [CLI Reference](docs/cli-reference.md).
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](docs/architecture.md) | Pipeline stages, data flow diagrams, parallelism model, design principles |
+| [Architecture](docs/architecture.md) | Data flow, modules, contracts, reproducibility, tests |
 | [Configuration](docs/configuration.md) | Complete `config.yaml` parameter reference with types, defaults, and examples |
 | [Filtering](docs/filtering.md) | What is searched, kept and reported at each step, and what cannot be concluded |
 | [Outputs](docs/outputs.md) | Output directory structure, parquet column schemas, file format descriptions |
-| [CLI Reference](docs/cli-reference.md) | All CLI flags, invocation patterns, flag-to-rule mapping, rerun recipes |
+| [CLI Reference](docs/cli-reference.md) | Stages and options, the checks and the guard, exit statuses, what reruns when |
 | [Visual style](docs/visual_style.md) | The colour, type and layout system of the figures |
 | [Console and logs](docs/console_style.md) | What a run prints, where every line is kept, verbosity and colour |
-| [Troubleshooting](docs/troubleshooting.md) | Common issues, empty species handling, Windows/WSL caveats |
+| [Troubleshooting](docs/troubleshooting.md) | Common problems and what to do about them |
 
 ## What the figures look like
 
@@ -120,7 +120,7 @@ Whether the two methods agree:
 | `RPSHUNTER_CONFIG` | Config file for the run, when `--config` is not given |
 | `NCBI_API_KEY` | Optional. Raises NCBI's request limit for `--download-genomes` and `--download-queries`. Never put the key in the config |
 
-`execution.entrez_email` in the config is sent to NCBI with download requests, as its usage policy asks.
+`execution.entrez_email` in the config is sent to NCBI when query proteins are downloaded, as its usage policy asks.
 
 ## Acknowledgments
 

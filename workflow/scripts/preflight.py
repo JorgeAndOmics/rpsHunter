@@ -37,6 +37,7 @@ run writes about 3 GB)."""
 
 _FAMILIES = "replaced by the `domains:` block (docs/configuration.md)"
 _GONE = "no longer used; delete it"
+_TAGS = "Tags are now derived from the hit (docs/adr/ADR-004); delete it"
 RETIRED_KEYS: dict[tuple[str, ...], str] = {
     ("query",): "replaced by `queries:` (accession: label), which also takes one query",
     ("orf",): "the ORF stage was retired (docs/adr/ADR-011); delete the section",
@@ -44,10 +45,10 @@ RETIRED_KEYS: dict[tuple[str, ...], str] = {
     ("rpsblast", "target_domains"): _FAMILIES,
     ("hmmer", "profiles"): _FAMILIES,
     ("logging",): _GONE,
-    (
-        "random_id_length",
-    ): "Tags are now derived from the hit (docs/adr/ADR-004); delete it",
-    ("use_species_list",): _GONE,
+    ("execution", "random_id_length"): _TAGS,
+    ("execution", "use_species_list"): _GONE,
+    ("execution", "retrieval_time_lag"): _GONE,
+    ("execution", "max_retrieval_attempts"): _GONE,
     (
         "display",
         "display_snakemake_info",
@@ -172,7 +173,11 @@ def input_problems(request: stages.Request, layout: Layout) -> list[str]:
         problems += _absent(
             {"rpsbproc": layout.rpsbproc_data}, "CDD annotation", databases
         )
-    if layout.hmmer_active and _needs(request, "--hmmer", databases):
+    # --domains draws HMMER's table in too, so it needs the library as --hmmer does.
+    for_hmmer = any(
+        _needs(request, flag, databases) for flag in ("--hmmer", "--domains")
+    )
+    if layout.hmmer_active and for_hmmer:
         problems += _absent({"HMMER": layout.pfam_library}, "Pfam library", databases)
     return problems + _tree_problems(request, layout)
 

@@ -73,6 +73,7 @@ hmmer:
 #  blast_formatter: 'blast_formatter'
 #  makeblastdb: 'makeblastdb'
 #  rpsbproc: 'rpsbproc'
+#  makeprofiledb: 'makeprofiledb'
 
 loci:
   gap: 20000  # Largest gap (bp) between gated hits chained into one locus
@@ -94,11 +95,13 @@ execution:
 display:
   verbosity: normal   # quiet | normal | verbose (what the screen shows; logs keep everything)
 
+# Absolute paths. Databases and genomes need about 60 GB; results about 3 GB per run of
+# the example.
 root:
-  db_root_folder: '/mnt/v/databases/bat-experimental'
-  data_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/data'
-  results_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/results'
-  logs_root_folder: '/mnt/c/Users/Lympha/Documents/Repositories/rpsHunter/logs'
+  db_root_folder: '/path/to/databases'
+  data_root_folder: '/path/to/rpsHunter-data'
+  results_root_folder: '/path/to/rpsHunter-results'
+  logs_root_folder: '/path/to/rpsHunter-logs'
 
 species:
   # key (used in file names):

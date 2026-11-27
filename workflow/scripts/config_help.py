@@ -8,8 +8,7 @@ something else than the documentation: there is one text to keep right.
     ./rpsHunter --config-help rpsblast.e_value
 
 A section is a `### `name` -- Title` heading under "Parameter Reference"; its
-parameters are the rows of its table (Parameter, Type, Default or Required,
-Validation, Description).
+parameters are the rows of its tables; each table's header names the cells.
 
 This module is pure: the launcher reads the file and prints the answer.
 """
@@ -74,13 +73,25 @@ def _plain(cell: str) -> str:
     return _LINK.sub(r"\1", cell).replace("`", "").replace("\\|", "|").strip()
 
 
-def parameters(body: str) -> dict[str, list[str]]:
-    """Return the table rows of a section: parameter name to its plain cells."""
-    rows: dict[str, list[str]] = {}
+def _cells(line: str) -> list[str]:
+    """The plain cells of one table line."""
+    return [_plain(cell) for cell in _UNESCAPED_BAR.split(line.strip().strip("|"))]
+
+
+def parameters(body: str) -> dict[str, dict[str, str]]:
+    """Return the table rows of a section: parameter name to {column header: cell}.
+
+    The header of the table each row belongs to names its cells, so tables
+    with different columns (Default or Required, with or without Validation)
+    are all read the same way.
+    """
+    rows: dict[str, dict[str, str]] = {}
+    headers: list[str] = []
     for line in body.splitlines():
-        if found := _ROW.match(line):
-            cells = _UNESCAPED_BAR.split(line.strip().strip("|"))
-            rows[found["name"]] = [_plain(cell) for cell in cells]
+        if line.startswith("| Parameter |"):
+            headers = _cells(line)
+        elif found := _ROW.match(line):
+            rows[found["name"]] = dict(zip(headers, _cells(line), strict=False))
     return rows
 
 
@@ -91,20 +102,24 @@ def _listing(known: dict[str, Section]) -> str:
     return "\n".join(["Config sections (--config-help <section> for more):", *rows])
 
 
-def _parameter(section: str, name: str, cells: list[str]) -> str:
-    """One parameter: type, default, allowed values, meaning."""
-    _, kind, default, allowed, *meaning = cells
-    return "\n".join(
-        [
-            f"{section}.{name}",
-            f"  type:     {kind}",
-            f"  default:  {default}",
-            f"  allowed:  {allowed}",
-            textwrap.fill(
-                " ".join(meaning), _WIDTH, initial_indent="  ", subsequent_indent="  "
-            ),
-        ]
+def _parameter(section: str, name: str, cells: dict[str, str]) -> str:
+    """One parameter: each column of its row, then its description."""
+    facts = {
+        header: cell
+        for header, cell in cells.items()
+        if header not in ("Parameter", "Description")
+    }
+    width = max((len(header) for header in facts), default=0) + 1
+    lines = [
+        f"  {header.lower() + ':':<{width}}  {cell}" for header, cell in facts.items()
+    ]
+    meaning = textwrap.fill(
+        cells.get("Description", ""),
+        _WIDTH,
+        initial_indent="  ",
+        subsequent_indent="  ",
     )
+    return "\n".join([f"{section}.{name}", *lines, meaning])
 
 
 def explain(reference: str, key: str) -> str:

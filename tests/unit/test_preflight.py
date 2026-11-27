@@ -39,6 +39,17 @@ def test_a_retired_section_is_named_with_what_replaces_it():
     assert "ADR-011" in problems[0]
 
 
+def test_keys_that_lived_under_execution_are_found_there():
+    config = _config()
+    config["execution"]["random_id_length"] = 6
+    config["execution"]["max_retrieval_attempts"] = 3
+
+    problems = preflight.retired_key_problems(config)
+
+    assert any("execution.random_id_length" in p and "ADR-004" in p for p in problems)
+    assert any("execution.max_retrieval_attempts" in p for p in problems)
+
+
 def test_a_retired_key_inside_a_section_is_found_by_its_path():
     config = _config()
     config["rpsblast"]["target_domains"] = ["KRAB"]
@@ -139,9 +150,8 @@ def test_each_stage_needs_the_inputs_it_reads(tmp_path):
     assert "Homo_sapiens.fa" in _problems(tmp_path, ["--blast-dbs"])[0]
     assert "NP_1.1.fa" in _problems(tmp_path, ["--search"])[0]
     assert "Pfam-A.hmm" in _problems(tmp_path, ["--hmmer"])[0]
-    assert (
-        len(_problems(tmp_path, ["--domains"])) == 2
-    )  # a CDD model and rpsbproc's data
+    # a CDD model, rpsbproc's data, and Pfam: --domains also writes HMMER's table
+    assert len(_problems(tmp_path, ["--domains"])) == 3
     assert _problems(tmp_path, ["--loci"]) == []
 
 

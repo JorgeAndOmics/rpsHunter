@@ -36,7 +36,7 @@ is `workflow/scripts/log.py` (what jobs write), `workflow/scripts/external.py` (
 ## The screen
 
 ```
-rpsHunter 0.9.0 | config config.yaml | 16 cores | --search --domains --loci
+rpsHunter 0.9.0 | config /path/to/config.yaml | 16 cores | --search --domains --loci
 ✓ tblastn  Human_PRDM9/Homo_sapiens  33,863 hits at E <= 10
 ✓ select_hits  Human_PRDM9/Homo_sapiens  33,721 of 33,863 hits selected
 ...

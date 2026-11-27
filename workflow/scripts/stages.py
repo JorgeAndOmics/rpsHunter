@@ -108,8 +108,16 @@ STAGES: tuple[Stage, ...] = (
         "--domains",
         "Domains",
         ("rpsbproc_parser",),
-        "Call domains with RPS-BLAST and rpsbproc; write domain tables and GFF3 tracks.",
-        tools=("rpsblast", "blast_formatter", "makeprofiledb", "rpsbproc"),
+        "Call domains with RPS-BLAST and rpsbproc (and HMMER, if enabled); write the "
+        "domain tables and GFF3 tracks.",
+        tools=(
+            "rpsblast",
+            "blast_formatter",
+            "makeprofiledb",
+            "rpsbproc",
+            "hmmsearch",
+            "hmmfetch",
+        ),
     ),
     Stage(
         "--loci",
@@ -144,11 +152,11 @@ RETIRED: dict[str, str] = {
     "--rpsbproc": _INTO_DOMAINS,
     "--rpsbproc-parser": _INTO_DOMAINS,
     "--orf-analyser": "removed: the ORF stage was retired (docs/adr/ADR-011)",
-    "--completeness-detector": "removed: see tables/loci (docs/outputs.md)",
+    "--completeness-detector": "removed: model coverage is in tables/loci and --figures",
     "--contingency-parser": "removed: GFF3 tracks are written by --domains",
     "--hit-domain-inventory": "removed: use --loci",
     "--concordance": "removed: Method_Agreement is written by --domains",
-    "--extended-plots": "removed: figures are being rebuilt",
+    "--extended-plots": "replaced by --figures",
     "--skip-validation": _NO_CHECKS_TO_SKIP,
     "-skp": _NO_CHECKS_TO_SKIP,
 }
