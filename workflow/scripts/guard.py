@@ -72,10 +72,16 @@ def advice(reason: str) -> str:
             "Its outputs are not where the config says they should be. Check the "
             "folders under `root:` in the config before running anything."
         )
+    if "code has changed" in lowered:
+        return (
+            "The rule's own text changed (a new version of rpsHunter), not its "
+            "inputs or settings. If its outputs are still right, keep them by "
+            "running once with: -- --rerun-triggers mtime params input"
+        )
     if "have changed" in lowered:
         return (
-            "A setting or the rule itself changed since its outputs were made. If "
-            "that is intended, request its stage."
+            "A setting changed since its outputs were made. If that is intended, "
+            "request its stage."
         )
     if "updated" in lowered:
         return (
