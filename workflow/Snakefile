@@ -56,6 +56,7 @@ LOCI_PQ          = _R + '/tables/loci/loci.parquet'
 LOCI_CSV         = _R + '/tables/loci/loci.csv'
 LOCUS_FAM_PQ     = _R + '/tables/loci/locus_families.parquet'
 LOCUS_FAM_CSV    = _R + '/tables/loci/locus_families.csv'
+FIGURE_PDFS      = [_R + f'/plots/{name}.pdf' for name in ('overview', 'domains', 'loci', 'architecture')]
 MERGED_BLAST_PQ  = _R + '/tables/blast/aggregate.parquet'
 MERGED_BLAST_CSV = _R + '/tables/blast/aggregate.csv'
 MERGED_RPS_PQ    = _R + '/tables/rpsblast/rpsblast.parquet'
@@ -723,6 +724,41 @@ rule locus_tables:
         '''
 
 # =============================================================================
+# Figures
+# =============================================================================
+
+rule figure_pdfs:
+    """The run's figures: four vector PDFs drawn from the run-level tables."""
+    input:
+        hits=MERGED_BLAST_PQ,
+        calls=CALLS_PQ,
+        domains=MERGED_DOM_PQ,
+        loci=LOCI_PQ,
+        families=LOCUS_FAM_PQ,
+        tree=[str(defaults.SPECIES_TREE)] if defaults.SPECIES_TREE else []
+    output:
+        FIGURE_PDFS
+    params:
+        settings=tracked('domains', 'species', 'queries', 'figures'),
+        results=_R,
+        config=str(defaults.CONFIG_FILE),
+        out_dir=str(defaults.PATH_DICT['PLOT_DIR']),
+        tree=('--tree ' + shlex.quote(str(defaults.SPECIES_TREE))) if defaults.SPECIES_TREE else ''
+    log:
+        job_log('figure_pdfs')
+    benchmark:
+        job_benchmark('figure_pdfs')
+    shell:
+        '''
+        (
+        Rscript scripts/figures.R \
+            --results {params.results:q} \
+            --config {params.config:q} \
+            --out-dir {params.out_dir:q} {params.tree}
+        ) 2>&1 | tee {log:q}
+        '''
+
+# =============================================================================
 # Target rules: what the launcher's stages ask for (workflow/scripts/stages.py).
 # Snakemake builds whatever a target needs upstream.
 # =============================================================================
@@ -751,3 +787,9 @@ rule loci:
     input:
         LOCI_PQ,
         LOCUS_FAM_PQ
+
+rule figures:
+    """The figure PDFs."""
+    input:
+        FIGURE_PDFS
+

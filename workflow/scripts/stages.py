@@ -48,6 +48,7 @@ PHASES: dict[str, str] = {
     "Search": "Find the regions of each genome that resemble the queries.",
     "Domains": "Describe the protein domains in those regions.",
     "Tables": "Put exons back together into loci.",
+    "Figures": "Draw the run's tables.",
 }
 
 STAGES: tuple[Stage, ...] = (
@@ -116,6 +117,13 @@ STAGES: tuple[Stage, ...] = (
         ("loci",),
         "Chain selected hits into loci and report the families each carries.",
     ),
+    Stage(
+        "--figures",
+        "Figures",
+        ("figures",),
+        "Draw the overview, domain, locus and architecture PDFs.",
+        tools=("Rscript",),
+    ),
 )
 
 HEAVY_RULES: frozenset[str] = frozenset(
@@ -154,7 +162,7 @@ FORBIDDEN_SNAKEMAKE = ("--forceall", "-F")
 EXAMPLES = """\
 Examples:
   ./rpsHunter --all -n                 list what a full analysis would run
-  ./rpsHunter --all                    databases, search, domains and loci
+  ./rpsHunter --all                    databases, search, domains, loci, figures
   ./rpsHunter --domains --loci         redo from the domain calls after a config change
   ./rpsHunter --all --config my.yaml   use another config file
   ./rpsHunter --config-help rpsblast   explain a config section

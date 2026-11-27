@@ -33,7 +33,14 @@ def test_all_asks_for_every_analysis_stage_and_no_download():
     request = stages.parse(["--all"])
 
     flags = [stage.flag for stage in request.stages]
-    assert flags == ["--blast-dbs", "--search", "--hmmer", "--domains", "--loci"]
+    assert flags == [
+        "--blast-dbs",
+        "--search",
+        "--hmmer",
+        "--domains",
+        "--loci",
+        "--figures",
+    ]
     assert not any(stage.phase == "Setup" for stage in request.stages)
 
 
@@ -41,7 +48,7 @@ def test_targets_are_listed_once_in_stage_order():
     request = stages.parse(["--all"])
 
     assert len(set(request.targets)) == len(request.targets)
-    assert request.targets[-1] == "loci"
+    assert request.targets[-1] == "figures"
 
 
 def test_a_stage_may_run_its_own_heavy_rules_and_no_others():

@@ -76,6 +76,7 @@ class Layout(NamedTuple):
     rpsbproc_data: Path
     pfam_library: Path
     hmmer_active: bool
+    species_tree: Path | None = None
 
 
 # --- the config -----------------------------------------------------------------
@@ -173,7 +174,16 @@ def input_problems(request: stages.Request, layout: Layout) -> list[str]:
         )
     if layout.hmmer_active and _needs(request, "--hmmer", databases):
         problems += _absent({"HMMER": layout.pfam_library}, "Pfam library", databases)
-    return problems
+    return problems + _tree_problems(request, layout)
+
+
+def _tree_problems(request: stages.Request, layout: Layout) -> list[str]:
+    """A configured species tree must exist when figures are drawn."""
+    asked = any(stage.flag == "--figures" for stage in request.stages)
+    tree = layout.species_tree
+    if asked and tree is not None and not tree.is_file():
+        return [f"species tree not found: {tree} (figures.species_tree in the config)"]
+    return []
 
 
 # --- notes ----------------------------------------------------------------------
@@ -267,6 +277,7 @@ def _layout(config_file: Path) -> tuple[Layout, Path]:
         rpsbproc_data=paths["RPSBPROC_DB"] / "cddid.tbl",
         pfam_library=paths["HMM_DB"] / "Pfam-A.hmm",
         hmmer_active=bool(defaults.HMMER_ENABLED and defaults.PFAM_ACCESSIONS),
+        species_tree=defaults.SPECIES_TREE,
     )
     return layout, paths["RESULTS_DIR"]
 

@@ -102,6 +102,7 @@ PATH_DICT["FASTA_OUTPUT_DIR"] = PATH_DICT["RESULTS_DIR"] / "fastas"
 PATH_DICT["ASN_ROOT_OUTPUT_DIR"] = PATH_DICT["RESULTS_DIR"] / "asn"
 PATH_DICT["RPSBPROC_OUTPUT_DIR"] = PATH_DICT["RESULTS_DIR"] / "rpsbproc"
 PATH_DICT["RANGE_OUTPUT_DIR"] = PATH_DICT["RESULTS_DIR"] / "ranges"
+PATH_DICT["PLOT_DIR"] = PATH_DICT["RESULTS_DIR"] / "plots"
 # === Table Stage Subdirectories ===
 PATH_DICT["TABLE_BLAST_DIR"] = PATH_DICT["TABLE_OUTPUT_DIR"] / "blast"
 PATH_DICT["TABLE_RPSBLAST_DIR"] = PATH_DICT["TABLE_OUTPUT_DIR"] / "rpsblast"
@@ -208,6 +209,10 @@ HMMER_SEED: int = config.get("hmmer", {}).get("seed", 67)
 
 # === Loci: largest gap (bp) between gated hits chained into one locus (ADR-008) ===
 LOCUS_GAP: int = config.get("loci", {}).get("gap", 20000)
+
+# === Figures: optional Newick tree whose tip order gives the species order ===
+_tree = (config.get("figures") or {}).get("species_tree")
+SPECIES_TREE: Path | None = Path(_tree).resolve() if _tree else None
 
 # === External Program Names ===
 _programs = config.get("programs", {})

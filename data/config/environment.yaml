@@ -28,6 +28,7 @@ dependencies:
   - r-arrow=17.0.0
   - r-tidyverse=2.0.0
   # --- figures ---
+  - font-ttf-ibm-plex-sans=1.1.0   # the one typeface of every figure, embedded in the PDFs
   - pandoc=3.14
   - r-ggsci=5.2.0
   - r-htmlwidgets=1.6.4

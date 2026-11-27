@@ -9,6 +9,7 @@ execution: include('execution_schema')
 display: include('display_schema', required=False)
 root: include('root_schema')
 loci: include('loci_schema', required=False)
+figures: include('figures_schema', required=False)
 species: include('species_schema')
 ---
 blast_schema:
@@ -69,6 +70,9 @@ root_schema:
 
 loci_schema:
   gap: int(min=0, required=False)
+
+figures_schema:
+  species_tree: str(required=False)
 
 # A species key maps to its display name and a pin naming exactly which genome is
 # meant. At least one of `assembly` and `sha256` is required; that rule, and the

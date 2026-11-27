@@ -3,6 +3,7 @@
 # platform: linux-64
 # created-by: conda 26.7.1
 @EXPLICIT
+https://conda.anaconda.org/conda-forge/noarch/font-ttf-ibm-plex-sans-1.1.0-h267e887_0.conda#4f0e3999b863531c6866330b52e42b45
 https://conda.anaconda.org/conda-forge/noarch/_r-mutex-1.0.1-anacondar_1.tar.bz2#19f9db5f4f1b7f5ef5f6d67207f25f38
 https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.11.20-hbd8a1cb_0.conda#05f63e1cbcb57e737619f989a2b8c8b3
 https://conda.anaconda.org/conda-forge/noarch/font-ttf-dejavu-sans-mono-2.37-hab24e00_0.tar.bz2#0c96522c6bdaed4b1566d11387caaf45

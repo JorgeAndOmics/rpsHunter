@@ -168,6 +168,18 @@ def test_an_input_the_same_run_downloads_is_not_missing(tmp_path):
     assert _problems(tmp_path, ["--download-databases", "--hmmer", "--domains"]) == []
 
 
+def test_a_configured_species_tree_must_exist_when_figures_are_drawn(tmp_path):
+    layout = _layout(tmp_path)._replace(species_tree=tmp_path / "species.nwk")
+
+    assert (
+        "species.nwk"
+        in preflight.input_problems(stages.parse(["--figures"]), layout)[0]
+    )
+    assert preflight.input_problems(stages.parse(["--loci"]), layout) == []
+    (tmp_path / "species.nwk").write_text("(A,B);")
+    assert preflight.input_problems(stages.parse(["--figures"]), layout) == []
+
+
 def test_pfam_is_not_needed_when_hmmer_is_off(tmp_path):
     layout = _layout(tmp_path)._replace(hmmer_active=False)
 

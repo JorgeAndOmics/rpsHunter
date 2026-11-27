@@ -77,6 +77,11 @@ hmmer:
 loci:
   gap: 20000  # Largest gap (bp) between gated hits chained into one locus
 
+# Optional. A Newick tree whose tip order gives the order of species in the figures
+# (tips named by species key or display name). Without it: the order under `species:`.
+# figures:
+#   species_tree: '/path/to/species.nwk'
+
 queries:
   'NP_659058.3': 'Mouse PRDM9'
   'NP_064612.2': 'Human PRDM9'
