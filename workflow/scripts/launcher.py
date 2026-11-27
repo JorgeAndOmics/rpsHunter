@@ -20,6 +20,7 @@ from typing import Any, NamedTuple
 
 import yaml
 
+import config_help
 import console
 import external
 import guard
@@ -240,6 +241,16 @@ def _launch(request: stages.Request, environment: dict[str, str], tools: Tools) 
     )
 
 
+def _explain(key: str) -> int:
+    """Print what the configuration reference says about a key."""
+    reference = (REPO / "docs" / "configuration.md").read_text()
+    try:
+        print(config_help.explain(reference, key))
+    except config_help.UnknownKeyError as problem:
+        raise LaunchError(str(problem)) from problem
+    return 0
+
+
 DEFAULT_TOOLS = Tools()
 
 
@@ -247,6 +258,8 @@ def main(argv: Sequence[str] | None = None, tools: Tools = DEFAULT_TOOLS) -> int
     """Command-line entry point; returns the process exit status."""
     request = stages.parse(sys.argv[1:] if argv is None else argv)
     try:
+        if request.config_help is not None:
+            return _explain(request.config_help)
         return _launch(request, dict(os.environ), tools)
     except LaunchError as problem:
         print(f"rpsHunter: {problem}", file=sys.stderr)

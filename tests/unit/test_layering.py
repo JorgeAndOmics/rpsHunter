@@ -30,6 +30,7 @@ PURE_MODULES = (
     "stages",
     "guard",
     "console",
+    "config_help",
 )
 
 FORBIDDEN = frozenset(

@@ -308,3 +308,16 @@ def test_a_dry_run_and_a_run_with_nothing_to_do_write_no_manifest(config):
 
     assert dry.manifests == []
     assert idle.manifests == []
+
+
+def test_config_help_needs_no_stage_and_no_config(capsys):
+    assert launcher.main(["--config-help"]) == 0
+    assert "rpsblast" in capsys.readouterr().out
+
+    assert launcher.main(["--config-help", "rpsblast.e_value"]) == 0
+    assert "type:" in capsys.readouterr().out
+
+
+def test_config_help_for_an_unknown_key_lists_what_exists(capsys):
+    assert launcher.main(["--config-help", "nonsense"]) == 2
+    assert "sections:" in capsys.readouterr().err

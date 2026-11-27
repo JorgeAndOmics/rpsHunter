@@ -31,6 +31,7 @@ Any number of stages can be given in one call; they run in the order below, as o
 | `--cores N` | Cores to use; default `execution.num_cores` |
 | `--config FILE` | Config for this run. Otherwise `$RPSHUNTER_CONFIG`, otherwise `data/config/config.yaml`. One complete file; nothing is merged |
 | `--verbosity quiet\|normal\|verbose` | What the screen shows; default `display.verbosity`, else `normal`. See [console_style.md](console_style.md) |
+| `--config-help [KEY]` | Explain the config from [configuration.md](configuration.md): its sections, one section, or `section.parameter`. Needs no config and runs nothing |
 | `--allow-heavy` | Let a stage start a download, database build or search it does not own (see the guard) |
 
 ## What happens before anything runs

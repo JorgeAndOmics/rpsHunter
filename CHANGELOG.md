@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `--config-help [KEY]` explains config sections and parameters at the terminal, read from
+  `docs/configuration.md` so the two cannot disagree.
 - **A manifest per run** (`results/manifests/<date>_<time>.yaml`): code version and commit, command,
   a copy of the config with its checksum, versions of the analysis tools, database releases with
   checksums of the models searched, genomes and queries.

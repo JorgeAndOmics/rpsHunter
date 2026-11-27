@@ -174,6 +174,7 @@ class Request:
     allow_heavy: bool
     verbosity: str | None
     snakemake_args: tuple[str, ...]
+    config_help: str | None = None
 
     @property
     def targets(self) -> tuple[str, ...]:
@@ -228,6 +229,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Let a stage start a search or database build it does not own.",
     )
+    parser.add_argument(
+        "--config-help",
+        nargs="?",
+        const="",
+        metavar="KEY",
+        help="Explain the config: its sections, one section, or section.parameter.",
+    )
     for flag in RETIRED:
         parser.add_argument(flag, action="store_true", help=argparse.SUPPRESS)
     return parser
@@ -274,7 +282,7 @@ def parse(argv: Sequence[str]) -> Request:
         for stage in STAGES
         if getattr(args, stage.dest) or (args.all and stage.phase != "Setup")
     )
-    if not chosen:
+    if not chosen and args.config_help is None:
         parser.error(
             "no stage given; try --all -n to see what a full analysis would run"
         )
@@ -286,4 +294,5 @@ def parse(argv: Sequence[str]) -> Request:
         allow_heavy=args.allow_heavy,
         verbosity=args.verbosity,
         snakemake_args=passed_on,
+        config_help=args.config_help,
     )
