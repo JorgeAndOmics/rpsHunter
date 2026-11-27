@@ -22,6 +22,9 @@ The schema enforces types, value ranges, regex patterns, and required/optional s
 
 ## Parameter Reference
 
+`./rpsHunter --config-help` prints this reference at the terminal: the sections, one section
+(`--config-help rpsblast`) or one parameter (`--config-help rpsblast.e_value`).
+
 ### `blast` -- tBLASTn Filtering Thresholds
 
 These thresholds filter tBLASTn hits during the homology search stage. Hits that fail any threshold are excluded from downstream processing. Relaxing these values captures weaker homology signals at the cost of increased noise.
@@ -35,7 +38,7 @@ These thresholds filter tBLASTn hits during the homology search stage. Hits that
 
 ### `rpsblast` -- RPSBLAST / CDD Domain Detection
 
-Controls the RPSBLAST search against the NCBI Conserved Domain Database (CDD). The `target_domains` list enables subset database construction, searching only the specified domains rather than the full CDD.
+Controls the RPS-BLAST search of the selected hits against the CDD models of the families under `domains:`.
 
 | Parameter | Type | Default | Validation | Description |
 |-----------|------|---------|------------|-------------|

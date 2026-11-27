@@ -67,3 +67,9 @@ def test_a_changed_setting_and_a_newer_input_get_different_advice():
 
     assert len({changed, newer, missing}) == 3
     assert "config" in missing
+
+
+def test_a_rule_whose_text_changed_with_the_software_can_keep_its_outputs():
+    advice = guard.advice("Code has changed since last execution")
+
+    assert "--rerun-triggers mtime params input" in advice
